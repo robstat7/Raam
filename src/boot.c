@@ -14,6 +14,7 @@ void find_reserved_mem(UINTN msize, uint8_t mmap[], UINTN dsize);
 int get_mem_map(UINTN *msize, uint8_t *mmap, UINTN *mkey, UINTN *dsize);
 void get_ram_attrs(UINTN msize, uint8_t mmap[], UINTN dsize, uint64_t ** physical_start_addr_ptr, uint64_t ** physical_end_addr_ptr, uint64_t *ram_size);
 int create_bitmap(UINTN msize, uint8_t mmap[], UINTN dsize, uint8_t **bitmap_ptr_ptr, uint64_t *bitmap_size_ptr);
+int allocate_sys_variables_mem(uint8_t **sys_var_ptr_ptr);
 
 EFI_STATUS
 EFIAPI
@@ -113,27 +114,38 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	}
 
 
- 	/* get memory map */
-	memory_map_uefi.msize = sizeof(memory_map_uefi.mmap);
-	memory_map_uefi.mkey = 0;
-	memory_map_uefi.dsize = 0;
+ 	// /* get memory map */
+	// memory_map_uefi.msize = sizeof(memory_map_uefi.mmap);
+	// memory_map_uefi.mkey = 0;
+	// memory_map_uefi.dsize = 0;
 
-	if(get_mem_map(&memory_map_uefi.msize, memory_map_uefi.mmap, &memory_map_uefi.mkey, &memory_map_uefi.dsize) == 1) {
- 		goto end;
- 	}
+	// if(get_mem_map(&memory_map_uefi.msize, memory_map_uefi.mmap, &memory_map_uefi.mkey, &memory_map_uefi.dsize) == 1) {
+ 	// 	goto end;
+ 	// }
 
 	// /* find the reserved memory */
 	// find_reserved_mem(msize, mmap, dsize);
 	
-	uint8_t *bitmap_ptr;
-	uint64_t bitmap_size;
+	// uint8_t *bitmap_ptr;
+	// uint64_t bitmap_size;
 
-	if(create_bitmap(memory_map_uefi.msize, memory_map_uefi.mmap, memory_map_uefi.dsize, &bitmap_ptr, &bitmap_size) == 1) {
+	// if(create_bitmap(memory_map_uefi.msize, memory_map_uefi.mmap, memory_map_uefi.dsize, &bitmap_ptr, &bitmap_size) == 1) {
+	// 	goto end;
+	// }
+
+	// Print(L"@bitmap = %p\n", (void *) bitmap_ptr);
+	// Print(L"bitmap_size = %llu\n", bitmap_size);
+
+	
+	/* allocate and clear 2 MiB of memory for system variables */
+	uint8_t *sys_var_ptr;
+
+	if(allocate_sys_variables_mem(&sys_var_ptr) == 1) {
 		goto end;
 	}
 
-	Print(L"@bitmap = %p\n", (void *) bitmap_ptr);
-	Print(L"bitmap_size = %llu\n", bitmap_size);
+
+	Print(L"@sys_var_ptr= %p\n", (void *) sys_var_ptr);
 
 	/* get memory map */	
 	memory_map_uefi.msize = sizeof(memory_map_uefi.mmap);
@@ -215,6 +227,22 @@ int get_mem_map(UINTN *msize, uint8_t *mmap, UINTN *mkey, UINTN *dsize)
 		Print(L"error: could not get memory map!\n");
 		return 1;
 	}
+
+	return 0;
+}
+
+/* allocate and clear 2 MiB of memory for system variables */
+int allocate_sys_variables_mem(uint8_t **sys_var_ptr_ptr)
+{
+	EFI_STATUS Status = uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData, 2097152, (void **) sys_var_ptr_ptr);
+    	if (EFI_ERROR(Status)) {
+        	Print(L"error: allocate_pool: out of pool  %x!\n", Status);
+        	*sys_var_ptr_ptr = NULL;
+		return 1;
+    	}
+
+	/* fill the bitmap buffer with 0 */	
+	uefi_call_wrapper(BS->SetMem, 3, (void *) *sys_var_ptr_ptr, 2097152, 0);
 
 	return 0;
 }
