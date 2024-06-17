@@ -2,9 +2,9 @@
 
 || THAT WHOSE NATURE IS TRUE. THAT WHO IS IMMORTAL. ||
 
-# Raam kernel
+# Raam Core
 
-Raam is a free and open source 64-bit Unix-like operating system kernel for
+Raam is a free and open source 64-bit Computer Software System's Core for
 x86-64-based PC.
 
 Updates on my work can be read at [Discussions](https://github.com/robstat7/Raam/discussions).
