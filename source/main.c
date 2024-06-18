@@ -5,18 +5,8 @@
  */
 #include <efi.h>
 
-int main(void *xsdp)
+int main(void *xsdp, uint8_t *sys_var_ptr)
 {
-	// uint32_t SystemVariables	= 0x0000000000110000; // 0x110000 -> System Variables
-
-	// // Clear all memory after the kernel up to 2MiB
-	// __asm__("mov edi, %0\n\t"
-	// 	"mov ecx, 122880\n\t"			// Clear 960 KiB
-	// 	"mov eax, 0\n\t"
-	// 	"rep stosq"
-	// 	::"m" (SystemVariables):"edi", "ecx", "rax");
-
-
 	/* initialize the global memory manager */
 	// init_global_mm();
 
@@ -41,11 +31,11 @@ int main(void *xsdp)
 	
 
 	/* initialize the timer */
-	if(timer_init() == 1)
-		goto end;
+	// if(timer_init() == 1)
+	// 	goto end;
 	
 	/* enable APIC interrupt controller */
-	enable_apic();
+	// enable_apic();
 
 
 	// /* call test timer function */
@@ -53,8 +43,8 @@ int main(void *xsdp)
 
 
 	/* init nvme */
-	// if(nvme_init(xsdp) == 1)
-	// 	goto end;
+	if(nvme_init(xsdp, sys_var_ptr) == 1)
+		goto end;
 
 end:
 	/* hang here */

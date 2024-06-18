@@ -17,10 +17,10 @@ int16_t detected_function_num = -1;
 volatile uint64_t *nvme_base = NULL;
 uint8_t nvme_mjr_num = 0;
 uint8_t nvme_mnr_num = 0, nvme_ter_num = 0, nvme_irq = 0;
-uint32_t SystemVariables	= 0x0000000000110000; // 0x110000 -> System Variables
-uint64_t nvme_acqb = 0x0000000000171000; // 0x171000 -> 0x171FFF	4K admin completion queue base address
-uint64_t nvme_ans = 0x0000000000175000; // 0x175000 -> 0x175FFF	4K Namespace Data
-uint64_t nvme_nsid = 0x0000000000176000; // 0x176000 -> 0x176FFF	4K Namespace Identify Data
+uint32_t SystemVariables;	// = 0x0000000000110000; // 0x110000 -> System Variables
+uint64_t nvme_acqb; 	// = 0x0000000000171000; // 0x171000 -> 0x171FFF	4K admin completion queue base address
+uint64_t nvme_ans; 	// 0x0000000000175000; // 0x175000 -> 0x175FFF	4K Namespace Data
+uint64_t nvme_nsid;  	// 0x0000000000176000; // 0x176000 -> 0x176FFF	4K Namespace Identify Data
 
 unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
 uint32_t check_mcfg_checksum(uint64_t *mcfg);
@@ -33,8 +33,12 @@ void *get_base_phy_addr(uint16_t bus, uint8_t device, uint8_t function);
 void enable_pci_bus_mastering(void);
 void disable_controller_interrupts(void);
 
-int nvme_init(void *xsdp)
+int nvme_init(void *xsdp, uint8_t *sys_var_ptr)
 {
+	SystemVariables = (uint32_t) sys_var_ptr;
+	nvme_acqb = SystemVariables + 0x61000;
+	nvme_ans = SystemVariables + 0x65000;
+	nvme_nsid = SystemVariables + 0x66000;
 	int i;
 	uint64_t *xsdt;
 	uint32_t xsdt_length;
@@ -259,7 +263,7 @@ void nvme_admin_savetail(uint8_t val, uint64_t * nvme_atail, uint32_t old_tail_v
  */
 void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, uint64_t cdw6_7)
 {
-	uint64_t *nvme_asqb = 0x0000000000170000;	// 0x170000 -> 0x170FFF	4K admin submission queue base address
+	uint64_t *nvme_asqb = SystemVariables + 0x60000;	// 0x0000000000170000;	// 0x170000 -> 0x170FFF	4K admin submission queue base address
 	void *nvme_atail = SystemVariables + 0x0311;
 	uint32_t tmp, a_tail_val;
 	int64_t val2;
@@ -339,7 +343,7 @@ void save_controller_struct(void)
 	uint32_t cdw1 = 0;	// CDW1 Ignored
 	uint32_t nvme_ID_CTRL = 0x01;		// CDW10 CNS. Identify Controller data structure for the controller
 	uint32_t cdw11 = 0;	// CDW11 Ignored
-	uint64_t nvme_CTRLID = 0x0000000000174000; // CDW6-7 DPTR. 0x174000 -> 0x174FFF	4K Controller Identify Data
+	uint64_t nvme_CTRLID = SystemVariables + 0x64000;	// 0x0000000000174000; // CDW6-7 DPTR. 0x174000 -> 0x174FFF	4K Controller Identify Data
 
 	nvme_admin(cdw0, cdw1, nvme_ID_CTRL, cdw11, nvme_CTRLID);
 }
@@ -350,7 +354,7 @@ void create_io_queues(void)
 	uint32_t val2 = 0; 	// CDW1 Ignored
 	uint32_t val3 = 0x003F0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
 	uint32_t val4= 0x00000001;		// CDW11 PC Enabled (0)
-	uint64_t nvme_iocqb = 0x0000000000173000;			// CDW6-7 DPTR. 0x173000 -> 0x173FFF	4K I/O Completion Queue Base Address
+	uint64_t nvme_iocqb = SystemVariables + 0x63000; 	// 0x0000000000173000;			// CDW6-7 DPTR. 0x173000 -> 0x173FFF	4K I/O Completion Queue Base Address
 
 	// Create I/O Completion Queue
 	nvme_admin(val1, val2, val3, val4, nvme_iocqb);
@@ -359,7 +363,7 @@ void create_io_queues(void)
 	val1 = 0x00010001;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Submission Queue (0x01)
 	val3 = 0x003F0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
 	val4 = 0x00010001;		// CDW11 CQID 1 (31:16), PC Enabled (0)
-	uint64_t nvme_iosqb =  0x0000000000172000;	// CDW6-7 DPTR. 0x172000 -> 0x172FFF	4K I/O Submission Queue Base Address
+	uint64_t nvme_iosqb = SystemVariables + 0x62000; 	// 0x0000000000172000;	// CDW6-7 DPTR. 0x172000 -> 0x172FFF	4K I/O Submission Queue Base Address
 
 	nvme_admin(val1, val2, val3, val4, nvme_iosqb);
 }
@@ -412,7 +416,7 @@ void config_admin_queues(void)
 	uint32_t value = 0x003f003f;		// 64 commands each for ACQS (27:16) and ASQS (11:00)
 
 	char nvme_asq = 0x28;	// 8-byte admin submission queue base address
-	uint64_t nvme_asqb = 0x0000000000170000; // 0x170000 -> 0x170FFF	4K admin submission queue base address
+	uint64_t nvme_asqb = SystemVariables + 0x60000; 	// 0x0000000000170000; // 0x170000 -> 0x170FFF	4K admin submission queue base address
 	void* addr_asq = (void *) ((char *) nvme_base + nvme_asq);
 
 	char nvme_acq = 0x30; // 8-byte admin completion queue base address
