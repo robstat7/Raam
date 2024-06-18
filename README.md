@@ -5,6 +5,6 @@
 # || परमपस्तावा ||
 # || THE ULTIMATE REGRET ||
 
-Humans in the Mrityu loka (the world of death) and the deities in the Deva loka (the world of deities) have forgotten to chant (bhaja) that God who has created them and also the Honakal Parabrahma, the Shiva, the Brahmaa, and the Vishnu, the birds and the animals, the worms and the insects, and the trees and the plants. Instead of chanting (bhajanaa) that God we have entangled ourselves in the worldly deeds and relationships, māyā (illusion), and in other lords and deities. This is the ultimate regret!!!
+Humans in the world of death (Mrityuloka) and the deities in the world of deities (Devaloka) have forgotten to chant (bhaj) the name of "GOD" who created them and the Honakal, which includes the Parabrahm, the divine feminine energy (Shakti), Brahma, Shiva, Vishnu, the world of deities (Devaloka), the world of death (Mrityuloka, including birds, animals, worms, insects, trees, and plants), and even hell (Narakaloka). Instead of chanting (bhajana) the name of "GOD", we have entangled ourselves in worldly deeds and relationships, illusion (Māyā), and in other lords and deities. This is the ultimate regret!!!
 
-In a nutshell, we have entangled ourselves in "others" and have forgotten to chant (bhaja) that "God" who has created us and others. This is the ultimate regret!!!
+In a nutshell, we have entangled ourselves in "others" and have forgotten to chant (bhaj) the name of "GOD" who created us and others. This is the ultimate regret!!!
