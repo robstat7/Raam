@@ -13,6 +13,7 @@ volatile uint64_t *nvme_base = NULL;
 char *nvme_data_region;
 char *data_region_creation_addr;
 char *nvme_asqb;
+char *nvme_acqb;
 
 unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
 uint32_t check_mcfg_checksum(uint64_t *mcfg);
@@ -137,7 +138,7 @@ char *get_next_4096_aligned_addr(void)
 		new_addr++;
 	}
 
-	data_region_creation_addr = new_addr;	
+	data_region_creation_addr = new_addr;
 
 	return new_addr;
 }
@@ -149,13 +150,30 @@ char *get_next_4096_aligned_addr(void)
  */
 int configure_admin_q(void)
 {
+	char nvme_asq = 0x28;   // 8-byte admin submission queue base address
+	char nvme_acq = 0x30;	// 8-byte admin completion queue base address
+	volatile uint64_t *addr_asq = (volatile uint32_t *) ((char *) nvme_base + nvme_asq);
+	volatile uint64_t *addr_acq = (volatile uint32_t *) ((char *) nvme_base + nvme_acq);
+
 	/* set the Admin Queue Attributes (AQA) register for ACQS and ASQS values */
 	set_admin_q_attrs();
 
 	/* get the next 4096 aligned address in the data region to be assigned as asqb */
 	nvme_asqb = get_next_4096_aligned_addr();
 
+	/* set data region creation address to the next 4096 aligned address */
+	data_region_creation_addr = nvme_asqb + 4096;
+
+	nvme_acqb = data_region_creation_addr;
+
 	printk("@new asqb={p}\n", (void *) nvme_asqb);
+	printk("@new acqb={p}\n", (void *) nvme_acqb);
+
+	*addr_asq = (uint64_t) nvme_asqb;	// ASQB 4K aligned (63:12)
+	*addr_acq = (uint64_t) nvme_acqb;	// ACQB 4K aligned (63:12)
+
+	printk("@read asq register={p}\n", (void *) *addr_asq);
+	printk("@read acq register={p}\n", (void *) *addr_acq);
 
 	return 0;
 }
