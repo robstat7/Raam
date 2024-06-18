@@ -16,7 +16,9 @@ uint32_t check_mcfg_checksum(uint64_t *mcfg);
 void check_all_buses(uint16_t start, uint16_t end);
 int find_nvme_controller(uint16_t bus, uint8_t device, uint8_t function);
 volatile uint64_t *get_nvme_base(uint16_t bus, uint8_t device, uint8_t function);
-void reset_controller(void);
+int reset_controller(void);
+// int configure_admin_q(void);
+int wait_for_reset_complete(void);
 
 int nvme_init(void *xsdp, uint8_t *sys_var_ptr)
 {
@@ -88,10 +90,7 @@ int nvme_init(void *xsdp, uint8_t *sys_var_ptr)
 	printk("@nvme_base={p}\n", (void *) nvme_base);
 
 	/* reset the controller */
-	reset_controller();
-
-	/* configure the admin queue */
-	if(configure_admin_q() == 1) {
+	if(reset_controller() == 1) {
 		printk("nvme: error: the controller has had a fatal error!\n");
 		return 1;
 	}
@@ -101,12 +100,12 @@ int nvme_init(void *xsdp, uint8_t *sys_var_ptr)
 	return 0;
 }
 
-/* configure_admin_q
+/* wait_for_reset_complete
  *
  * wait for the controller to indicate that the previous reset is complete by
  * waiting for CSTS.RDY to become ‘0'.
  */
-void configure_admin_q(void)
+int wait_for_reset_complete(void)
 {
 	char nvme_csts =  0x1C;			// 4-byte Controller Status (CSTS) register
 	volatile uint32_t *addr = (volatile uint32_t *) ((char *) nvme_base + nvme_csts);
@@ -123,7 +122,7 @@ void configure_admin_q(void)
 	return 0;
 }
 
-void reset_controller(void)
+int reset_controller(void)
 {
 	char nvme_cc = 0x14;	// 4-byte Controller Configuration (CC) register
 	volatile uint32_t *addr = (volatile uint32_t *) ((char *) nvme_base + nvme_cc);
@@ -138,8 +137,10 @@ void reset_controller(void)
 		*addr = value;
 	}
 
-
 	printk("@new CC value={d}\n", *addr);
+
+	/* wait for the reset to complete */
+	return wait_for_reset_complete();
 }
 
 volatile uint64_t *get_nvme_base(uint16_t bus, uint8_t device, uint8_t function) {
