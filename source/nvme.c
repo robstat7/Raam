@@ -90,6 +90,36 @@ int nvme_init(void *xsdp, uint8_t *sys_var_ptr)
 	/* reset the controller */
 	reset_controller();
 
+	/* configure the admin queue */
+	if(configure_admin_q() == 1) {
+		printk("nvme: error: the controller has had a fatal error!\n");
+		return 1;
+	}
+
+	printk("@nvme: reset complete!\n");
+
+	return 0;
+}
+
+/* configure_admin_q
+ *
+ * wait for the controller to indicate that the previous reset is complete by
+ * waiting for CSTS.RDY to become ‘0'.
+ */
+void configure_admin_q(void)
+{
+	char nvme_csts =  0x1C;			// 4-byte Controller Status (CSTS) register
+	volatile uint32_t *addr = (volatile uint32_t *) ((char *) nvme_base + nvme_csts);
+	uint32_t val;
+
+	do {
+		val = *addr;
+
+		if((val & 0x2) != 0x0) {		// CSTS.CFS (bit #1) should be 0. If not the controller has had a fatal error
+			return 1;
+		}
+	} while((val & 0x1) != 0x0);	// Wait for CSTS.RDY (bit #0) to become 0
+
 	return 0;
 }
 
@@ -103,7 +133,7 @@ void reset_controller(void)
 
 	printk("@old CC value={d}\n", value);
 
-	if((value & 0x1) != 0x0) {		// clear CC.EN (bit 0) to 0
+	if((value & 0x1) != 0x0) {		// clear CC.EN (bit #0) to 0
 		value &= 0xfffffffe;
 		*addr = value;
 	}
