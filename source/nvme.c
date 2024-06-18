@@ -17,7 +17,7 @@ void check_all_buses(uint16_t start, uint16_t end);
 int find_nvme_controller(uint16_t bus, uint8_t device, uint8_t function);
 volatile uint64_t *get_nvme_base(uint16_t bus, uint8_t device, uint8_t function);
 int reset_controller(void);
-// int configure_admin_q(void);
+int configure_admin_q(void);
 int wait_for_reset_complete(void);
 
 int nvme_init(void *xsdp, uint8_t *sys_var_ptr)
@@ -96,6 +96,24 @@ int nvme_init(void *xsdp, uint8_t *sys_var_ptr)
 	}
 
 	printk("@nvme: reset complete!\n");
+
+	/* configure the admin queue */
+	configure_admin_q();
+
+	return 0;
+}
+
+int configure_admin_q(void)
+{
+	/* set the Admin Queue Attributes (AQA) register for ACQS and ASQS values */
+	char nvme_aqa = 0x24;		// 4-byte AQA register offset
+	volatile uint32_t *addr = (volatile uint32_t *) ((char *) nvme_base + nvme_aqa);
+	uint32_t value = 0x003f003f;	// 64 commands each for ACQS (27:16) and ASQS (11:00).
+					// Both are 0’s based values i.e. the value is 63.
+
+	*addr = value;
+
+	printk("@aqa register value={p}\n", (void *) *addr);
 
 	return 0;
 }
