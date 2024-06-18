@@ -14,6 +14,7 @@ char *nvme_data_region;
 char *data_region_creation_addr;
 char *nvme_asqb;
 char *nvme_acqb;
+char nvme_cc = 0x14;	// 4-byte Controller Configuration (CC) register
 
 unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
 uint32_t check_mcfg_checksum(uint64_t *mcfg);
@@ -25,6 +26,7 @@ int configure_admin_q(void);
 int wait_for_reset_complete(void);
 void set_admin_q_attrs(void);
 char *get_next_4096_aligned_addr(void);
+void enable_controller(void);
 
 int nvme_init(void *xsdp, char *sys_var_ptr)
 {
@@ -109,6 +111,11 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 
 	/* configure the admin queue */
 	configure_admin_q();
+
+	/* enable controller */
+	enable_controller();
+
+	printk("@nvme: controller is enabled!\n");
 
 	return 0;
 }
@@ -201,9 +208,25 @@ int wait_for_reset_complete(void)
 	return 0;
 }
 
+void enable_controller(void)
+{
+	volatile uint32_t *addr = (volatile uint32_t *) ((char *) nvme_base + nvme_cc);
+	uint32_t value;
+
+	value = *addr;
+
+	printk("@old CC value={d}\n", value);
+
+	// set CC.EN (bit #0) to 1
+	value |= 0x1;
+
+	*addr = value;
+
+	printk("@new CC value={d}\n", *addr);
+}
+
 int reset_controller(void)
 {
-	char nvme_cc = 0x14;	// 4-byte Controller Configuration (CC) register
 	volatile uint32_t *addr = (volatile uint32_t *) ((char *) nvme_base + nvme_cc);
 	uint32_t value;
 
