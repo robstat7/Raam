@@ -16,6 +16,7 @@ uint32_t check_mcfg_checksum(uint64_t *mcfg);
 void check_all_buses(uint16_t start, uint16_t end);
 int find_nvme_controller(uint16_t bus, uint8_t device, uint8_t function);
 volatile uint64_t *get_nvme_base(uint16_t bus, uint8_t device, uint8_t function);
+void reset_controller(void);
 
 int nvme_init(void *xsdp, uint8_t *sys_var_ptr)
 {
@@ -86,7 +87,29 @@ int nvme_init(void *xsdp, uint8_t *sys_var_ptr)
 
 	printk("@nvme_base={p}\n", (void *) nvme_base);
 
+	/* reset the controller */
+	reset_controller();
+
 	return 0;
+}
+
+void reset_controller(void)
+{
+	char nvme_cc = 0x14;	// 4-byte Controller Configuration (CC) register
+	volatile uint32_t *addr = (volatile uint32_t *) ((char *) nvme_base + nvme_cc);
+	uint32_t value;
+
+	value = *addr;
+
+	printk("@old CC value={d}\n", value);
+
+	if((value & 0x1) != 0x0) {		// clear CC.EN (bit 0) to 0
+		value &= 0xfffffffe;
+		*addr = value;
+	}
+
+
+	printk("@new CC value={d}\n", *addr);
 }
 
 volatile uint64_t *get_nvme_base(uint16_t bus, uint8_t device, uint8_t function) {
