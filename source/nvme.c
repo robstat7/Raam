@@ -10,6 +10,9 @@ int16_t detected_bus_num = -1;
 int16_t detected_device_num = -1;
 int16_t detected_function_num = -1;
 volatile uint64_t *nvme_base = NULL;
+char *nvme_data_region;
+char *data_region_creation_addr;
+char *nvme_asqb;
 
 unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
 uint32_t check_mcfg_checksum(uint64_t *mcfg);
@@ -20,8 +23,9 @@ int reset_controller(void);
 int configure_admin_q(void);
 int wait_for_reset_complete(void);
 void set_admin_q_attrs(void);
+char *get_next_4096_aligned_addr(void);
 
-int nvme_init(void *xsdp, uint8_t *sys_var_ptr)
+int nvme_init(void *xsdp, char *sys_var_ptr)
 {
 	int i;
 	uint64_t *xsdt;
@@ -98,13 +102,18 @@ int nvme_init(void *xsdp, uint8_t *sys_var_ptr)
 
 	printk("@nvme: reset complete!\n");
 
+	nvme_data_region = sys_var_ptr;
+
+	data_region_creation_addr = nvme_data_region;
+
 	/* configure the admin queue */
 	configure_admin_q();
 
 	return 0;
 }
 
-/* set_admin_q_attrs
+/* 
+ * set_admin_q_attrs
  *
  * set the Admin Queue Attributes (AQA) register for ACQS and ASQS values
  */
@@ -120,14 +129,39 @@ void set_admin_q_attrs(void)
 	printk("@aqa register value={p}\n", (void *) *addr);
 }
 
+char *get_next_4096_aligned_addr(void)
+{
+	char *new_addr = data_region_creation_addr;
+
+	while((((uint64_t) new_addr) % 4096) != 0) {
+		new_addr++;
+	}
+
+	data_region_creation_addr = new_addr;	
+
+	return new_addr;
+}
+
+/*
+ * configure_admin_q
+ *
+ * configure the admin queue
+ */
 int configure_admin_q(void)
 {
+	/* set the Admin Queue Attributes (AQA) register for ACQS and ASQS values */
 	set_admin_q_attrs();
+
+	/* get the next 4096 aligned address in the data region to be assigned as asqb */
+	nvme_asqb = get_next_4096_aligned_addr();
+
+	printk("@new asqb={p}\n", (void *) nvme_asqb);
 
 	return 0;
 }
 
-/* wait_for_reset_complete
+/*
+ * wait_for_reset_complete
  *
  * wait for the controller to indicate that the previous reset is complete by
  * waiting for CSTS.RDY to become ‘0'.
