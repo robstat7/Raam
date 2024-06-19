@@ -5,15 +5,15 @@
 #include "printk.h"
 #include <stdint.h>
 
-uint64_t *pcie_ecam = NULL;
+volatile uint64_t *pcie_ecam = NULL;
 int16_t detected_bus_num = -1;
 int16_t detected_device_num = -1;
 int16_t detected_function_num = -1;
 volatile uint64_t *nvme_base = NULL;
-char *nvme_data_region;
-char *data_region_creation_addr;
-char *nvme_asqb;
-char *nvme_acqb;
+volatile char *nvme_data_region;
+volatile char *data_region_creation_addr;
+volatile char *nvme_asqb;
+volatile char *nvme_acqb;
 char nvme_cc = 0x14;	// 4-byte Controller Configuration (CC) register
 
 unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
@@ -97,6 +97,8 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 
 	printk("@nvme_base={p}\n", (void *) nvme_base);
 
+	check_cmd_set_supported();
+
 	/* reset the controller */
 	if(reset_controller() == 1) {
 		printk("nvme: error: the controller has had a fatal error!\n");
@@ -117,7 +119,176 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 
 	printk("@nvme: controller is enabled!\n");
 
+	if(nvme_init_enable_wait() == 1) {
+		printk("nvme: fatal error! CSTS.CFS (1) is not 0!\n");
+		return 1;
+	}
+
+	save_controller_struct();
+
+	printk("@done!\n");
+
 	return 0;
+}
+
+void check_cmd_set_supported(void)
+{
+	char nvme_cap = 0x0;		
+	volatile uint64_t *addr = (volatile uint64_t *) ((char *) nvme_base + nvme_cap);
+	uint64_t value;
+
+	*addr = value;
+
+	printk("@cap register value={p}\n", (void *) value);
+}
+
+
+int nvme_init_enable_wait(void)
+{
+	char nvme_csts =  0x1C; // 4-byte controller status property
+	void* addr = (void *) ((char *) nvme_base + nvme_csts);
+	uint32_t val;
+
+	do {
+		val = *((volatile uint32_t *) addr);
+
+		if((val & 0x2)!= 0x0)	// CSTS.CFS (1) should be 0. If not the controller has had a fatal error
+		{
+			return 1;
+		}
+	}while((val & 0x1) != 0x1);	// Wait for CSTS.RDY (0) to become '1'
+
+	return 0;
+}
+
+void nvme_admin_wait(volatile char *acqb_copy)
+{
+	// for(int i = 0; i < 200; i++)
+	// 	printk("{d}", *((char *) nvme_acqb + i));
+
+	// printk("\n");
+
+	uint64_t val;
+
+	do{
+		// val = *(volatile uint64_t *) acqb_copy;
+		val = *(volatile uint64_t *) nvme_acqb;
+		// printk("@val={lld}\n", val);
+	}while(val == 0);
+
+	// *(volatile uint64_t *) acqb_copy = 0; // Overwrite the old entry
+	*(volatile uint64_t *) nvme_acqb = 0; // Overwrite the old entry
+}	
+
+void nvme_admin_savetail(uint32_t a_tail_val, volatile char* nvme_atail, uint32_t old_tail_val)
+{
+	uint8_t val = (uint8_t) a_tail_val;
+	uint32_t val_new = val;
+	volatile char *acqb_copy = nvme_acqb;
+
+	printk("@old_tail_val={d}\n", old_tail_val);
+
+
+	*nvme_atail = val;	// Save the tail for the next command
+
+	printk("@val={d}\n", val);
+
+
+
+	*((volatile uint32_t *) ((char *) nvme_base + 0x1000)) = val_new; // Write the new tail value
+
+	// Check completion queue
+	old_tail_val = (old_tail_val << 4);	// Each entry is 16 bytes
+	old_tail_val = (uint8_t) old_tail_val + 8;	// Add 8 for DW3
+
+	// printk("@old_tail_val={d}\n", old_tail_val);
+	printk("@acqb_copy={p}\n", (void *) acqb_copy);
+
+	acqb_copy += old_tail_val;
+
+	printk("@acqb_copy={p}\n", (void *) acqb_copy);
+	
+	nvme_admin_wait(acqb_copy);
+}
+
+/*
+ * nvme_admin -- Perform an Admin operation on a nvme controller
+ */
+void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, volatile char* cdw6_7)
+{
+	volatile char *nvme_asqb_ptr = nvme_asqb;
+	volatile char *nvme_atail;
+	uint32_t tmp, a_tail_val = 0;
+	int64_t val2;
+	uint8_t a_tail_val_8;
+
+	data_region_creation_addr += 1;
+
+	nvme_atail = data_region_creation_addr;
+
+	// Build the command at the expected location in the Submission ring
+	a_tail_val = *nvme_atail; // Get the current Admin tail value
+
+	printk("@a_tail_val={d}\n", a_tail_val);
+	
+	// printk("@admin tail value={d}\n", a_tail_val);
+
+	a_tail_val *= 64;			// Quick multiply by 64
+							//
+	a_tail_val_8 = (uint8_t) a_tail_val;
+
+	nvme_asqb_ptr += a_tail_val_8;
+
+	// printk("@nvme_asqb_ptr={p}\n", (void *) nvme_asqb_ptr);
+
+	// Build the structure
+	*(volatile uint32_t *) nvme_asqb_ptr = cdw0;	// CDW0
+	*(volatile uint32_t *) (nvme_asqb_ptr + 4) = cdw1;	// CDW1
+	*(volatile uint32_t *) (nvme_asqb_ptr + 8) = 0;	// CDW2
+	*(volatile uint32_t *) (nvme_asqb_ptr + 12) = 0;	// CDW3
+	*(volatile uint64_t *) (nvme_asqb_ptr + 16) = 0;	// CDW4-5
+	*(volatile uint64_t *) (nvme_asqb_ptr + 24) = (uint64_t) cdw6_7;	// CDW6-7
+	*(volatile uint64_t *) (nvme_asqb_ptr + 32) = 0;	// CDW8-9
+	*(volatile uint32_t *) (nvme_asqb_ptr + 40) = cdw10;	// CDW10
+	*(volatile uint32_t *) (nvme_asqb_ptr + 44) = cdw11;	// CDW11
+	*(volatile uint32_t *) (nvme_asqb_ptr + 48) = 0;	// CDW12
+	*(volatile uint32_t *) (nvme_asqb_ptr + 52) = 0;	// CDW13
+	*(volatile uint32_t *) (nvme_asqb_ptr + 56) = 0;	// CDW14
+	*(volatile uint32_t *) (nvme_asqb_ptr + 60) = 0;	// CDW15
+
+	// for(int i = 0; i < 64; i++)
+	// 	printk("{d}", *((volatile unsigned char *) nvme_asqb_ptr + i));
+
+	// printk("\n");
+
+
+	// Start the Admin command by updating the tail doorbell
+	a_tail_val = 0;
+	a_tail_val = *nvme_atail; // Get the current Admin tail value
+	tmp = a_tail_val;	// Save the old Admin tail value for reading from the completion ring
+	a_tail_val++;			// Add 1 to it
+	
+	// printk("@a_tail_val={d}\n", a_tail_val);
+
+	if(a_tail_val>= 64)
+		a_tail_val = 0;
+
+	nvme_admin_savetail(a_tail_val, nvme_atail, tmp);
+}
+
+void save_controller_struct(void)
+{
+	uint32_t cdw0 = 0x00000006;	// CDW0 CID 0, PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Identify (0x06)
+	uint32_t cdw1 = 0;	// CDW1 Ignored
+	uint32_t nvme_ID_CTRL = 0x01;		// CDW10 CNS. Identify Controller data structure for the controller
+	uint32_t cdw11 = 0;	// CDW11 Ignored
+	volatile char *nvme_CTRLID;	// 4K Controller Identify Data
+
+	data_region_creation_addr = nvme_acqb + 4096;
+
+	nvme_CTRLID = data_region_creation_addr;
+
+	nvme_admin(cdw0, cdw1, nvme_ID_CTRL, cdw11, nvme_CTRLID);
 }
 
 /* 
