@@ -97,7 +97,15 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 
 	printk("@nvme_base={p}\n", (void *) nvme_base);
 
+	/* Mark controller memory as un-cacheable */
+        // uncacheable_memory();
+
+
 	check_cmd_set_supported();
+
+	/* enable pcie bus mastering */
+        enable_pci_bus_mastering();
+
 
 	/* reset the controller */
 	if(reset_controller() == 1) {
@@ -126,9 +134,52 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 
 	save_controller_struct();
 
-	printk("@done!\n");
+	printk("@Done!\n");
 
 	return 0;
+}
+
+void uncacheable_memory(void)
+{
+        __asm__("mov rax, %0\n\t"
+                "shr rax, 18\n\t"
+                "and al, 0xF8\n\t"              // Clear the last 3 bits
+                "mov rdi, 0x10000\n\t"          // Base of low PDE
+                "add rdi, rax\n\t"
+                "mov rax, [rdi]\n\t"
+                "btc rax, 3\n\t"                        // Clear PWT to disable caching
+                "bts rax, 4\n\t"                        // Set PCD to disable caching
+                "mov [rdi], rax"
+                ::"m" (nvme_base):"rax","rdi");
+}
+
+void *get_base_phy_addr(uint16_t bus, uint8_t device, uint8_t function)
+{
+        void *phy_addr;
+
+        phy_addr = (void *) ((uint64_t) pcie_ecam + (((uint32_t) bus) << 20 | ((uint32_t) device) << 15 | ((uint32_t) function) << 12));
+
+        return phy_addr;
+}
+
+void enable_pci_bus_mastering(void)
+{
+        volatile void *phy_addr;
+        int32_t value;
+
+        phy_addr = get_base_phy_addr(detected_bus_num, detected_device_num, detected_function_num);
+
+        phy_addr = (void *) ((char *) phy_addr + (1 * 4));      /* get status/command from pcie device's register #1 */
+
+        value = *((volatile int32_t *) phy_addr);
+
+        __asm__("mov eax, %0\n\t"
+                "bts eax, 2\n\t"
+                "mov %0, eax"
+                ::"m" (value):"eax");
+
+        *((volatile int32_t *) phy_addr) = value;        /* write value to pcie device's register #1 */
+
 }
 
 void check_cmd_set_supported(void)
@@ -169,6 +220,18 @@ void nvme_admin_wait(volatile char *acqb_copy)
 	// printk("\n");
 
 	uint64_t val;
+	// volatile uint32_t *phy_addr;
+        // uint32_t value;
+
+        // phy_addr = (uint32_t *) ((char *) phy_addr + (1 * 4));      /* get status/command from pcie device's register #1 */
+        // // phy_addr = (volatile uint16_t *) ((char *) phy_addr + 0x0A);
+
+        // value = *phy_addr;
+
+	// value >>= 16;
+
+        // printk("status reg value = {d}\n", value);
+
 
 	do{
 		// val = *(volatile uint64_t *) acqb_copy;
@@ -178,6 +241,7 @@ void nvme_admin_wait(volatile char *acqb_copy)
 
 	// *(volatile uint64_t *) acqb_copy = 0; // Overwrite the old entry
 	*(volatile uint64_t *) nvme_acqb = 0; // Overwrite the old entry
+	printk("@@done!!!\n");
 }	
 
 void nvme_admin_savetail(uint32_t a_tail_val, volatile char* nvme_atail, uint32_t old_tail_val)
@@ -191,22 +255,27 @@ void nvme_admin_savetail(uint32_t a_tail_val, volatile char* nvme_atail, uint32_
 
 	*nvme_atail = val;	// Save the tail for the next command
 
-	printk("@val={d}\n", val);
+	printk("@written tail_val_new={d}\n", val_new);
 
 
 
 	*((volatile uint32_t *) ((char *) nvme_base + 0x1000)) = val_new; // Write the new tail value
+
+
+	// Explicit memory barrier for use with GCC.
+	asm volatile ("": : :"memory");
+
 
 	// Check completion queue
 	old_tail_val = (old_tail_val << 4);	// Each entry is 16 bytes
 	old_tail_val = (uint8_t) old_tail_val + 8;	// Add 8 for DW3
 
 	// printk("@old_tail_val={d}\n", old_tail_val);
-	printk("@acqb_copy={p}\n", (void *) acqb_copy);
+	printk("@acqb_copy={p}\n", (volatile void *) acqb_copy);
 
 	acqb_copy += old_tail_val;
 
-	printk("@acqb_copy={p}\n", (void *) acqb_copy);
+	printk("@acqb_copy={p}\n", (volatile void *) acqb_copy);
 	
 	nvme_admin_wait(acqb_copy);
 }
@@ -222,14 +291,12 @@ void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, vo
 	int64_t val2;
 	uint8_t a_tail_val_8;
 
-	data_region_creation_addr += 1;
-
 	nvme_atail = data_region_creation_addr;
 
 	// Build the command at the expected location in the Submission ring
 	a_tail_val = *nvme_atail; // Get the current Admin tail value
 
-	printk("@a_tail_val={d}\n", a_tail_val);
+	// printk("@first a_tail_val={d}\n", a_tail_val);
 	
 	// printk("@admin tail value={d}\n", a_tail_val);
 
@@ -255,6 +322,26 @@ void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, vo
 	*(volatile uint32_t *) (nvme_asqb_ptr + 52) = 0;	// CDW13
 	*(volatile uint32_t *) (nvme_asqb_ptr + 56) = 0;	// CDW14
 	*(volatile uint32_t *) (nvme_asqb_ptr + 60) = 0;	// CDW15
+								//
+	
+	// *(volatile uint32_t *) nvme_asqb_ptr = 0;	// CDW15
+	// *(volatile uint32_t *) (nvme_asqb_ptr + 4) = 0;	// CDW14
+	// *(volatile uint32_t *) (nvme_asqb_ptr + 8) = 0;	// CDW13
+	// *(volatile uint32_t *) (nvme_asqb_ptr + 12) = 0;	// CDW12
+	// *(volatile uint32_t *) (nvme_asqb_ptr + 16) = cdw11;	// CDW11
+	// *(volatile uint32_t *) (nvme_asqb_ptr + 20) = cdw10;	// CDW10
+	// *(volatile uint64_t *) (nvme_asqb_ptr + 24) = 0;	// CDW8-9
+	// *(volatile uint64_t *) (nvme_asqb_ptr + 32) = (uint64_t) cdw6_7;	// CDW6-7
+	// *(volatile uint64_t *) (nvme_asqb_ptr + 40) = 0;	// CDW4-5
+	// *(volatile uint32_t *) (nvme_asqb_ptr + 48) = 0;	// CDW3
+	// *(volatile uint32_t *) (nvme_asqb_ptr + 52) = 0;	// CDW2
+	// *(volatile uint32_t *) (nvme_asqb_ptr + 56) = cdw1;	// CDW1
+	// *(volatile uint32_t *) (nvme_asqb_ptr + 60)= cdw0;	// CDW0
+
+
+	// Explicit memory barrier for use with GCC.
+	asm volatile ("": : :"memory");
+
 
 	// for(int i = 0; i < 64; i++)
 	// 	printk("{d}", *((volatile unsigned char *) nvme_asqb_ptr + i));
@@ -287,6 +374,8 @@ void save_controller_struct(void)
 	data_region_creation_addr = nvme_acqb + 4096;
 
 	nvme_CTRLID = data_region_creation_addr;
+
+	data_region_creation_addr += 4096;
 
 	nvme_admin(cdw0, cdw1, nvme_ID_CTRL, cdw11, nvme_CTRLID);
 }
@@ -344,14 +433,14 @@ int configure_admin_q(void)
 
 	nvme_acqb = data_region_creation_addr;
 
-	printk("@new asqb={p}\n", (void *) nvme_asqb);
-	printk("@new acqb={p}\n", (void *) nvme_acqb);
+	printk("@new asqb={p}\n", (volatile void *) nvme_asqb);
+	printk("@new acqb={p}\n", (volatile void *) nvme_acqb);
 
 	*addr_asq = (uint64_t) nvme_asqb;	// ASQB 4K aligned (63:12)
 	*addr_acq = (uint64_t) nvme_acqb;	// ACQB 4K aligned (63:12)
 
-	printk("@read asq register={p}\n", (void *) *addr_asq);
-	printk("@read acq register={p}\n", (void *) *addr_acq);
+	printk("@read asq register={p}\n", (volatile void *) *addr_asq);
+	printk("@read acq register={p}\n", (volatile void *) *addr_acq);
 
 	return 0;
 }
@@ -446,7 +535,7 @@ volatile uint64_t *get_nvme_base(uint16_t bus, uint8_t device, uint8_t function)
 
 
 int find_nvme_controller(uint16_t bus, uint8_t device, uint8_t function) {
-	uint64_t *phy_addr;
+	volatile uint64_t *phy_addr;
 	uint32_t value;
 
 	phy_addr = (uint64_t *) ((uint64_t) pcie_ecam + (((uint32_t) bus) << 20 | ((uint32_t) device) << 15 | ((uint32_t) function) << 12));
@@ -465,7 +554,7 @@ int find_nvme_controller(uint16_t bus, uint8_t device, uint8_t function) {
 
 uint16_t get_vendor_id(uint16_t bus, uint8_t device, uint8_t function)
 {
-	uint64_t *phy_addr;
+	volatile uint64_t *phy_addr;
 	uint16_t vendor_id;
 
 	phy_addr = (uint64_t *) ((uint64_t) pcie_ecam + (((uint32_t) bus) << 20 | ((uint32_t) device) << 15 | ((uint32_t) function) << 12));
