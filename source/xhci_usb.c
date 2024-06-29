@@ -13,6 +13,7 @@ volatile uint64_t *get_xhci_base(void);
 uint32_t check_mcfg_checksum(uint64_t *mcfg);
 void check_all_buses(uint16_t start, uint16_t end);
 int find_xhci_controller(uint16_t bus, uint8_t device, uint8_t function);
+uint8_t get_cap_reg_len(void);
 
 int xhci_init(void *xsdp)
 {
@@ -81,6 +82,12 @@ int xhci_init(void *xsdp)
 	xhci_base = get_xhci_base();
 
 	printk("@xhci_base = {p}\n", (void *) xhci_base);
+
+	/* get the Capability Register Length */
+	uint8_t cap_length = get_cap_reg_len();
+
+	printk("@cap_length = {d}\n", cap_length);
+
 
 	return 0;
 }
@@ -220,4 +227,21 @@ volatile uint64_t *get_xhci_base(void)
 	base_addr = (uint64_t) base_addr & 0xfffffffffffffff0;		/* clear the lowest 4 bits */
 
 	return base_addr;
+}
+
+volatile uint64_t *get_base_phy_addr(void)
+{
+	volatile uint64_t *phy_addr;
+
+	phy_addr = (uint64_t *) ((uint64_t) pcie_ecam + (((uint32_t) detected_bus_num) << 20 | ((uint32_t) detected_device_num) << 15 | ((uint32_t) detected_function_num) << 12));
+
+	return phy_addr;
+}
+uint8_t get_cap_reg_len(void)
+{
+
+	volatile uint8_t *addr = (char *) xhci_base;
+	uint8_t value = *addr;
+
+	return value;
 }
