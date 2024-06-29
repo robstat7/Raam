@@ -77,6 +77,11 @@ int xhci_init(void *xsdp)
 		printk("couldn't found the xhci controller!\n");
 		return 1;
 	}
+
+	xhci_base = get_xhci_base();
+
+	printk("@xhci_base = {p}\n", (void *) xhci_base);
+
 	return 0;
 }
 
@@ -136,6 +141,11 @@ void check_all_buses(uint16_t start, uint16_t end)
      for(bus = start; bus <= end; bus++) {
          for(device = 0; device < 32; device++) {
 		if(check_device(bus, device) == 0) {
+			if(device == 13)	/* skip the thuderbolt 4 usb controller */
+			{
+				continue;
+			}
+
 			detected_bus_num = (int16_t) bus;
 		 	detected_device_num = (int16_t) device;
 			detected_function_num = 0;
@@ -184,4 +194,30 @@ unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length)
     }
 
     return sum;
+}
+
+volatile uint64_t *get_xhci_base(void)
+{
+	volatile char *phy_addr;
+	volatile uint32_t *bar0_value, bar1_value;
+	volatile uint64_t *base_addr;
+
+	phy_addr = (volatile char *) ((uint64_t) pcie_ecam + (((uint32_t) detected_bus_num) << 20 | ((uint32_t) detected_device_num) << 15 | ((uint32_t) detected_function_num) << 12));
+
+	phy_addr = phy_addr + (4 * 4);	/* Multiplying by 4 because each register consists of 4 bytes */
+
+	/* read register 4 for BAR0 */
+	bar0_value = *(volatile uint32_t *) phy_addr;
+
+	/* read regiser #5 for BAR1 */
+	phy_addr += 4;
+	bar1_value = *(volatile uint32_t *) phy_addr;
+
+	base_addr = bar1_value;
+	base_addr = (uint64_t) base_addr << 32;		/* left shift 32 bits */
+	base_addr = (uint64_t) base_addr | (uint64_t) bar0_value;
+
+	base_addr = (uint64_t) base_addr & 0xfffffffffffffff0;		/* clear the lowest 4 bits */
+
+	return base_addr;
 }
