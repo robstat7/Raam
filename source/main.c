@@ -8,15 +8,7 @@
 int main(void *xsdp, uint8_t *sys_var_ptr)
 {
 	/* initialize the global memory manager */
-	// init_global_mm();
-
-
-	/* initialize gdt */
-	init_gdt();
-
-	/* initialize idt */
-	init_idt();
-
+	// init_global_mm();	
 
 
 //	__asm__ volatile ("mov $60, %eax; mov $0, %edi; syscall "); 
@@ -40,11 +32,16 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 
 	// /* call test timer function */
 	// test_timer();
-
-
-	/* init nvme */
-	if(nvme_init(xsdp, sys_var_ptr) == 1)
+	
+	
+	/* init xhci controller */
+	if(xhci_init(xsdp) == 1)
 		goto end;
+
+
+	// /* init nvme */
+	// if(nvme_init(xsdp, sys_var_ptr) == 1)
+	// 	goto end;
 
 end:
 	/* hang here */
