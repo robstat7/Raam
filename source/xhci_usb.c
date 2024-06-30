@@ -9,6 +9,8 @@ int16_t detected_device_num = -1;
 int16_t detected_function_num = -1;
 uint8_t capability_register_length = 0;
 volatile char *operational_registers_base = NULL;
+volatile uint64_t *device_context_base_address_array = NULL;
+int device_context_base_address_array_size = 24;	// in bytes
 
 unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
 volatile uint64_t *get_xhci_base(void);
@@ -16,8 +18,9 @@ uint32_t check_mcfg_checksum(uint64_t *mcfg);
 void check_all_buses(uint16_t start, uint16_t end);
 int find_xhci_controller(uint16_t bus, uint8_t device, uint8_t function);
 uint8_t get_cap_reg_len(void);
+volatile uint64_t *find_first_64_byte_aligned_address(char *sys_var_ptr);
 
-int xhci_init(void *xsdp)
+int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 {
 	int i;
 	uint64_t *xsdt;
@@ -101,7 +104,36 @@ int xhci_init(void *xsdp)
 	/* set the maximum number of enabled device slots */
 	set_max_slots_en();
 
+	/* allocate 24 bytes for device context base address array consisting of 3 entries of 64-bit each. Entry 0 is reserved */
+	device_context_base_address_array = find_first_64_byte_aligned_address(sys_var_ptr);
+
+	printk("@device_context_base_address_array = {p}\n", device_context_base_address_array);
+
+	/* set Device Context Base Address Array Pointer Register (DCBAAP) */
+	set_dcbaap_reg();
+
 	return 0;
+}
+
+void set_dcbaap_reg(void)
+{
+	volatile uint64_t *dcbaap = (uint64_t *) (operational_registers_base + 0x30);	// 64-bit Device Context Base Address Array Pointer Register (DCBAAP)
+
+	*dcbaap = (uint64_t) device_context_base_address_array;
+
+	printk("@DCBAAP reg new value = {p}\n", (void *) *dcbaap);
+}
+
+
+volatile uint64_t *find_first_64_byte_aligned_address(char *sys_var_ptr)
+{
+	volatile char *addr = sys_var_ptr - 1;
+
+	while((uint64_t) addr % 64 != 0) {
+		addr++;
+	}
+
+	return (volatile uint64_t *) addr;
 }
 
 void reset_controller(void)
