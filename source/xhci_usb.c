@@ -95,10 +95,34 @@ int xhci_init(void *xsdp)
 
 	printk("@operational_registers_base = {p}\n", (void *) operational_registers_base);
 
+	/* reset the host controller */
+	reset_controller();
+
 	/* set the maximum number of enabled device slots */
 	set_max_slots_en();
 
 	return 0;
+}
+
+void reset_controller(void)
+{
+	uint32_t value;
+
+	value = *(volatile uint32_t *) operational_registers_base;	// 32-bit USBCMD register (Operational Base+ (00h))
+
+	value |= 0x2;	// set Host Controller Reset (HCRST) bit
+
+	volatile uint32_t *usbsts = (uint32_t *) (operational_registers_base + 0x04); // USB Status Register (USBSTS)
+
+	/* wait until the Controller Not Ready (CNR) flag in the USBSTS is ‘0’ */
+	do {
+		value = *usbsts;
+
+		value >>= 11;
+
+	} while(value % 2 == 1); 
+
+	printk("@@@controller reset completed!\n");
 }
 
 void set_max_slots_en(void)
