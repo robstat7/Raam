@@ -7,6 +7,8 @@ volatile uint64_t *xhci_base = NULL;
 int16_t detected_bus_num = -1;
 int16_t detected_device_num = -1;
 int16_t detected_function_num = -1;
+uint8_t capability_register_length = 0;
+volatile char *operational_registers_base = NULL;
 
 unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
 volatile uint64_t *get_xhci_base(void);
@@ -84,15 +86,39 @@ int xhci_init(void *xsdp)
 	printk("@xhci_base = {p}\n", (void *) xhci_base);
 
 	/* get the Capability Register Length */
-	uint8_t cap_length = get_cap_reg_len();
+	capability_register_length = get_cap_reg_len();
 
-	printk("@cap_length = {d}\n", cap_length);
+	printk("@capability_register_length = {d}\n", capability_register_length);
 
+	/* find the operational registers base */
+	operational_registers_base = (char *) xhci_base + capability_register_length;
+
+	printk("@operational_registers_base = {p}\n", (void *) operational_registers_base);
+
+	/* set the maximum number of enabled device slots */
+	set_max_slots_en();
 
 	return 0;
 }
 
-int find_xhci_controller(uint16_t bus, uint8_t device, uint8_t function) {
+void set_max_slots_en(void)
+{
+	volatile uint32_t *config_reg = (uint32_t *) (operational_registers_base + 0x38);
+	uint32_t value;
+
+	value = *config_reg;
+
+	// printk("@config_reg initial value = {d}\n", value);
+
+	value |= 0x02;	// CONFIG(7:0) is 0x2 for maximum no. of 2 device slots
+	
+	*config_reg = value;
+
+	printk("@xhci_usb: set_max_slots_en: config_reg = {d}\n", *config_reg);
+}
+
+
+int find_xhci_controller(uint16_t bus, uint8_t device, uint8_t function) {	
 	volatile uint64_t *phy_addr;
 	uint32_t value;
 
