@@ -121,6 +121,8 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 	/* set command ring control register (CRCR) */
 	set_cmd_ring_cntrl_reg();
 
+	run_the_controller();
+
 	return 0;
 }
 
@@ -399,4 +401,15 @@ uint8_t get_cap_reg_len(void)
 	uint8_t value = *addr;
 
 	return value;
+}
+
+void run_the_controller(void)
+{
+	uint32_t value = *(volatile uint32_t *) operational_registers_base;
+
+	value |= 0x1;
+
+	*(volatile uint32_t *) operational_registers_base = value;
+
+	printk("@usb_cmd reg = {p}\n", (void *) *(volatile uint32_t *) operational_registers_base);
 }
