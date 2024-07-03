@@ -125,6 +125,9 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 
 
 	check_device_connected_to_port_2();
+
+	reset_port_2();
+
 	return 0;
 }
 
@@ -436,3 +439,30 @@ void check_device_connected_to_port_2(void)
 	}
 
 }
+
+void reset_port_2(void)
+{
+	// PORTSC register
+	volatile uint32_t *addr = (uint32_t *) ((char *) operational_registers_base + (0x400 + (0x10 * (2-1))));
+
+	uint32_t value = *addr;
+
+	value |= 0x10;
+
+	*addr = value;
+
+
+
+	while(1) {
+
+	value = *addr;
+
+	if(((value >> 21) % 2 == 1) && ((value >> 1) %2 == 1) && ((value >> 4) % 2 == 0)) {
+		if((value >> 5) % 8 == 0) {
+			printk("@port reset completed!\n");
+			break;
+		}
+	}
+	}
+}
+
