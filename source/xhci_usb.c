@@ -123,6 +123,8 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 
 	run_the_controller();
 
+
+	check_device_connected_to_port_2();
 	return 0;
 }
 
@@ -412,4 +414,25 @@ void run_the_controller(void)
 	*(volatile uint32_t *) operational_registers_base = value;
 
 	printk("@usb_cmd reg = {p}\n", (void *) *(volatile uint32_t *) operational_registers_base);
+}
+
+void check_device_connected_to_port_2(void)
+{
+	volatile uint32_t *addr = (uint32_t *) ((char *) operational_registers_base + (0x400 + (0x10 * (2-1))));
+
+	while(1) {
+		uint32_t value = *addr;
+
+		if((value >> 17) % 2 == 1)	/* bit #17 (starting from #0) is 1. CSC = 1 implies change in CCS. */
+		{
+			printk("@xhci_usb: change in CSC detected!\n");
+			if(value % 2 == 1)	/* bit #0 (CCS) is 1. 1 implies "a device is connected". */
+			{
+				printk("@xhci_usb: usb device detected!\n");
+
+				break;
+			}
+		}
+	}
+
 }
