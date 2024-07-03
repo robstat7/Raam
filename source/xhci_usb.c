@@ -1,4 +1,5 @@
 #include "string.h"
+#include <string.h>
 #include "printk.h"
 #include <stdint.h>
 
@@ -27,6 +28,7 @@ volatile uint64_t *device_context_base_address_array = NULL;
 int device_context_base_address_array_size = 24;	// in bytes
 
 volatile uint64_t *get_base_phy_addr(void);
+volatile uint32_t *get_doorbell_reg_0_base(void);
 unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
 volatile uint64_t *get_xhci_base(void);
 uint32_t check_mcfg_checksum(uint64_t *mcfg);
@@ -145,6 +147,19 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 
 	printk("@enable_slot_command_trb_fields.slot_type = {d}\n", enable_slot_command_trb_fields.slot_type);
 
+
+		memcpy((void *) command_ring_base, (void *) &enable_slot_command_trb_fields, sizeof(enable_slot_command_trb_fields));
+	struct enable_slot_command_trb *trb1 = (struct enable_slot_command_trb *) command_ring_base;
+
+
+printk("@trb1->trb_type = {d}\n", trb1->trb_type);
+
+	volatile uint32_t *doorbell_reg_0 = get_doorbell_reg_0_base();
+
+
+	printk("@rang the HC doorbell!\n");
+
+	*doorbell_reg_0 = 0;	// ring the HC doorbell. Here, DB Target is HC Command ('0')
 	return 0;
 }
 
@@ -486,3 +501,10 @@ void reset_port_2(void)
 	}
 }
 
+volatile uint32_t *get_doorbell_reg_0_base(void)
+{
+	volatile uint32_t *addr = (uint32_t *) ((char *) xhci_base + 0x14);	// DBOFF register
+	uint32_t address_val = *addr;
+
+	return (uint32_t *) address_val;
+}
