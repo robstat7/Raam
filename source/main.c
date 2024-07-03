@@ -34,8 +34,8 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 	// test_timer();
 	
 	
-	/* init xhci controller */
-	if(xhci_init(xsdp) == 1)
+	/* initialize the xhci host controller */
+	if(xhci_init(xsdp, sys_var_ptr) == 1)
 		goto end;
 
 

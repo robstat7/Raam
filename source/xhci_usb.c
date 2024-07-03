@@ -8,10 +8,13 @@ int16_t detected_bus_num = -1;
 int16_t detected_device_num = -1;
 int16_t detected_function_num = -1;
 uint8_t capability_register_length = 0;
+/* command ring dequeue pointer */
+volatile uint64_t *command_ring_pointer = NULL;
 volatile char *operational_registers_base = NULL;
 volatile uint64_t *device_context_base_address_array = NULL;
 int device_context_base_address_array_size = 24;	// in bytes
 
+volatile uint64_t *get_base_phy_addr(void);
 unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
 volatile uint64_t *get_xhci_base(void);
 uint32_t check_mcfg_checksum(uint64_t *mcfg);
@@ -88,6 +91,9 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 
 	printk("@xhci_base = {p}\n", (void *) xhci_base);
 
+	// enable bus mastering
+	enable_pci_bus_mastering();
+
 	/* get the Capability Register Length */
 	capability_register_length = get_cap_reg_len();
 
@@ -112,7 +118,73 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 	/* set Device Context Base Address Array Pointer Register (DCBAAP) */
 	set_dcbaap_reg();
 
+	/* set command ring control register (CRCR) */
+	set_cmd_ring_cntrl_reg();
+
 	return 0;
+}
+
+void enable_pci_bus_mastering(void)
+{
+	volatile void *phy_addr;
+	int32_t value;
+
+	phy_addr = (void *) get_base_phy_addr();
+
+	phy_addr = (volatile void *) ((char *) phy_addr + (1 * 4));	/* get status/command from pcie device's register #1 */
+
+	value = *((volatile int32_t *) phy_addr);
+
+	__asm__("mov eax, %0\n\t"
+		"bts eax, 2\n\t"
+		"mov %0, eax"
+		::"m" (value):"eax");
+	
+	*((volatile int32_t *) phy_addr) = value;	/* write value to pcie device's register #1 */
+
+	printk("@@@bus_mastering_enable func: value read = {d}\n", *((volatile uint32_t *) phy_addr));
+
+}
+
+void set_cmd_ring_cntrl_reg(void)
+{
+	volatile uint64_t *crcr = (uint64_t *) ( (char *) operational_registers_base + 0x18);
+	printk("@crcr = {p}\n", (void *) crcr);
+
+	uint64_t addr = (uint64_t) ((char *) device_context_base_address_array + 64);	// next 64-byte aligned address in the system variables memory region
+
+	printk("@set_cmd_ring_cntrl_reg: addr = {p}\n", (void *) addr);
+
+	// printk("@crcr reg before writing:{p}\n", (void *) *crcr);
+
+	*crcr = addr;
+
+	// // Explicit memory barrier for use with GCC.
+	// asm volatile ("": : :"memory");
+
+	// /* force serialization */
+	// __asm__("mov rax, cr0\n\t"
+	// 	"mov cr0, rax"
+	// 	:::"rax");
+
+	// /* issue a serializing instruction to force a memory barrier operation in hardware */
+	// __asm__("cpuid"
+ 	// 	:::);
+
+
+	// __asm__("mov rax, %1\n\t"
+	// 	"mov rbx, %0\n\t"
+	// 	"mov [rbx], rax\n\t"
+	// 	"cpuid"
+	// 	::"m" (crcr),
+	// 	  "m" (addr):"rax","rbx");
+
+	// Explicit memory barrier for use with GCC.
+	// asm volatile ("": : :"memory");
+
+
+
+	// printk("@crcr reg new value = {p}\n", (void *) *crcr);
 }
 
 void set_dcbaap_reg(void)
@@ -215,6 +287,7 @@ int check_device(uint16_t bus, uint8_t device)
 		return 1;
 
 	res = find_xhci_controller(bus, device, function);	
+
 
 	return res;
 }
