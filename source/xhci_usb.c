@@ -2,6 +2,17 @@
 #include "printk.h"
 #include <stdint.h>
 
+struct enable_slot_command_trb {
+	unsigned long long rsvdz_1 :64;
+	unsigned long long rsvdz_2 :32;
+	unsigned long long c: 1;
+	unsigned long long rsvdz_3 :9;
+	unsigned long long trb_type :5;
+	unsigned long long slot_type :5;
+	unsigned long long rsvdz_4 :11;
+} enable_slot_command_trb_fields;
+
+
 volatile uint64_t *pcie_ecam = NULL;
 volatile uint64_t *xhci_base = NULL;
 int16_t detected_bus_num = -1;
@@ -9,7 +20,8 @@ int16_t detected_device_num = -1;
 int16_t detected_function_num = -1;
 uint8_t capability_register_length = 0;
 /* command ring dequeue pointer */
-volatile uint64_t *command_ring_pointer = NULL;
+volatile uint64_t *command_ring_base = NULL;	// 4k command ring
+volatile uint64_t *command_ring_dequeue_pointer = NULL;
 volatile char *operational_registers_base = NULL;
 volatile uint64_t *device_context_base_address_array = NULL;
 int device_context_base_address_array_size = 24;	// in bytes
@@ -128,6 +140,11 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 
 	reset_port_2();
 
+	enable_slot_command_trb_fields.trb_type = 0x9;	// enable slot command
+	enable_slot_command_trb_fields.c = 1;	// cycle bit
+
+	printk("@enable_slot_command_trb_fields.slot_type = {d}\n", enable_slot_command_trb_fields.slot_type);
+
 	return 0;
 }
 
@@ -192,6 +209,9 @@ void set_cmd_ring_cntrl_reg(void)
 
 
 	// printk("@crcr reg new value = {p}\n", (void *) *crcr);
+
+		command_ring_base = (uint64_t *) addr;
+	command_ring_dequeue_pointer = (uint64_t *) addr;
 }
 
 void set_dcbaap_reg(void)
