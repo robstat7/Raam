@@ -20,7 +20,7 @@ struct event_ring_segment_table {
 	unsigned long long rsvdz :48;
 } event_ring_segment_table_t;
 
-
+volatile char *event_ring_segment_table_allocated_base = NULL;
 volatile uint64_t *pcie_ecam = NULL;
 volatile uint64_t *xhci_base = NULL;
 int16_t detected_bus_num = -1;
@@ -167,21 +167,23 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 
 	printk("@erstsz = {d}\n", *erstsz);
 
+	event_ring_segment_table_allocated_base = (char *) event_ring_segment_0 + 4096;
+	memcpy((void *) event_ring_segment_table_allocated_base, (void *) &event_ring_segment_table_t, sizeof(event_ring_segment_table_t));
+
 	/* set Event Ring Dequeue Pointer Register (ERDP) to event_ring_segment_0 */
 	volatile uint64_t *erdp = (uint64_t *) ((char *) runtime_base + 0x038 + (32 * 0));
-	*erdp = event_ring_segment_0;
+	*erdp = event_ring_segment_table_allocated_base;
 
 	printk("@erdp reg = {p}\n", (void *) *erdp);
 
 
-
-		/* find the event ring segment table base address register (ERSTBA) address */
-		volatile uint64_t *erstba = (uint64_t *) ((char *) runtime_base + 0x030 + (32 * 0));
-
-		*erstba = event_ring_segment_0;
-
-		printk("@&event_ring_segment_table_t = {p}\n", (void *) &event_ring_segment_table_t);
-		printk("@erstba reg = {p}\n", (void *) *erstba);
+	/* find the event ring segment table base address register (ERSTBA) address */
+	volatile uint64_t *erstba = (uint64_t *) ((char *) runtime_base + 0x030 + (32 * 0));
+	
+	*erstba = event_ring_segment_table_allocated_base;
+	
+	printk("@event_ring_segment_table_allocated_base = {p}\n", (void *) event_ring_segment_table_allocated_base);
+	printk("@erstba reg = {p}\n", (void *) *erstba);
 
 
 
