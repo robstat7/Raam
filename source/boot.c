@@ -248,12 +248,13 @@ int get_mem_map(UINTN *msize, uint8_t *mmap, UINTN *mkey, UINTN *dsize)
 /* allocate and clear 2 MiB of memory for system variables */
 int allocate_sys_variables_mem(uint8_t **sys_var_ptr_ptr)
 {
-	EFI_STATUS Status = uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData, 2097152, (void **) sys_var_ptr_ptr);
+	EFI_STATUS Status = uefi_call_wrapper(BS->AllocatePool, 3, EfiRuntimeServicesData, 2097152, (void **) sys_var_ptr_ptr);
     	if (EFI_ERROR(Status)) {
-        	Print(L"error: allocate_pool: out of pool  %x!\n", Status);
-        	*sys_var_ptr_ptr = NULL;
-		return 1;
+             Print(L"error: allocate_pool: out of pool  %x!\n", Status);
+             *sys_var_ptr_ptr = NULL;
+	     return 1;
     	}
+
 
 	/* fill the bitmap buffer with 0 */	
 	uefi_call_wrapper(BS->SetMem, 3, (void *) *sys_var_ptr_ptr, 2097152, 0);
