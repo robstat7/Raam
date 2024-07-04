@@ -13,6 +13,13 @@ struct enable_slot_command_trb {
 	unsigned long long rsvdz_4 :11;
 } enable_slot_command_trb_fields;
 
+struct event_ring_segment_table {
+
+	unsigned long long ring_seg_base_addr :64;
+	unsigned long long ring_seg_size :16;
+	unsigned long long rsvdz :48;
+} event_ring_segment_table_t;
+
 
 volatile uint64_t *pcie_ecam = NULL;
 volatile uint64_t *xhci_base = NULL;
@@ -140,6 +147,11 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 	/* set the event ring segment 0 base address */
 	event_ring_segment_0 = (uint64_t *) (char *) command_ring_base + 4096;
 
+
+	/* initialize the only event ring segment table entry */
+	event_ring_segment_table_t.ring_seg_base_addr = event_ring_segment_0; 
+	event_ring_segment_table_t.ring_seg_size = event_ring_segment_0_size;
+
 	/* find the runtime base */
 	volatile uint32_t *rtsoff = (uint32_t *) ((char *) xhci_base + 0x18);	/* RTSOFF register address */
 	uint32_t value = *rtsoff;
@@ -148,6 +160,29 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 	volatile uint32_t *runtime_base = (uint32_t *) ((char *) xhci_base + value);
 
 	printk("@runtime_base = {p}\n", (void *) runtime_base);
+
+	/* find the Event Ring Segment Table Size Register (ERSTSZ) address */
+	volatile uint32_t *erstsz = (uint32_t *) ((char *) runtime_base + 0x028 + (32 * 0));
+	*erstsz = event_ring_segment_0_size;
+
+	printk("@erstsz = {d}\n", *erstsz);
+
+	/* set Event Ring Dequeue Pointer Register (ERDP) to event_ring_segment_0 */
+	volatile uint64_t *erdp = (uint64_t *) ((char *) runtime_base + 0x038 + (32 * 0));
+	*erdp = event_ring_segment_0;
+
+	printk("@erdp reg = {p}\n", (void *) *erdp);
+
+
+
+		/* find the event ring segment table base address register (ERSTBA) address */
+		volatile uint64_t *erstba = (uint64_t *) ((char *) runtime_base + 0x030 + (32 * 0));
+
+		*erstba = event_ring_segment_0;
+
+		printk("@&event_ring_segment_table_t = {p}\n", (void *) &event_ring_segment_table_t);
+		printk("@erstba reg = {p}\n", (void *) *erstba);
+
 
 
 	run_the_controller();
@@ -172,9 +207,18 @@ printk("@trb1->trb_type = {d}\n", trb1->trb_type);
 	volatile uint32_t *doorbell_reg_0 = get_doorbell_reg_0_base();
 
 
-	printk("@rang the HC doorbell!\n");
 
 	*doorbell_reg_0 = 0;	// ring the HC doorbell. Here, DB Target is HC Command ('0')
+
+	printk("@rang the HC doorbell!\n");
+
+	while(1)
+	{
+		if(*event_ring_segment_0 != 0)
+			printk("@FOUND EVENT TRB!!! 64bits value = {llu}\n", *event_ring_segment_0);
+
+	}
+
 	return 0;
 }
 
@@ -390,10 +434,10 @@ uint32_t check_mcfg_checksum(uint64_t *mcfg)
 
 	sum = 0;
 
-	length = *((uint32_t *) ((unsigned char *) mcfg + 4));
+	length = *((volatile uint32_t *) ((unsigned char *) mcfg + 4));
 
 	for(i = 0; i < length; i++)
-		sum += ((unsigned char *) mcfg)[i];
+		sum += ((volatile unsigned char *) mcfg)[i];
 
 	return (sum & 0xff);
 }
@@ -409,7 +453,7 @@ unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length)
     sum = 0;
 
     for(i = 0; i < xsdt_length; i++) {
-	sum += ((char *) xsdt)[i];
+	sum += ((volatile char *) xsdt)[i];
     }
 
     return sum;
