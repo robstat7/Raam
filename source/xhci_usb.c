@@ -21,11 +21,13 @@ int16_t detected_device_num = -1;
 int16_t detected_function_num = -1;
 uint8_t capability_register_length = 0;
 /* command ring dequeue pointer */
-volatile uint64_t *command_ring_base = NULL;	// 4k command ring
+volatile uint64_t *command_ring_base = NULL;	// 4k bytes command ring
 volatile uint64_t *command_ring_dequeue_pointer = NULL;
 volatile char *operational_registers_base = NULL;
 volatile uint64_t *device_context_base_address_array = NULL;
 int device_context_base_address_array_size = 24;	// in bytes
+volatile uint64_t *event_ring_segment_0 = NULL;		/* 4k bytes event ring segment #0 */
+int event_ring_segment_0_size = 256;			/* 256 TRBs */
 
 volatile uint64_t *get_base_phy_addr(void);
 volatile uint32_t *get_doorbell_reg_0_base(void);
@@ -134,6 +136,19 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 
 	/* set command ring control register (CRCR) */
 	set_cmd_ring_cntrl_reg();
+
+	/* set the event ring segment 0 base address */
+	event_ring_segment_0 = (uint64_t *) (char *) command_ring_base + 4096;
+
+	/* find the runtime base */
+	volatile uint32_t *rtsoff = (uint32_t *) ((char *) xhci_base + 0x18);	/* RTSOFF register address */
+	uint32_t value = *rtsoff;
+	printk("@rtsoff reg = {p}\n", (void *) value);
+
+	volatile uint32_t *runtime_base = (uint32_t *) ((char *) xhci_base + value);
+
+	printk("@runtime_base = {p}\n", (void *) runtime_base);
+
 
 	run_the_controller();
 
