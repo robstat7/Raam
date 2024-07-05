@@ -374,12 +374,16 @@ void page_enable()
 
 void install_page(void)
 {
-	volatile void *addr_1 = (void *) find_first_4096_byte_aligned_address(sys_var_ptr);
+	volatile char *addr_1 = (void *) find_first_4096_byte_aligned_address(sys_var_ptr);
 
-	Print(L"@install_page: addr_1 = %p\n", addr_1);
+	Print(L"@install_page: addr_1 = %p\n", (void *) addr_1);
 
 	pml4_table_t *pml4e = (pml4_table_t *)addr_1;
+
 	pae_page_directory_pointer_table_t *pdpte = (pae_page_directory_pointer_table_t*) (addr_1 + 0x1000);
+
+	pae_page_directory_table_t *pde = (pae_page_directory_table_t *) ((char *) pdpte + 0x1000);
+
 	unsigned long addr_2;
 	uint32_t cpu_edx, cpu_eax;
 
@@ -389,7 +393,17 @@ void install_page(void)
 	addr_2 = (unsigned long) pdpte;
 	pml4e->pdpt_phy_addr = (addr_2 >> 12) & 0xfffffffff;
 
-	Print(L"@debug\n");
+	Print(L"@pml4e->pdpt_phy_addr = %p\n", (void *) pml4e->pdpt_phy_addr);
+
+	pdpte->p = 1;
+	pdpte->rw = 1;
+	pdpte->us = 1;
+	unsigned long addr_3;
+	addr_3 = (unsigned long) pde;
+	pdpte->pd_phy_addr = (addr_3 >> 12) & 0xfffffffff;
+
+	Print(L"@pdpte->pd_phy_addr = %p\n", (void *) pdpte->pd_phy_addr);
+
 
 	__asm__ __volatile__("cli");
 
