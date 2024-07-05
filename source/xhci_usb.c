@@ -1,4 +1,5 @@
 #include "string.h"
+#include <stdlib.h>
 #include <string.h>
 #include "printk.h"
 #include <stdint.h>
@@ -170,11 +171,21 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 	event_ring_segment_table_allocated_base = (char *) event_ring_segment_0 + 4096;
 	memcpy((void *) event_ring_segment_table_allocated_base, (void *) &event_ring_segment_table_t, sizeof(event_ring_segment_table_t));
 
-	/* set Event Ring Dequeue Pointer Register (ERDP) to event_ring_segment_0 */
+	/* set Event Ring Dequeue Pointer Register (ERDP) */
 	volatile uint64_t *erdp = (uint64_t *) ((char *) runtime_base + 0x038 + (32 * 0));
-	*erdp = event_ring_segment_table_allocated_base;
+	// *erdp = event_ring_segment_table_allocated_base;
+	*erdp = event_ring_segment_0;
 
 	printk("@erdp reg = {p}\n", (void *) *erdp);
+	
+	// while(1)
+	// {
+	// 	if(*event_ring_segment_0 != 0) {
+	// 		printk("@FOUND EVENT TRB!!! 64bits value = {llu}\n", *event_ring_segment_0);
+	// 		break;
+	// 	}
+
+	// }
 
 
 	/* find the event ring segment table base address register (ERSTBA) address */
@@ -189,10 +200,54 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 
 	run_the_controller();
 
+	// while(1)
+	// {
+	// 	if(*event_ring_segment_0 != 0) {
+	// 		printk("@FOUND EVENT TRB!!! 64bits value = {llu}\n", *event_ring_segment_0);
+	// 		break;
+	// 	}
+
+	// }
+
 
 	check_device_connected_to_port_2();
 
+	while(1)
+	{
+		if(*event_ring_segment_0 != 0) {
+			printk("@FOUND a TRB on the EVENT RING!!!\n");
+
+			// // volatile uint32_t *event_ring_seg_0_ptr = (char *) event_ring_segment_0 + 128; //offset to the last dword
+			// volatile uint32_t *event_ring_seg_0_ptr = (uint32_t *) ((char *) event_ring_segment_0 + 62);
+			// uint32_t val = *event_ring_seg_0_ptr;
+
+			// // val >>= 10;	// left shift 10 bits for TRB type
+
+			// printk("@xhci_usb: val = {d}\n", val);
+			// // if ((val & 0x3f) == 34)	{	// Port Status Change Event ID = 34
+			// // 	printk("@port status change event detected!\n");
+			// // }
+
+			volatile uint64_t *erdp = (uint64_t *) ((char *) runtime_base + 0x038 + (32 * 0));
+			*erdp = (char *) event_ring_segment_0;
+
+			break;
+		}
+
+	}
+
+	printk("@@event_ring_segment_0 first 64 bits value = {d}\n", *event_ring_segment_0);
+
 	reset_port_2();
+
+	// while(1)
+	// {
+	// 	if(*event_ring_segment_0 != 0) {
+	// 		printk("@FOUND EVENT TRB!!! 64bits value = {llu}\n", *event_ring_segment_0);
+	// 		break;
+	// 	}
+
+	// }
 
 	enable_slot_command_trb_fields.trb_type = 0x9;	// enable slot command
 	enable_slot_command_trb_fields.c = 1;	// cycle bit
@@ -204,20 +259,33 @@ int xhci_init(void *xsdp, uint8_t *sys_var_ptr)
 	struct enable_slot_command_trb *trb1 = (struct enable_slot_command_trb *) command_ring_base;
 
 
-printk("@trb1->trb_type = {d}\n", trb1->trb_type);
+	printk("@trb1->trb_type = {d}\n", trb1->trb_type);
 
 	volatile uint32_t *doorbell_reg_0 = get_doorbell_reg_0_base();
+	
+	volatile uint64_t *event_ring_segment_0_ptr = (uint64_t *) ((char *) event_ring_segment_0 + 16);
+	while(1)
+	{
+		if(*event_ring_segment_0_ptr != 0) {
+			printk("@FOUND EVENT TRB!!! value = {llu}\n", *event_ring_segment_0_ptr);
+			break;
+		}
 
+	}
 
 
 	*doorbell_reg_0 = 0;	// ring the HC doorbell. Here, DB Target is HC Command ('0')
 
 	printk("@rang the HC doorbell!\n");
 
+	// volatile uint64_t *event_ring_segment_0_ptr = (uint64_t *) ((char *) event_ring_segment_0 + 16);
+
 	while(1)
 	{
-		if(*event_ring_segment_0 != 0)
-			printk("@FOUND EVENT TRB!!! 64bits value = {llu}\n", *event_ring_segment_0);
+		if(*event_ring_segment_0_ptr != 0) {
+			printk("@FOUND EVENT TRB!!! value = {llu}\n", *event_ring_segment_0_ptr);
+			break;
+		}
 
 	}
 
@@ -517,6 +585,7 @@ void run_the_controller(void)
 
 void check_device_connected_to_port_2(void)
 {
+	// PORTSC register
 	volatile uint32_t *addr = (uint32_t *) ((char *) operational_registers_base + (0x400 + (0x10 * (2-1))));
 
 	while(1) {
