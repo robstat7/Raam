@@ -384,6 +384,9 @@ void install_page(void)
 
 	pae_page_directory_table_t *pde = (pae_page_directory_table_t *) ((char *) pdpte + 0x1000);
 
+	pae_page_table_t *pte = (pae_page_table_t *) ((char *) pde + 0x1000);
+
+
 	unsigned long addr_2;
 	uint32_t cpu_edx, cpu_eax;
 
@@ -403,6 +406,24 @@ void install_page(void)
 	pdpte->pd_phy_addr = (addr_3 >> 12) & 0xfffffffff;
 
 	Print(L"@pdpte->pd_phy_addr = %p\n", (void *) pdpte->pd_phy_addr);
+
+	pde->p = 1;
+	pde->rw = 1;
+	pde->us = 1;
+	unsigned long addr_4 = (unsigned long) pte;
+	pde->pt_phy_addr = (addr_4 >> 12) & 0xfffffffff;
+
+	Print(L"@pde->pt_phy_addr = %p\n", (void *) pde->pt_phy_addr);
+
+	pte->p = 1;
+	pte->rw = 1;
+	pte->us = 1;
+	unsigned long addr_5 = (unsigned long) 0x0;
+	pte->page_4k_phy_addr = (addr_5 >> 12) & 0xfffffffff;
+
+	Print(L"@pte->page_4k_phy_addr = %p\n", (void *) pte->page_4k_phy_addr);
+
+
 
 
 	__asm__ __volatile__("cli");
