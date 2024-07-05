@@ -9,6 +9,7 @@
 #include "fb.h"
 #include "mm.h"
 #include "paging.h"
+#include "printk.h"
 
 uint8_t *sys_var_ptr;
 
@@ -18,7 +19,8 @@ int get_mem_map(UINTN *msize, uint8_t *mmap, UINTN *mkey, UINTN *dsize);
 void get_ram_attrs(UINTN msize, uint8_t mmap[], UINTN dsize, uint64_t ** physical_start_addr_ptr, uint64_t ** physical_end_addr_ptr, uint64_t *ram_size);
 int create_bitmap(UINTN msize, uint8_t mmap[], UINTN dsize, uint8_t **bitmap_ptr_ptr, uint64_t *bitmap_size_ptr);
 int allocate_sys_variables_mem(uint8_t **sys_var_ptr_ptr);
-void page_install(void);
+void install_page(void);
+volatile uint64_t *find_first_4096_byte_aligned_address(char *sys_var_ptr);
 
 EFI_STATUS
 EFIAPI
@@ -89,6 +91,8 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 		}
 	}
 
+	// Print(L"frame_buffer_base = %p\n", (void *) frame_buffer.frame_buffer_base);
+
 
 	/* locating and storing the pointer to the XSDP structure */	
 	num_config_tables = SystemTable->NumberOfTableEntries;
@@ -148,7 +152,17 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	}
 
 
-	Print(L"@sys_var_ptr= %p\n", (void *) sys_var_ptr);
+	// Print(L"@sys_var_ptr= %p\n", (void *) sys_var_ptr);
+
+
+	/* install the page */
+
+
+	install_page();
+
+	Print(L"@done install paging\n");
+	
+
 
 	/* get memory map */	
 	memory_map_uefi.msize = sizeof(memory_map_uefi.mmap);
@@ -177,22 +191,16 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	tty_out_init(frame_buffer);
 
 	/* fill terminal background color with white */
-	fill_tty_bgcolor();
+	// fill_tty_bgcolor();
 	
 	/* initialize gdt */
 	init_gdt();
 
 	/* initialize idt */
 	init_idt();
-
-	// printk("@debug\n");
-	/* install the page */
-	// page_install();
-
-	// printk("@done install paging\n");
-
+	
 	/* jump to kernel */
-	main(xsdp, sys_var_ptr); // use this call atm
+	// main(xsdp, sys_var_ptr); // use this call atm
 	// main(xsdp, &memory_map_uefi);
 
 
@@ -364,42 +372,59 @@ void page_enable()
 			     "mov cr0, rax"::);
 }
 
-void page_install(void)
+void install_page(void)
 {
-	pml4_table_t *pml4e = (pml4_table_t *)sys_var_ptr;
-	pae_page_directory_pointer_table_t *pdpte = (pae_page_directory_pointer_table_t*) (sys_var_ptr + 0x1000);
-	unsigned long addr;
+	volatile void *addr_1 = (void *) find_first_4096_byte_aligned_address(sys_var_ptr);
+
+	Print(L"@install_page: addr_1 = %p\n", addr_1);
+
+	pml4_table_t *pml4e = (pml4_table_t *)addr_1;
+	pae_page_directory_pointer_table_t *pdpte = (pae_page_directory_pointer_table_t*) (addr_1 + 0x1000);
+	unsigned long addr_2;
 	uint32_t cpu_edx, cpu_eax;
 
 	pml4e->p = 1;
 	pml4e->rw = 1;
 	pml4e->us = 1;
-	addr = (unsigned long) pdpte;
-	pml4e->pdpt_phy_addr = (addr >> 12) & 0xfffffffff;
+	addr_2 = (unsigned long) pdpte;
+	pml4e->pdpt_phy_addr = (addr_2 >> 12) & 0xfffffffff;
+
+	Print(L"@debug\n");
 
 	__asm__ __volatile__("cli");
 
 	// enable_paging(pml4e);
 	
-	// __asm__("mov rax, %0\n\t"
-	// 	"call enable_paging"
-	// 	::"m" (pml4e):"rax");
-	//
+	__asm__("mov r8, %0\n\t"
+		"call enable_paging"
+		::"m" (pml4e):"r8");
+	
 
-	printk("@debug\n");
-	page_disable();	
-	printk("@debug1\n");
-	enable_pae();
-	load_pml4_table(pml4e);
+	Print(L"@debug\n");
+	// page_disable();	
+	// printk("@debug1\n");
+	// enable_pae();
+	// load_pml4_table(pml4e);
 
 	//  ; Set LME (long mode enable)
 	// setmsr(0xC0000080 , 0x100, 0);
-	read_msr_reg(0xC0000080 , &cpu_edx, &cpu_eax);
-	cpu_eax |= 0x100;
-	write_msr_reg(0xC0000080 , &cpu_edx, &cpu_eax);
+	// read_msr_reg(0xC0000080 , &cpu_edx, &cpu_eax);
+	// cpu_eax |= 0x100;
+	// write_msr_reg(0xC0000080 , &cpu_edx, &cpu_eax);
 
-	printk("@debug2\n");
-	page_enable();
+	// printk("@debug2\n");
+	// page_enable();
 
 	__asm__ __volatile__("sti");
+}
+
+volatile uint64_t *find_first_4096_byte_aligned_address(char *sys_var_ptr)
+{
+	volatile char *addr = sys_var_ptr;
+
+	while((uint64_t) addr % 4096 != 0) {
+		addr++;
+	}
+
+	return (volatile uint64_t *) addr;
 }

@@ -74,3 +74,16 @@ void fill_tty_bgcolor()
 		*addr++ = tty_bgcolor;
 	}
 }
+
+void put_red_pixel(void)
+{
+	// unsigned int pixels = frame_buffer.horizontal_resolution * frame_buffer.vertical_resolution;
+	uint32_t* addr = frame_buffer.frame_buffer_base;
+
+	*addr = 0xff0000;
+
+
+	// while (pixels--) {
+	// 	*addr++ = bgcolor;
+	// }
+}

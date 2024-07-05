@@ -4,12 +4,19 @@
  * Kernel's main function
  */
 #include <efi.h>
+	#include "printk.h"
 
 int main(void *xsdp, uint8_t *sys_var_ptr)
 {
 	/* initialize the global memory manager */
 	// init_global_mm();	
+	// mm_init();
 
+
+		// printk("Raam Raam sa\n");
+
+
+	put_red_pixel();
 
 //	__asm__ volatile ("mov $60, %eax; mov $0, %edi; syscall "); 
 	
@@ -35,8 +42,8 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 	
 	
 	/* initialize the xhci host controller */
-	if(xhci_init(xsdp, sys_var_ptr) == 1)
-		goto end;
+	// if(xhci_init(xsdp, sys_var_ptr) == 1)
+		// goto end;
 
 
 	// /* init nvme */
