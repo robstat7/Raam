@@ -104,6 +104,8 @@ void draw_borders(void)
 	int fill_color = 0xFF0000;	/* red */
 
 	draw_top_border(fill_color, horizontal_height, rectangle_width);
+
+	draw_bottom_border(fill_color, horizontal_height, rectangle_width);
 }
 
 void draw_top_border(int fill_color, int horizontal_height, int width)
@@ -116,3 +118,17 @@ void draw_top_border(int fill_color, int horizontal_height, int width)
 		}
 	}
 }
+
+void draw_bottom_border(int fill_color, int horizontal_height, int width)
+{
+	int total_pixels = frame_buffer.horizontal_resolution * frame_buffer.vertical_resolution;
+	int total_bottom_rect_pixels = horizontal_height * width;
+	volatile uint32_t* addr = (uint32_t *) frame_buffer.frame_buffer_base + (total_pixels - total_bottom_rect_pixels);
+
+	for (int i = 0; i < width; i++) {
+		for(int j = 0; j < horizontal_height; j++) {
+			*addr++ = fill_color;
+		}
+	}
+}
+
