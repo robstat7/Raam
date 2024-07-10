@@ -63,6 +63,11 @@ void tty_out_init(struct frame_buffer_descriptor fb) {
 	/* init terminal output coordinates */
 	tty_x = tty_page_x_coord;
 	tty_y = tty_page_y_coord;
+/* fill terminal background color with white */
+	fill_tty_bgcolor();
+
+	/* draw rectangular borders */
+	draw_borders();
 }
 
 void fill_tty_bgcolor()
@@ -78,12 +83,36 @@ void fill_tty_bgcolor()
 void put_red_pixel(void)
 {
 	// unsigned int pixels = frame_buffer.horizontal_resolution * frame_buffer.vertical_resolution;
-	uint32_t* addr = frame_buffer.frame_buffer_base;
+	volatile uint32_t* addr = frame_buffer.frame_buffer_base;
 
-	*addr = 0xff0000;
+	// *addr = 0xff0000;
+	*(volatile uint32_t *) 0x4000000000 = 0xff0000;
 
+	// printk("@addr = {p}\n", (void *) addr);
 
 	// while (pixels--) {
 	// 	*addr++ = bgcolor;
 	// }
+}
+
+void draw_borders(void)
+{
+	int rectangle_width = 27;	/* rectanglular border width */
+	int horizontal_height = frame_buffer.horizontal_resolution;
+	int vertical_height = frame_buffer.vertical_resolution;
+
+	int fill_color = 0xFF0000;	/* red */
+
+	draw_top_border(fill_color, horizontal_height, rectangle_width);
+}
+
+void draw_top_border(int fill_color, int horizontal_height, int width)
+{
+	volatile uint32_t* addr = frame_buffer.frame_buffer_base;
+
+	for (int i = 0; i < width; i++) {
+		for(int j = 0; j < horizontal_height; j++) {
+			*addr++ = fill_color;
+		}
+	}
 }

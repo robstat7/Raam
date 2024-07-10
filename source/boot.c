@@ -154,15 +154,7 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
 	// Print(L"@sys_var_ptr= %p\n", (void *) sys_var_ptr);
 
-
-	/* install the page */
-
-
-	install_page();
-
-	Print(L"@done install paging\n");
 	
-
 
 	/* get memory map */	
 	memory_map_uefi.msize = sizeof(memory_map_uefi.mmap);
@@ -199,6 +191,14 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	/* initialize idt */
 	init_idt();
 	
+	
+	/* install the page */
+
+	// install_page();
+
+	// Print(L"@done install paging\n");
+	
+
 	/* jump to kernel */
 	// main(xsdp, sys_var_ptr); // use this call atm
 	// main(xsdp, &memory_map_uefi);
@@ -376,15 +376,21 @@ void install_page(void)
 {
 	volatile char *addr_1 = (void *) find_first_4096_byte_aligned_address(sys_var_ptr);
 
-	Print(L"@install_page: addr_1 = %p\n", (void *) addr_1);
+	// Print(L"@install_page: addr_1 = %p\n", (void *) addr_1);
 
-	pml4_table_t *pml4e = (pml4_table_t *)addr_1;
+	volatile pml4_table_t *pml4e = (pml4_table_t *)addr_1;
 
-	pae_page_directory_pointer_table_t *pdpte = (pae_page_directory_pointer_table_t*) (addr_1 + 0x1000);
+	volatile pae_page_directory_pointer_table_t *pdpt_base = (pae_page_directory_pointer_table_t*) ((char *) pml4e + 0x1000);
 
-	pae_page_directory_table_t *pde = (pae_page_directory_table_t *) ((char *) pdpte + 0x1000);
+	volatile pae_page_directory_pointer_table_t *pdpte = (pae_page_directory_pointer_table_t*) ((char *) pdpt_base + (257 * 8));
 
-	pae_page_table_t *pte = (pae_page_table_t *) ((char *) pde + 0x1000);
+	volatile pae_page_directory_table_t *pde = (pae_page_directory_table_t *) ((char *) pdpt_base + 0x1000);
+
+	// pae_page_table_t *pt_base = (pae_page_table_t *) ((char *) pde + 0x1000);
+	
+	volatile pae_page_table_t *pte = (pae_page_table_t *) ((char *) pde + 0x1000);
+
+	// pae_page_table_t *pte = (pae_page_table_t *) ((char *) pt_base + (16 * 8));
 
 
 	unsigned long addr_2;
@@ -393,35 +399,40 @@ void install_page(void)
 	pml4e->p = 1;
 	pml4e->rw = 1;
 	pml4e->us = 1;
-	addr_2 = (unsigned long) pdpte;
-	pml4e->pdpt_phy_addr = (addr_2 >> 12) & 0xfffffffff;
+	addr_2 = (unsigned long) pdpt_base;
+	pml4e->pdpt_phy_addr = (addr_2 >> 12) & 0x3FFFFFFFFF;
+	// pml4e->pdpt_phy_addr = addr_2;
 
-	Print(L"@pml4e->pdpt_phy_addr = %p\n", (void *) pml4e->pdpt_phy_addr);
+	// Print(L"@pml4e->pdpt_phy_addr = %p\n", (void *) pml4e->pdpt_phy_addr);
 
 	pdpte->p = 1;
 	pdpte->rw = 1;
 	pdpte->us = 1;
 	unsigned long addr_3;
 	addr_3 = (unsigned long) pde;
-	pdpte->pd_phy_addr = (addr_3 >> 12) & 0xfffffffff;
+	pdpte->pd_phy_addr = (addr_3 >> 12) & 0xFFFFF;
+	// pdpte->pd_phy_addr = addr_3;
 
-	Print(L"@pdpte->pd_phy_addr = %p\n", (void *) pdpte->pd_phy_addr);
+	// Print(L"@pdpte->pd_phy_addr = %p\n", (void *) pdpte->pd_phy_addr);
 
 	pde->p = 1;
 	pde->rw = 1;
 	pde->us = 1;
+	// unsigned long addr_4 = (unsigned long) pt_base;
 	unsigned long addr_4 = (unsigned long) pte;
-	pde->pt_phy_addr = (addr_4 >> 12) & 0xfffffffff;
+	pde->pt_phy_addr = (addr_4 >> 12) & 0x3FFFFFFFFF;
+	// pde->pt_phy_addr = addr_4;
 
-	Print(L"@pde->pt_phy_addr = %p\n", (void *) pde->pt_phy_addr);
+	// Print(L"@pde->pt_phy_addr = %p\n", (void *) pde->pt_phy_addr);
 
 	pte->p = 1;
 	pte->rw = 1;
 	pte->us = 1;
-	unsigned long addr_5 = (unsigned long) 0x0;
-	pte->page_4k_phy_addr = (addr_5 >> 12) & 0xfffffffff;
+	unsigned long addr_5 = (unsigned long) 0x4000000000;
+	pte->page_4k_phy_addr = (addr_5 >> 12) & 0x3FFFFFFFFF;
+	// pte->page_4k_phy_addr = addr_5;
 
-	Print(L"@pte->page_4k_phy_addr = %p\n", (void *) pte->page_4k_phy_addr);
+	// Print(L"@pte->page_4k_phy_addr = %p\n", (void *) pte->page_4k_phy_addr);
 
 
 
@@ -435,7 +446,7 @@ void install_page(void)
 		::"m" (pml4e):"r8");
 	
 
-	Print(L"@debug\n");
+//	Print(L"@debug\n");
 	// page_disable();	
 	// printk("@debug1\n");
 	// enable_pae();
