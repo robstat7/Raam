@@ -108,6 +108,8 @@ void draw_borders(void)
 	draw_bottom_border(fill_color, horizontal_height, rectangle_width);
 
 	draw_left_border(fill_color, vertical_height, horizontal_height, rectangle_width);
+
+	draw_right_border(fill_color, vertical_height, horizontal_height, rectangle_width);
 }
 
 void draw_top_border(int fill_color, int horizontal_height, int width)
@@ -144,5 +146,19 @@ void draw_left_border(int fill_color, int vertical_height, int horizontal_height
 		}
 
 		addr = (uint32_t *) frame_buffer.frame_buffer_base + ((i+1) * horizontal_height);
+	}
+}
+
+
+void draw_right_border(int fill_color, int vertical_height, int horizontal_height, int width)
+{
+	volatile uint32_t* addr = frame_buffer.frame_buffer_base;
+
+	for(int i = 0; i < vertical_height; i++) {
+		addr = (uint32_t *) frame_buffer.frame_buffer_base + (((i + 1) * horizontal_height) - width);
+
+		for(int j = 0; j < width; j++) {
+			*addr++ = fill_color;
+		}
 	}
 }
