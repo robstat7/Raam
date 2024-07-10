@@ -57,6 +57,37 @@ void write_char(unsigned char c)
 	}
 }	
 
+void write_hindi_char(unsigned char c)
+{
+	int cx,cy;
+	int mask[8]={128, 64, 32, 16, 8, 4, 2, 1};
+	int offset;
+
+	offset = (int) c;
+	offset = offset * 8;
+
+	if((int) c == 10) {	 /* LF */
+		tty_x = tty_page_x_coord;
+		tty_y += font_height + line_separator_space;
+		return;
+	}
+	
+
+	for(cy=0;cy<8;cy++){
+		for(cx=0;cx<8;cx++){
+			write_pixel(hindi_console_font_8x8[offset+cy]&mask[cx] ? 0xffffff : 0xFF0000, tty_x + cx, tty_y + cy); // bgcolor = red, fgcolor = white
+		}
+	}
+
+	/* update tty output coords */
+	if((tty_x + cx) >= tty_page_width) { // 615 old
+		tty_x = tty_page_x_coord;
+		tty_y += cy + line_separator_space;
+	} else {
+		tty_x = tty_x + cx;
+	}
+}
+
 void tty_out_init(struct frame_buffer_descriptor fb) {
 	frame_buffer = fb;
 
@@ -68,6 +99,9 @@ void tty_out_init(struct frame_buffer_descriptor fb) {
 
 	/* draw rectangular borders */
 	draw_borders();
+
+	/* draw RAAM names */
+	draw_raam_names();
 }
 
 void fill_tty_bgcolor()
@@ -161,4 +195,26 @@ void draw_right_border(int fill_color, int vertical_height, int horizontal_heigh
 			*addr++ = fill_color;
 		}
 	}
+}
+
+void draw_raam_names(void)
+{
+	draw_first_raam_name();
+}
+
+void draw_first_raam_name(void)
+{
+	int horizontal_height = frame_buffer.horizontal_resolution;
+	volatile uint32_t* addr = (uint32_t *) frame_buffer.frame_buffer_base + (5 * horizontal_height) + 5; // x offset = (5 + horizontal_height), y offset = + 5
+	
+	// // top straight line
+	// for (int i = 0; i < 10; i++)
+	// 	write_pixel(0xffffff, horizontal_height + 5 + i, 5);
+
+	// // R of RAAM
+	// राम
+	
+	write_hindi_char(0);	
+	write_hindi_char(1);	
+	// write_hindi_char(2);	
 }

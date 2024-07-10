@@ -19,6 +19,8 @@ build_and_boot_Core:
 	
 	gcc -c fonts.c -o build/fonts.o -Wall
 	
+	gcc -c hindi_fonts.c -o build/hindi_fonts.o -Wall
+	
 	gcc -c test_timer.c -o build/test_timer.o -Wall
 	
 	gcc -c apic.c -o build/apic.o -Wall
@@ -36,7 +38,7 @@ build_and_boot_Core:
 	nasm interrupt.asm -f elf64 -o build/interrupt.o	
 	
 	ld -shared -Bsymbolic -L /home/dileep/gnu-efi/x86_64/lib/ -L /home/dileep/gnu-efi/x86_64/gnuefi/ -T /home/dileep/gnu-efi/gnuefi/elf_x86_64_efi.lds \
-		/home/dileep/gnu-efi/x86_64/gnuefi/crt0-efi-x86_64.o build/boot.o build/main.o build/xhci_usb.o build/timer.o build/tty_io.o build/printk.o build/string.o build/fonts.o build/test_timer.o build/apic.o build/msr_io.o build/descriptor.o build/descriptor_load.o build/isr.o build/paging.o build/interrupt.o -o build/system.so -lefi -lgnuefi
+		/home/dileep/gnu-efi/x86_64/gnuefi/crt0-efi-x86_64.o build/boot.o build/main.o build/xhci_usb.o build/timer.o build/tty_io.o build/printk.o build/string.o build/fonts.o build/hindi_fonts.o build/test_timer.o build/apic.o build/msr_io.o build/descriptor.o build/descriptor_load.o build/isr.o build/paging.o build/interrupt.o -o build/system.so -lefi -lgnuefi
 	
 	objcopy -j .text -j .sdata -j .data -j .rodata -j .dynamic -j .dynsym -j .rel -j .rela -j .rel.* -j .rela.* -j .reloc --target efi-app-x86_64 --subsystem=10 build/system.so build/BOOTx64.EFI
 	
