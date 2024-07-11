@@ -4,10 +4,13 @@
 #include "fb.h"
 #include "fonts.h"
 #include <stdint.h>
+#include <stdlib.h>
 
 /* terminal output coordinates */
 int tty_x;
 int tty_y;
+int tty_border_x;
+int tty_border_y;
 
 uint32_t tty_fgcolor = 0x000000; /* tty text color = black */
 uint32_t tty_bgcolor = 0xffffff; /* white */
@@ -16,6 +19,13 @@ const int tty_page_x_coord = 0; /* tty visible page x coord */
 const int tty_page_y_coord = 0; /* tty visible page y coord */
 const int tty_page_width = 639;
 const int line_separator_space = 2; /* in pixels */
+const int tty_border_x_initial = 2; // in pixels
+const int tty_border_y_initial = 5; /* in pixels */
+const int raam_name_separator_space = 20; /* in pixels */
+// const int rectangle_width = 27;	/* rectanglular border width in pixels */
+const int rectangle_width = 40;		/* rectanglular border width in pixels */
+
+
 
 const int font_height = 8; /* in pixels */
 
@@ -66,35 +76,35 @@ void write_hindi_char(unsigned char c)
 	offset = (int) c;
 	offset = offset * 8;
 
-	if((int) c == 10) {	 /* LF */
-		tty_x = tty_page_x_coord;
-		tty_y += font_height + line_separator_space;
-		return;
-	}
+	// if((int) c == 10) {	 /* LF */
+	// 	tty_border_x = tty_page_x_coord;
+	// 	tty_border_y += font_height + line_separator_space;
+	// 	return;
+	// }
 	
 
 	for(cy=0;cy<8;cy++){
 		for(cx=0;cx<8;cx++){
-			write_pixel(hindi_console_font_8x8[offset+cy]&mask[cx] ? 0xffffff : 0xFF0000, tty_x + cx, tty_y + cy); // bgcolor = red, fgcolor = white
+			write_pixel(hindi_console_font_8x8[offset+cy]&mask[cx] ? 0xffffff : 0xFF0000, tty_border_x + cx, tty_border_y + cy); // bgcolor = red, fgcolor = white
 		}
 	}
 
-	/* update tty output coords */
-	if((tty_x + cx) >= tty_page_width) { // 615 old
-		tty_x = tty_page_x_coord;
-		tty_y += cy + line_separator_space;
-	} else {
-		tty_x = tty_x + cx;
-	}
+	/* update tty border x coordinate */
+	tty_border_x = tty_border_x + cx;
 }
 
 void tty_out_init(struct frame_buffer_descriptor fb) {
 	frame_buffer = fb;
 
+	// init tty border text coordinates
+	tty_border_x = tty_border_x_initial;	
+	tty_border_y = tty_border_y_initial;
+
 	/* init terminal output coordinates */
 	tty_x = tty_page_x_coord;
 	tty_y = tty_page_y_coord;
-/* fill terminal background color with white */
+	
+	/* fill terminal background color with white */
 	fill_tty_bgcolor();
 
 	/* draw rectangular borders */
@@ -131,7 +141,6 @@ void put_red_pixel(void)
 
 void draw_borders(void)
 {
-	int rectangle_width = 27;	/* rectanglular border width */
 	int horizontal_height = frame_buffer.horizontal_resolution;
 	int vertical_height = frame_buffer.vertical_resolution;
 
@@ -199,7 +208,7 @@ void draw_right_border(int fill_color, int vertical_height, int horizontal_heigh
 
 void draw_raam_names(void)
 {
-	draw_first_raam_name();
+	draw_raam_name_in_left_border();
 }
 
 void draw_first_raam_name(void)
@@ -213,8 +222,34 @@ void draw_first_raam_name(void)
 
 	// // R of RAAM
 	// राम
+
+	for(int i = 0; i < 24; i++) {	
+		write_hindi_char(0);	
+		write_hindi_char(1);	
+		write_hindi_char(2);	
+	}
+}
+
+void draw_raam_name_in_left_border(void)
+{
+	// int x_offset = 5;	// in pixels
+	// int y_offset = 3;
+
+	for(int i = 0; i < 18; i++) {
+		draw_raam_name();
+
+		/* update tty output coords */
+		tty_border_x = tty_border_x_initial;
+		tty_border_y += font_height + raam_name_separator_space;
+	}
+
+}
+
+void draw_raam_name(void)
+{
+	// int horizontal_height = frame_buffer.horizontal_resolution;
+	// volatile uint32_t* addr = (uint32_t *) frame_buffer.frame_buffer_base + (5 * horizontal_height) + 5; // x offset = (5 + horizontal_height), y offset = + 5
 	
 	write_hindi_char(0);	
 	write_hindi_char(1);	
-	// write_hindi_char(2);	
 }
