@@ -20,14 +20,17 @@ const int tty_page_y_coord = 0; /* tty visible page y coord */
 const int tty_page_width = 639;
 const int line_separator_space = 2; /* in pixels */
 const int tty_border_x_initial = 2; // in pixels
-const int tty_border_y_initial = 5; /* in pixels */
-const int raam_name_separator_space = 20; /* in pixels */
+// const int tty_border_y_initial = 5; /* in pixels */
+const int tty_border_y_initial = 9; /* in pixels */
+// const int raam_name_separator_space = 20; /* in pixels */
+const int raam_name_separator_space = 25; /* in pixels */
 // const int rectangle_width = 27;	/* rectanglular border width in pixels */
 const int rectangle_width = 40;		/* rectanglular border width in pixels */
 
 
 
 const int font_height = 8; /* in pixels */
+const int font_width = 8; /* in pixels */
 
 struct frame_buffer_descriptor frame_buffer;
 
@@ -209,6 +212,10 @@ void draw_right_border(int fill_color, int vertical_height, int horizontal_heigh
 void draw_raam_names(void)
 {
 	draw_raam_name_in_left_border();
+
+	draw_raam_name_in_bottom_border();
+
+	draw_raam_name_in_right_border();
 }
 
 void draw_first_raam_name(void)
@@ -235,7 +242,7 @@ void draw_raam_name_in_left_border(void)
 	// int x_offset = 5;	// in pixels
 	// int y_offset = 3;
 
-	for(int i = 0; i < 18; i++) {
+	for(int i = 0; i < 16; i++) {
 		draw_raam_name();
 
 		/* update tty output coords */
@@ -252,4 +259,33 @@ void draw_raam_name(void)
 	
 	write_hindi_char(0);	
 	write_hindi_char(1);	
+}
+
+void draw_raam_name_in_bottom_border(void)
+{
+	tty_border_y = (int) frame_buffer.vertical_resolution - tty_border_y_initial - font_height;
+
+	// for(int i = 0; i < 18; i++) {
+		draw_raam_name();
+		// write_hindi_char(2);
+
+		/* update tty output coords */
+		// tty_border_x += raam_name_separator_space;
+	//}
+
+}
+
+void draw_raam_name_in_right_border(void)
+{
+	tty_border_x = frame_buffer.horizontal_resolution - (2 * font_width) - tty_border_x_initial;
+	tty_border_y = tty_border_y_initial;
+
+	for(int i = 0; i < 16; i++) {
+		draw_raam_name();
+
+		/* update tty output coords */
+		tty_border_x = frame_buffer.horizontal_resolution - (2 * font_width) - tty_border_x_initial;
+		tty_border_y += font_height + raam_name_separator_space;
+	}
+
 }
