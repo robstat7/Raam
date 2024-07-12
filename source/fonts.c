@@ -794,6 +794,7 @@ unsigned char console_font_8x8[] = {
     0xC6,  /* 11000110 */
     0x00,  /* 00000000 */
 
+
     /*
      * code=66, hex=0x42, ascii="B"
      */
@@ -3073,4 +3074,5 @@ unsigned char console_font_8x8[] = {
     0x00,  /* 00000000 */
     0x00,  /* 00000000 */
     0x00,  /* 00000000 */
+
 };
