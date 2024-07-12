@@ -275,7 +275,8 @@ void draw_raam_name_in_left_border(void)
 	// int x_offset = 5;	// in pixels
 	// int y_offset = 3;
 
-	for(int i = 0; i < 25; i++) {
+	// for(int i = 0; i < 25; i++) {
+	for(int i = 0; i < 19; i++) {
 		draw_raam_name();
 
 		/* update tty output coords */
@@ -296,11 +297,11 @@ void draw_raam_name(void)
 
 void draw_raam_name_in_bottom_border(void)
 {
-	// tty_border_y = frame_buffer.vertical_resolution - tty_border_y_initial - font_height;
+	// tty_border_y = frame_buffer.vertical_resolution - 1 - tty_border_y_initial - font_height;
 	// tty_border_y = frame_buffer.vertical_resolution - font_height;
 	tty_border_x = tty_border_x_initial + font_width + raam_name_separator_space;
 	tty_border_y = 500;
-	// tty_border_y = 0;
+	// tty_border_y = 100;
 	// tty_border_y = frame_buffer.vertical_resolution - 1000;
 
 	for(int i = 0; i < 14; i++) {
@@ -318,7 +319,8 @@ void draw_raam_name_in_right_border(void)
 	tty_border_x = frame_buffer.horizontal_resolution - (2 * font_width) - tty_border_x_initial;
 	tty_border_y = tty_border_y_initial;
 
-	for(int i = 0; i < 25; i++) {
+	// for(int i = 0; i < 25; i++) {
+	for(int i = 0; i < 19; i++) {
 		draw_raam_name();
 
 		/* update tty output coords */
