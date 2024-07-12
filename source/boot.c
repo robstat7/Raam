@@ -181,6 +181,7 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
 	/* initialize terminal output */
 	tty_out_init(frame_buffer);
+	// printk("hello");
 
 	/* fill terminal background color with white */
 	// fill_tty_bgcolor();
@@ -199,8 +200,8 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	// Print(L"@done install paging\n");
 	
 
-	/* jump to kernel */
-	// main(xsdp, sys_var_ptr); // use this call atm
+	/* jump to core */
+	main(xsdp, sys_var_ptr); // use this call atm
 	// main(xsdp, &memory_map_uefi);
 
 

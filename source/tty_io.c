@@ -13,26 +13,27 @@ int tty_y;
 int tty_border_x;
 int tty_border_y;
 
+const int font_height = 8; /* in pixels */
+const int font_width = 8; /* in pixels */
+
 uint32_t tty_fgcolor = 0x000000; /* tty text color = black */
 uint32_t tty_bgcolor = 0xffffff; /* white */
 
-const int tty_page_x_coord = 0; /* tty visible page x coord */
-const int tty_page_y_coord = 0; /* tty visible page y coord */
-const int tty_page_width = 639;
-const int line_separator_space = 2; /* in pixels */
 const int tty_border_x_initial = 2; // in pixels
 // const int tty_border_y_initial = 5; /* in pixels */
 const int tty_border_y_initial = 9; /* in pixels */
+// const int tty_page_x_coord = 0; /* tty visible page x coord */
+const int tty_page_x_coord = (2 * tty_border_x_initial) + (2 * font_width) + 5; /* tty visible page x coord */
+// const int tty_page_y_coord = 0; /* tty visible page y coord */
+const int tty_page_y_coord = ( 2 * tty_border_y_initial) + font_height + 5; /* tty visible page y coord */
+const int tty_page_width = 639;
+const int line_separator_space = 2; /* in pixels */
 // const int raam_name_separator_space = 20; /* in pixels */
 // const int raam_name_separator_space = 25; /* in pixels */
 const int raam_name_separator_space = 19; /* in pixels */
 // const int rectangle_width = 27;	/* rectanglular border width in pixels */
 const int rectangle_width = 40;		/* rectanglular border width in pixels */
 
-
-
-const int font_height = 8; /* in pixels */
-const int font_width = 8; /* in pixels */
 
 struct frame_buffer_descriptor frame_buffer;
 
@@ -147,7 +148,7 @@ void tty_out_init(struct frame_buffer_descriptor fb) {
 	/* draw RAAM names */
 	draw_raam_names();
 
-	write_chant_raam_name_msg_at_top();
+	// write_chant_raam_name_msg_at_top();
 }
 
 void fill_tty_bgcolor()
@@ -245,6 +246,8 @@ void draw_right_border(int fill_color, int vertical_height, int horizontal_heigh
 void draw_raam_names(void)
 {
 	draw_raam_name_in_left_border();
+
+	// printk("hello");
 
 	draw_raam_name_in_bottom_border();
 

@@ -1,6 +1,6 @@
 /*
  * Write the text file 'test.txt' to the file system.
- * We will later open it from our kernel using
+ * We will later open it from our core using
  * the open syscall.
  */
 #include "fs.h"
