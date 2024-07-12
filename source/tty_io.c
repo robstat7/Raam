@@ -24,7 +24,8 @@ const int tty_border_x_initial = 2; // in pixels
 // const int tty_border_y_initial = 5; /* in pixels */
 const int tty_border_y_initial = 9; /* in pixels */
 // const int raam_name_separator_space = 20; /* in pixels */
-const int raam_name_separator_space = 25; /* in pixels */
+// const int raam_name_separator_space = 25; /* in pixels */
+const int raam_name_separator_space = 19; /* in pixels */
 // const int rectangle_width = 27;	/* rectanglular border width in pixels */
 const int rectangle_width = 40;		/* rectanglular border width in pixels */
 
@@ -91,7 +92,7 @@ void write_hindi_char(unsigned char c)
 
 	for(cy=0;cy<8;cy++){
 		for(cx=0;cx<8;cx++){
-			write_pixel(hindi_console_font_8x8[offset+cy]&mask[cx] ? 0xffffff : 0xFF0000, tty_border_x + cx, tty_border_y + cy); // bgcolor = red, fgcolor = white
+			write_pixel(hindi_console_font_8x8[offset+cy]&mask[cx] ? 0xffffff : 0xe5322c, tty_border_x + cx, tty_border_y + cy); // bgcolor = red, fgcolor = white
 		}
 	}
 
@@ -117,7 +118,7 @@ void write_top_border_char(unsigned char c)
 
 	for(cy=0;cy<8;cy++){
 		for(cx=0;cx<8;cx++){
-			write_pixel(console_font_8x8[offset+cy]&mask[cx] ? 0xffffff : 0xFF0000, tty_border_x + cx, tty_border_y + cy); // bgcolor = red, fgcolor = white
+			write_pixel(console_font_8x8[offset+cy]&mask[cx] ? 0xffffff : 0xe5322c, tty_border_x + cx, tty_border_y + cy); // bgcolor = red, fgcolor = white
 		}
 	}
 
@@ -179,7 +180,7 @@ void draw_borders(void)
 	int horizontal_height = frame_buffer.horizontal_resolution;
 	int vertical_height = frame_buffer.vertical_resolution;
 
-	int fill_color = 0xFF0000;	/* red */
+	int fill_color = 0xe5322c;	/* red */
 
 	draw_top_border(fill_color, horizontal_height, rectangle_width);
 
@@ -274,7 +275,7 @@ void draw_raam_name_in_left_border(void)
 	// int x_offset = 5;	// in pixels
 	// int y_offset = 3;
 
-	for(int i = 0; i < 16; i++) {
+	for(int i = 0; i < 25; i++) {
 		draw_raam_name();
 
 		/* update tty output coords */
@@ -297,11 +298,12 @@ void draw_raam_name_in_bottom_border(void)
 {
 	// tty_border_y = frame_buffer.vertical_resolution - tty_border_y_initial - font_height;
 	// tty_border_y = frame_buffer.vertical_resolution - font_height;
-	tty_border_x = 45;
+	tty_border_x = tty_border_x_initial + font_width + raam_name_separator_space;
 	tty_border_y = 500;
+	// tty_border_y = 0;
 	// tty_border_y = frame_buffer.vertical_resolution - 1000;
 
-	for(int i = 0; i < 12; i++) {
+	for(int i = 0; i < 14; i++) {
 		draw_raam_name();
 		write_hindi_char(2);
 
@@ -316,7 +318,7 @@ void draw_raam_name_in_right_border(void)
 	tty_border_x = frame_buffer.horizontal_resolution - (2 * font_width) - tty_border_x_initial;
 	tty_border_y = tty_border_y_initial;
 
-	for(int i = 0; i < 16; i++) {
+	for(int i = 0; i < 25; i++) {
 		draw_raam_name();
 
 		/* update tty output coords */
@@ -339,8 +341,9 @@ void write_chant_raam_name_msg_at_top(void)
 {
 	// tty_border_x = (2 * tty_border_x_initial) + (2 * font_width) + 10;
 	// tty_border_y = tty_border_y_initial;
-	tty_border_x = 10;
-	tty_border_y = 3;
+	tty_border_x = 30;
+	// tty_border_y = 3;
+	tty_border_y = 0;
 
 	char *msg = "|| Chant Raam name. Wake up your destiny ||";
 
@@ -349,7 +352,7 @@ void write_chant_raam_name_msg_at_top(void)
 	// write_top_border_eng_text(msg, msg_len);
 	// write_top_border_char('R');
 	// write_hindi_char(0);
-	// draw_raam_name();
+	draw_raam_name();
 	// printk("Hello World RAAM JI!");
 	// write_char('A');
 	// write_char('B');
