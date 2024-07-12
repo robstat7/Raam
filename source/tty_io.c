@@ -5,6 +5,7 @@
 #include "fonts.h"
 #include <stdint.h>
 #include <stdlib.h>
+#include "string.h"
 
 /* terminal output coordinates */
 int tty_x;
@@ -34,9 +35,11 @@ const int font_width = 8; /* in pixels */
 
 struct frame_buffer_descriptor frame_buffer;
 
+void write_top_border_char(unsigned char c);
+
 static inline void write_pixel(uint32_t pixel, int x, int y)
 {
-        *((uint32_t*)(frame_buffer.frame_buffer_base + frame_buffer.pixels_per_scan_line * y + x)) = pixel;
+        *((volatile uint32_t*)(frame_buffer.frame_buffer_base + frame_buffer.pixels_per_scan_line * y + x)) = pixel;
 }
 	 
 void write_char(unsigned char c)
@@ -96,6 +99,33 @@ void write_hindi_char(unsigned char c)
 	tty_border_x = tty_border_x + cx;
 }
 
+void write_top_border_char(unsigned char c)
+{
+	int cx,cy;
+	int mask[8]={128, 64, 32, 16, 8, 4, 2, 1};
+	int offset;
+
+	offset = (int) c;
+	offset = offset * 8;
+
+	// if((int) c == 10) {	 /* LF */
+	// 	tty_border_x = tty_page_x_coord;
+	// 	tty_border_y += font_height + line_separator_space;
+	// 	return;
+	// }
+	
+
+	for(cy=0;cy<8;cy++){
+		for(cx=0;cx<8;cx++){
+			write_pixel(console_font_8x8[offset+cy]&mask[cx] ? 0xffffff : 0xFF0000, tty_border_x + cx, tty_border_y + cy); // bgcolor = red, fgcolor = white
+		}
+	}
+
+	/* update tty border x coordinate */
+	tty_border_x = tty_border_x + cx;
+}
+
+
 void tty_out_init(struct frame_buffer_descriptor fb) {
 	frame_buffer = fb;
 
@@ -115,6 +145,8 @@ void tty_out_init(struct frame_buffer_descriptor fb) {
 
 	/* draw RAAM names */
 	draw_raam_names();
+
+	write_chant_raam_name_msg_at_top();
 }
 
 void fill_tty_bgcolor()
@@ -263,16 +295,20 @@ void draw_raam_name(void)
 
 void draw_raam_name_in_bottom_border(void)
 {
-	tty_border_y = (int) frame_buffer.vertical_resolution - tty_border_y_initial - font_height;
+	// tty_border_y = frame_buffer.vertical_resolution - tty_border_y_initial - font_height;
+	// tty_border_y = frame_buffer.vertical_resolution - font_height;
+	tty_border_x = 45;
+	tty_border_y = 500;
+	// tty_border_y = frame_buffer.vertical_resolution - 1000;
 
-	// for(int i = 0; i < 18; i++) {
+	for(int i = 0; i < 12; i++) {
 		draw_raam_name();
-		// write_hindi_char(2);
+		write_hindi_char(2);
 
 		/* update tty output coords */
-		// tty_border_x += raam_name_separator_space;
-	//}
-
+		tty_border_x += raam_name_separator_space;
+	}
+	
 }
 
 void draw_raam_name_in_right_border(void)
@@ -289,3 +325,40 @@ void draw_raam_name_in_right_border(void)
 	}
 
 }
+
+void write_top_border_eng_text(char *msg, int msg_len)
+{
+
+	for(int i = 0; i < msg_len; i++) {
+		write_top_border_char(msg[i]);
+	}
+}
+
+
+void write_chant_raam_name_msg_at_top(void)
+{
+	// tty_border_x = (2 * tty_border_x_initial) + (2 * font_width) + 10;
+	// tty_border_y = tty_border_y_initial;
+	tty_border_x = 10;
+	tty_border_y = 3;
+
+	char *msg = "|| Chant Raam name. Wake up your destiny ||";
+
+	int msg_len = strlen(msg);
+
+	// write_top_border_eng_text(msg, msg_len);
+	// write_top_border_char('R');
+	// write_hindi_char(0);
+	// draw_raam_name();
+	// printk("Hello World RAAM JI!");
+	// write_char('A');
+	// write_char('B');
+
+	// Explicit memory barrier for use with GCC.
+	// asm volatile ("": : :"memory");
+	
+	// fill_tty_bgcolor();
+
+}
+
+
