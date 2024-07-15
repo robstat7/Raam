@@ -19,7 +19,7 @@ int get_mem_map(UINTN *msize, uint8_t *mmap, UINTN *mkey, UINTN *dsize);
 void get_ram_attrs(UINTN msize, uint8_t mmap[], UINTN dsize, uint64_t ** physical_start_addr_ptr, uint64_t ** physical_end_addr_ptr, uint64_t *ram_size);
 int create_bitmap(UINTN msize, uint8_t mmap[], UINTN dsize, uint8_t **bitmap_ptr_ptr, uint64_t *bitmap_size_ptr);
 int allocate_sys_variables_mem(uint8_t **sys_var_ptr_ptr);
-void install_page(void);
+void setup_and_enable_paging(void);
 volatile uint64_t *find_first_4096_byte_aligned_address(char *sys_var_ptr);
 
 EFI_STATUS
@@ -192,12 +192,12 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	/* initialize idt */
 	init_idt();
 	
+	// setup and enable paging
 	
-	/* install the page */
 
-	// install_page();
+	// setup_and_enable_paging();
 
-	// Print(L"@done install paging\n");
+	// Print(L"@done enabling paging\n");
 	
 
 	/* jump to core */
@@ -373,11 +373,11 @@ void page_enable()
 			     "mov cr0, rax"::);
 }
 
-void install_page(void)
+void setup_and_enable_paging(void)
 {
 	volatile char *addr_1 = (void *) find_first_4096_byte_aligned_address(sys_var_ptr);
 
-	// Print(L"@install_page: addr_1 = %p\n", (void *) addr_1);
+	// Print(L"@setup_and_enable_paging: addr_1 = %p\n", (void *) addr_1);
 
 	volatile pml4_table_t *pml4e = (pml4_table_t *)addr_1;
 
