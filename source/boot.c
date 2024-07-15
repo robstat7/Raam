@@ -383,7 +383,7 @@ void setup_and_enable_paging(void)
 
 	volatile pae_page_directory_pointer_table_t *pdpt_base = (pae_page_directory_pointer_table_t*) ((char *) pml4e + 0x1000);
 
-	volatile pae_page_directory_pointer_table_t *pdpte = (pae_page_directory_pointer_table_t*) ((char *) pdpt_base + (257 * 8));
+	volatile pae_page_directory_pointer_table_t *pdpte = (pae_page_directory_pointer_table_t*) ((char *) pdpt_base + (256 * 8));
 
 	volatile pae_page_directory_table_t *pde = (pae_page_directory_table_t *) ((char *) pdpt_base + 0x1000);
 
@@ -411,7 +411,8 @@ void setup_and_enable_paging(void)
 	pdpte->us = 1;
 	unsigned long addr_3;
 	addr_3 = (unsigned long) pde;
-	pdpte->pd_phy_addr = (addr_3 >> 12) & 0xFFFFF;
+	// pdpte->pd_phy_addr = (addr_3 >> 12) & 0xFFFFF;
+	pdpte->pd_phy_addr = (addr_3 >> 12) & 0x3FFFFFFFFF;
 	// pdpte->pd_phy_addr = addr_3;
 
 	// Print(L"@pdpte->pd_phy_addr = %p\n", (void *) pdpte->pd_phy_addr);
