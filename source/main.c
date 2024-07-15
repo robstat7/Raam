@@ -16,7 +16,7 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 		// printk("Raam Raam sa\n");
 
 
-	// put_red_pixel();
+	put_red_pixel();
 
 //	__asm__ volatile ("mov $60, %eax; mov $0, %edi; syscall "); 
 	
@@ -52,7 +52,7 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 	
 
 	/* print the command prompt */
-	printk("# _");
+	// printk("# _");
 
 end:
 	/* hang here */

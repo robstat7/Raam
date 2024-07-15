@@ -180,7 +180,7 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
 
 	/* initialize terminal output */
-	tty_out_init(frame_buffer);
+	// tty_out_init(frame_buffer);
 	// printk("hello");
 
 	/* fill terminal background color with white */
