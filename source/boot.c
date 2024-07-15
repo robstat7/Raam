@@ -195,7 +195,7 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	// setup and enable paging
 	
 
-	// setup_and_enable_paging();
+	setup_and_enable_paging();
 
 	// Print(L"@done enabling paging\n");
 	
