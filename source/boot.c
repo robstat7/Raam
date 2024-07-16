@@ -193,15 +193,16 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	init_idt();
 	
 	// setup and enable paging
-	
 
 	setup_and_enable_paging();
 
 	// Print(L"@done enabling paging\n");
-	
+
+
+	*(volatile uint32_t *) 0x4000000000 = 0xff0000;
 
 	/* jump to core */
-	main(xsdp, sys_var_ptr); // use this call atm
+	// main(xsdp, sys_var_ptr); // use this call atm
 	// main(xsdp, &memory_map_uefi);
 
 
@@ -257,7 +258,8 @@ int get_mem_map(UINTN *msize, uint8_t *mmap, UINTN *mkey, UINTN *dsize)
 /* allocate and clear 2 MiB of memory for system variables */
 int allocate_sys_variables_mem(uint8_t **sys_var_ptr_ptr)
 {
-	EFI_STATUS Status = uefi_call_wrapper(BS->AllocatePool, 3, EfiRuntimeServicesData, 2097152, (void **) sys_var_ptr_ptr);
+	// EFI_STATUS Status = uefi_call_wrapper(BS->AllocatePool, 3, EfiRuntimeServicesData, 2097152, (void **) sys_var_ptr_ptr);
+	EFI_STATUS Status = uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData, 2097152, (void **) sys_var_ptr_ptr);
     	if (EFI_ERROR(Status)) {
              Print(L"error: allocate_pool: out of pool  %x!\n", Status);
              *sys_var_ptr_ptr = NULL;
@@ -402,6 +404,7 @@ void setup_and_enable_paging(void)
 	pml4e->us = 1;
 	addr_2 = (unsigned long) pdpt_base;
 	pml4e->pdpt_phy_addr = (addr_2 >> 12) & 0x3FFFFFFFFF;
+//	pml4e->pdpt_phy_addr = ((addr_2 & 0xFFF) << 4) | ((addr_2 >> 28) & 0xF);
 	// pml4e->pdpt_phy_addr = addr_2;
 
 	// Print(L"@pml4e->pdpt_phy_addr = %p\n", (void *) pml4e->pdpt_phy_addr);
@@ -413,6 +416,7 @@ void setup_and_enable_paging(void)
 	addr_3 = (unsigned long) pde;
 	// pdpte->pd_phy_addr = (addr_3 >> 12) & 0xFFFFF;
 	pdpte->pd_phy_addr = (addr_3 >> 12) & 0x3FFFFFFFFF;
+	// pdpte->pd_phy_addr = ((addr_3 & 0xFFF) << 4) | ((addr_3 >> 28) & 0xF);
 	// pdpte->pd_phy_addr = addr_3;
 
 	// Print(L"@pdpte->pd_phy_addr = %p\n", (void *) pdpte->pd_phy_addr);
@@ -423,6 +427,7 @@ void setup_and_enable_paging(void)
 	// unsigned long addr_4 = (unsigned long) pt_base;
 	unsigned long addr_4 = (unsigned long) pte;
 	pde->pt_phy_addr = (addr_4 >> 12) & 0x3FFFFFFFFF;
+	// pde->pt_phy_addr = ((addr_4 & 0xFFF) << 4) | ((addr_4 >> 28) & 0xF);
 	// pde->pt_phy_addr = addr_4;
 
 	// Print(L"@pde->pt_phy_addr = %p\n", (void *) pde->pt_phy_addr);
@@ -432,6 +437,7 @@ void setup_and_enable_paging(void)
 	pte->us = 1;
 	unsigned long addr_5 = (unsigned long) 0x4000000000;
 	pte->page_4k_phy_addr = (addr_5 >> 12) & 0x3FFFFFFFFF;
+	// pte->page_4k_phy_addr = ((addr_5 & 0xFFF) << 4) | ((addr_5 >> 28) & 0xF);
 	// pte->page_4k_phy_addr = addr_5;
 
 	// Print(L"@pte->page_4k_phy_addr = %p\n", (void *) pte->page_4k_phy_addr);
@@ -442,10 +448,13 @@ void setup_and_enable_paging(void)
 	__asm__ __volatile__("cli");
 
 	// enable_paging(pml4e);
+	//
 	
-	__asm__("mov r8, %0\n\t"
-		"call enable_paging"
-		::"m" (pml4e):"r8");
+	__asm__("mov cr3, %0"::"r" (pml4e));
+	
+	// __asm__("mov r8, %0\n\t"
+	// 	"call enable_paging"
+	// 	::"m" (pml4e):"r8");
 	
 
 //	Print(L"@debug\n");

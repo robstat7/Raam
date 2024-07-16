@@ -1,5 +1,7 @@
 #include <stdint.h>
 
+// Using M = 50
+
 typedef struct _pml4_table {
 	uint64_t p :1;
 	uint64_t rw :1;
