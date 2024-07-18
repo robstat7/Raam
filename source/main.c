@@ -50,6 +50,8 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 // 	if(nvme_init(xsdp, sys_var_ptr) == 1)
 // 		goto end;
 	
+	/* initialize the keyboard driver */
+	init_keyboard_driver();
 
 	/* print the command prompt */
 	printk("# _");
