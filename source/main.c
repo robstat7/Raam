@@ -29,10 +29,10 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 
 	
 
-// 	/* initialize the timer */
-// 	 if(timer_init() == 1)
-// 	 	goto end;
-// 	
+ 	/* initialize the timer */
+ 	 if(timer_init() == 1)
+ 	 	goto end;
+ 	
 // 	/* enable APIC interrupt controller */
 // 	enable_apic();
 // 
@@ -54,7 +54,7 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 	init_keyboard_driver();
 
 	/* print the command prompt */
-	printk("# _");
+	// printk("# _");
 
 end:
 	/* hang here */

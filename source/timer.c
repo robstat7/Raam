@@ -55,7 +55,7 @@ int timer_init(void)
 	}
 	
 	
-	printk("@timer: cpuid: check for GenIntel message passed!\n");
+	// printk("@timer: cpuid: check for GenIntel message passed!\n");
 	
 	__asm__("mov eax, 0x1\n\t"
 		"cpuid\n\t"
@@ -74,7 +74,7 @@ int timer_init(void)
 		
 	/* check whether MSRs are supported */
 	if (value1 == 0x10) {
-		printk("@timer: cpuid: MSRs are supported!\n");
+		// printk("@timer: cpuid: MSRs are supported!\n");
 	} else if (value1 == 0x0) {
 		printk("error: timer: cpuid: MSRs aren't supported!\n");
 		return 1;
@@ -82,7 +82,7 @@ int timer_init(void)
 	
 	/* check whether the CPU has a built-in local APIC and if it hasn't been disabled in MSRs */
 	if(value3 == 0x200) {
-		printk("@timer: cpuid: the cpu has a built-in local apic!\n");
+		// printk("@timer: cpuid: the cpu has a built-in local apic!\n");
 	} else {
 		printk("error: timer: cpuid: either the cpu doesn't have a local apic or it has been disabled in MSRs!\n");
 		return 1;
@@ -90,7 +90,7 @@ int timer_init(void)
 	
 	/* detecting x2APIC mode */
 	if (value2 == 0x200000) {
-		printk("@timer: cpuid: the processor supports the x2APIC capability!\n");
+		// printk("@timer: cpuid: the processor supports the x2APIC capability!\n");
 	} else if (value2 == 0x0) {
 		printk("error: timer: cpuid: the processor doesn't support the x2APIC capability!\n");
 		return 1;
@@ -108,7 +108,7 @@ int timer_init(void)
 		::"m" (value1):);
 	
 	if (value1 == 0x800) {
-		printk("@timer: init: enabled the local APIC!\n");
+		// printk("@timer: init: enabled the local APIC!\n");
 	} else {
 		printk("error: timer: init: unable to enable the local APIC!\n");
 		return 1;
@@ -161,7 +161,7 @@ int timer_init(void)
 		"mov %0, ax"
 		::"m" (cpuid_ax):);
 	
-	printk("@timer: cpuid: core base frequency is {d} MHz\n", cpuid_ax);
+	// printk("@timer: cpuid: core base frequency is {d} MHz\n", cpuid_ax);
 	
 	
 	asm("sti");
@@ -192,9 +192,10 @@ int set_mode(uint32_t mode)
 		::"m" (res):);	
 
 	if(res == 0x1000000)
-		printk("@timer: set_mode: ecx bit 24 is 1!\n");
+		// printk("@timer: set_mode: ecx bit 24 is 1!\n");
+		;
 	else if(res == 0x0) {
-		printk("@timer: set_mode: ecx bit 24 is 0! not setting the mode using only the bit 17 at the moment!\n");
+		// printk("@timer: set_mode: ecx bit 24 is 0! not setting the mode using only the bit 17 at the moment!\n");
 		return 1;
 	}
 
@@ -222,7 +223,7 @@ void set_initial_count(uint64_t count)
 		::"m" (mode):"ecx", "edx", "eax");
 
 	if(mode == 0x0 || mode == 0x20000) {	/* one-shot or periodic mode */
-		printk("@timer: set_initial_count: mode is either one-shot or periodic!\n");
+		// printk("@timer: set_initial_count: mode is either one-shot or periodic!\n");
 
 		__asm__("mov ecx, 0x838\n\t"
 			"mov edx, 0x0\n\t"
