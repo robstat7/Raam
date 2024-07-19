@@ -149,6 +149,10 @@ int timer_init(void)
 	cpu_eax &= 0xfffeffff;
 	
 	write_msr_reg(0x832, &cpu_edx, &cpu_eax);
+
+
+	/* stop the timer */
+	stop_timer();
 	
 	
 	/* register interrupt handler for the timer interrupt */

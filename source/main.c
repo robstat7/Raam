@@ -4,6 +4,7 @@
  * Core's main function
  */
 #include <efi.h>
+#include <stdint.h>
 #include "printk.h"
 
 int main(void *xsdp, uint8_t *sys_var_ptr)
@@ -51,7 +52,19 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 // 		goto end;
 	
 	/* initialize the keyboard driver */
-	init_keyboard_driver();
+	if(init_keyboard_driver() == 1)
+		goto end;
+
+	// uint8_t key;
+
+	// while(1) {
+	// 	key = inportb(0x60);
+
+	// 	if(key == 0xfa || key == 0xab)
+	// 		continue;
+
+	// 	printk("@key: {p}\n", (void *) key);
+	// }
 
 	/* print the command prompt */
 	// printk("# _");

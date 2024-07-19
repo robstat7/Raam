@@ -13,11 +13,3 @@ uint8_t inportb(uint16_t portid)
 	asm volatile("in al, dx":"=a"(ret):"d"(portid));
 	return ret;
 }
-
-/* Input word from port DX into AX */
-uint16_t inportw(uint16_t portid)
-{
-	uint16_t ret;
-	asm volatile("in ax, dx":"=a"(ret):"d"(portid));
-	return ret;
-}
