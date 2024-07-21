@@ -3,9 +3,9 @@
  *
  * Core's main function
  */
-#include <efi.h>
 #include <stdint.h>
 #include "printk.h"
+#include "ps2.h"
 
 int main(void *xsdp, uint8_t *sys_var_ptr)
 {
@@ -50,10 +50,15 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 // 	/* init nvme */
 // 	if(nvme_init(xsdp, sys_var_ptr) == 1)
 // 		goto end;
-	
-	/* initialize the keyboard driver */
-	if(init_keyboard_driver() == 1)
+
+	 /* initialize the PS/2 controller */
+	if(init_ps2_controller() == 1)
 		goto end;
+
+	
+	// /* initialize the keyboard driver */
+	// if(init_keyboard_driver() == 1)
+	// 	goto end;
 
 	// uint8_t key;
 

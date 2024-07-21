@@ -3,9 +3,11 @@ build_and_boot_Core:
 	
 	gcc -masm=intel -I /usr/include/efi -fpic -ffreestanding -fno-stack-protector -fno-stack-check -fshort-wchar -mno-red-zone -maccumulate-outgoing-args -c port_io.c -o build/port_io.o -Wall
 
-	gcc -masm=intel -I /usr/include/efi -fpic -ffreestanding -fno-stack-protector -fno-stack-check -fshort-wchar -mno-red-zone -maccumulate-outgoing-args -c kbd.c -o build/kbd.o -Wall
+	# gcc -masm=intel -I /usr/include/efi -fpic -ffreestanding -fno-stack-protector -fno-stack-check -fshort-wchar -mno-red-zone -maccumulate-outgoing-args -c kbd.c -o build/kbd.o -Wall
 
 	gcc -masm=intel -I /usr/include/efi -fpic -ffreestanding -fno-stack-protector -fno-stack-check -fshort-wchar -mno-red-zone -maccumulate-outgoing-args -c main.c -o build/main.o -Wall
+	
+	gcc -masm=intel -I /usr/include/efi -fpic -ffreestanding -fno-stack-protector -fno-stack-check -fshort-wchar -mno-red-zone -maccumulate-outgoing-args -c ps2.c -o build/ps2.o -Wall
 	
 
 	gcc -masm=intel -I /usr/include/efi -fpic -ffreestanding -fno-stack-protector -fno-stack-check -fshort-wchar -mno-red-zone -maccumulate-outgoing-args -c timer.c -o build/timer.o -Wall
@@ -40,7 +42,7 @@ build_and_boot_Core:
 	nasm interrupt.asm -f elf64 -o build/interrupt.o	
 	
 	ld -shared -Bsymbolic -L /home/dileep/gnu-efi/x86_64/lib/ -L /home/dileep/gnu-efi/x86_64/gnuefi/ -T /home/dileep/gnu-efi/gnuefi/elf_x86_64_efi.lds \
-		/home/dileep/gnu-efi/x86_64/gnuefi/crt0-efi-x86_64.o build/boot.o build/main.o build/timer.o build/tty_io.o build/printk.o build/string.o build/fonts.o build/hindi_fonts.o build/test_timer.o build/apic.o build/msr_io.o build/descriptor.o build/descriptor_load.o build/isr.o build/paging.o build/interrupt.o build/port_io.o build/kbd.o -o build/system.so -lefi -lgnuefi
+		/home/dileep/gnu-efi/x86_64/gnuefi/crt0-efi-x86_64.o build/boot.o build/main.o build/timer.o build/tty_io.o build/printk.o build/string.o build/fonts.o build/hindi_fonts.o build/ps2.o build/test_timer.o build/apic.o build/msr_io.o build/descriptor.o build/descriptor_load.o build/isr.o build/paging.o build/interrupt.o build/port_io.o build/kbd.o -o build/system.so -lefi -lgnuefi
 	
 	objcopy -j .text -j .sdata -j .data -j .rodata -j .dynamic -j .dynsym -j .rel -j .rela -j .rel.* -j .rela.* -j .reloc --target efi-app-x86_64 --subsystem=10 build/system.so build/BOOTx64.EFI
 	
