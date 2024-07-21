@@ -2,6 +2,7 @@
  * PS/2 controller driver.
  */
 #include "ps2.h"
+#include <stdint.h>
 
 uint64_t timer_count = 10000;		/* timer count */
 
@@ -35,6 +36,9 @@ int init_ps2_controller(void)
 
 	printk("@contr 1 new cc_byte = {p}\n", (void *) cc_byte);
 
+	if(send_bytes_to_dev(0x64, 0x60) == 1)
+		return 1;
+
 	if(send_bytes_to_dev(0x64, cc_byte) == 1)
 		return 1;
 
@@ -45,7 +49,7 @@ int init_ps2_controller(void)
 
 		printk("@ps2: second PS/2 port is enabled!\n");
 
-		cc_byte = read_controller_configuration_byte();
+		uint8_t cc_byte = read_controller_configuration_byte();
 		printk("@contr 2 cc_byte = {p}\n", (void *) cc_byte);
 		int dual_channel_controller = !is_dual_channel_controller(cc_byte);
 		printk("@contr 2 dual_channel_controller = {d}\n", dual_channel_controller);
@@ -54,9 +58,35 @@ int init_ps2_controller(void)
 			if(send_bytes_to_dev(0x64, 0xa7) == 1)	/* disable the second PS/2 port */
 				return 1;
 
-			printk("@ps2: second PS/2 port is disabled!\n");
+			printk("@ps2: second PS/2 port disabled!\n");
+			printk("@ps2: only 1 channel is present!\n");
+		} else {
+			printk("@ps2: 2 channels are present!\n");
 		}
 	}
+
+	/* enable the first port */
+
+	if(send_bytes_to_dev(0x64, 0xae) == 1)
+			return 1;
+
+	printk("@ps2: first port enabled!\n");
+
+
+	/* enable interrupts */
+
+	if(dual_channel_controller)
+		cc_byte |= 0x3;	/* set bit 0 and 1 */
+	else
+		cc_byte |= 0x1; /* set bit 0 */
+
+	if(send_bytes_to_dev(0x64, 0x60) == 1)
+			return 1;
+
+	if(send_bytes_to_dev(0x64, cc_byte) == 1)
+			return 1;
+
+	printk("@ps2: interrupts enabled!\n");
 
 	return 0;
 }
