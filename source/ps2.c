@@ -2,8 +2,6 @@
  * PS/2 controller driver.
  */
 #include "ps2.h"
-#include <iso646.h>
-#include <stdint.h>
 
 uint64_t timer_count = 10000;		/* timer count */
 
@@ -22,18 +20,43 @@ int init_ps2_controller(void)
 
 	inportb(0x60);	/* flush the output buffer */
 
-	/* set the controller configuration byte */
-	if(send_bytes_to_dev(0x64, 0x20) == 1)	/* read the configuration byte */
-		return 1;
 
-	uint8_t cc_byte = inportb(0x60);
+	/* read and set the controller configuration byte */
+	
+	uint8_t cc_byte = read_controller_configuration_byte();
 
-	printk("@cc_byte = {p}\n", (void *) cc_byte);
+	printk("@contr 1 cc_byte = {p}\n", (void *) cc_byte);
+
+	int dual_channel_controller = is_dual_channel_controller(cc_byte);
+
+	printk("@contr 1 dual_channel_controller = {d}\n", dual_channel_controller);
 
 	cc_byte &= 0xbc;	/* disable all IRQs and disable translation (clear bits 0, 1 and 6) */
 
+	printk("@contr 1 new cc_byte = {p}\n", (void *) cc_byte);
+
 	if(send_bytes_to_dev(0x64, cc_byte) == 1)
 		return 1;
+
+	/* determine if there are 2 channels */
+	if(dual_channel_controller == 1) {
+		if(send_bytes_to_dev(0x64, 0xa8) == 1)	/* enable the second PS/2 port */
+			return 1;
+
+		printk("@ps2: second PS/2 port is enabled!\n");
+
+		cc_byte = read_controller_configuration_byte();
+		printk("@contr 2 cc_byte = {p}\n", (void *) cc_byte);
+		int dual_channel_controller = !is_dual_channel_controller(cc_byte);
+		printk("@contr 2 dual_channel_controller = {d}\n", dual_channel_controller);
+
+		if(dual_channel_controller) {
+			if(send_bytes_to_dev(0x64, 0xa7) == 1)	/* disable the second PS/2 port */
+				return 1;
+
+			printk("@ps2: second PS/2 port is disabled!\n");
+		}
+	}
 
 	return 0;
 }
@@ -70,4 +93,28 @@ int send_bytes_to_dev(uint16_t port_id, uint8_t value)
 	}
 
 	return flag;
+}
+
+/* read the configuration byte */
+uint8_t read_controller_configuration_byte(void)
+{
+	if(send_bytes_to_dev(0x64, 0x20) == 1)
+		return 1;
+
+	return inportb(0x60);
+}
+
+/* 
+ * check bit 5 of controller configuration byte to determine if it is a "dual channel" controller.
+ * set = true
+ * clear = false
+ */
+int is_dual_channel_controller(uint8_t cc_byte)
+{
+	int dual_channel_controller = 0;
+
+	if((cc_byte & 0x20) == 0x20)
+		dual_channel_controller = 1;
+
+	return dual_channel_controller;
 }
