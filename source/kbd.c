@@ -1,8 +1,9 @@
 /*
  * Keyboard driver.
  */
-#include "printk.h"
 #include "port_io.h"
+#include <stdint.h>
+#include "timer.h"
 
 int detect_ps2dev(void);
 
@@ -19,18 +20,42 @@ int init_keyboard_driver(void)
 
 int detect_ps2dev(void)
 {
+	int flag = 1;
+	uint32_t t_mode = 0x0;	/* one shot timer mode */
+	/* uint64_t t_cnt = 120000; */
+	uint64_t t_cnt = 10000;	/* timer count */
+
 	/* set timer divide value */
 	set_divide_value(0xb); /* divide by 1 (111) */
 
-	uint32_t mode = 0x0;	// one shot timer mode
-	uint64_t initial_cnt = 120000;
+	set_mode(t_mode);	/* set timer mode */ 
 
-	set_mode(mode); 
+
+	inportb(0x60);	/* flush the output buffer */
 
 	printk("@kbd.c: detecting ps/2 device...\n");
+	printk("@kbd.c: status reg value = {p}\n", inportb(0x64));
+
 
 	/* Send the "disable scanning" command 0xF5 to the device */
-	outportb(0x60, 0xf5);
+
+	set_initial_count(t_cnt);	/* set initial count of timer */
+
+	while(read_current_count() > 0) {
+		/* Poll bit 1 of the Status Register ("Input buffer empty/full") until it becomes clear */
+		if((inportb(0x64) & 0x2) == 0) {
+			flag = 0;
+			break;
+		}
+	}
+
+	if(flag == 1)
+	{
+		printk("@kbd.c: error: time-out expired while checking for clear status of the bit #1 of status register!\n");
+		return 1;
+	} else {
+		outportb(0x60, 0xf5);
+	}
 
 	/* TODO: receive byte from device using IRQ */
 

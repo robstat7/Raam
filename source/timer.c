@@ -1,10 +1,7 @@
 /*
  * local apic (in x2apic mode) timer driver
  */
-#include "printk.h"
-#include "string.h"
-#include "msr_io.h"
-#include "isr.h"
+#include "timer.h"
 
 /*
  * initialize the timer
@@ -152,7 +149,7 @@ int timer_init(void)
 
 
 	/* stop the timer */
-	stop_timer();
+	// stop_timer();
 	
 	
 	/* register interrupt handler for the timer interrupt */
