@@ -19,7 +19,7 @@ int get_mem_map(UINTN *msize, uint8_t *mmap, UINTN *mkey, UINTN *dsize);
 void get_ram_attrs(UINTN msize, uint8_t mmap[], UINTN dsize, uint64_t ** physical_start_addr_ptr, uint64_t ** physical_end_addr_ptr, uint64_t *ram_size);
 int create_bitmap(UINTN msize, uint8_t mmap[], UINTN dsize, uint8_t **bitmap_ptr_ptr, uint64_t *bitmap_size_ptr);
 int allocate_sys_variables_mem(uint8_t **sys_var_ptr_ptr);
-void install_page(void);
+void setup_and_enable_paging(void);
 volatile uint64_t *find_first_4096_byte_aligned_address(char *sys_var_ptr);
 
 EFI_STATUS
@@ -180,7 +180,7 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
 
 	/* initialize terminal output */
-	tty_out_init(frame_buffer);
+	// tty_out_init(frame_buffer);
 	// printk("hello");
 
 	/* fill terminal background color with white */
@@ -192,16 +192,17 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	/* initialize idt */
 	init_idt();
 	
-	
-	/* install the page */
+	// setup and enable paging
 
-	// install_page();
+	setup_and_enable_paging();
 
-	// Print(L"@done install paging\n");
-	
+	// Print(L"@done enabling paging\n");
+
+
+	*(volatile uint32_t *) 0x4000000000 = 0xff0000;
 
 	/* jump to core */
-	main(xsdp, sys_var_ptr); // use this call atm
+	// main(xsdp, sys_var_ptr); // use this call atm
 	// main(xsdp, &memory_map_uefi);
 
 
@@ -257,7 +258,8 @@ int get_mem_map(UINTN *msize, uint8_t *mmap, UINTN *mkey, UINTN *dsize)
 /* allocate and clear 2 MiB of memory for system variables */
 int allocate_sys_variables_mem(uint8_t **sys_var_ptr_ptr)
 {
-	EFI_STATUS Status = uefi_call_wrapper(BS->AllocatePool, 3, EfiRuntimeServicesData, 2097152, (void **) sys_var_ptr_ptr);
+	// EFI_STATUS Status = uefi_call_wrapper(BS->AllocatePool, 3, EfiRuntimeServicesData, 2097152, (void **) sys_var_ptr_ptr);
+	EFI_STATUS Status = uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData, 2097152, (void **) sys_var_ptr_ptr);
     	if (EFI_ERROR(Status)) {
              Print(L"error: allocate_pool: out of pool  %x!\n", Status);
              *sys_var_ptr_ptr = NULL;
@@ -373,17 +375,17 @@ void page_enable()
 			     "mov cr0, rax"::);
 }
 
-void install_page(void)
+void setup_and_enable_paging(void)
 {
 	volatile char *addr_1 = (void *) find_first_4096_byte_aligned_address(sys_var_ptr);
 
-	// Print(L"@install_page: addr_1 = %p\n", (void *) addr_1);
+	// Print(L"@setup_and_enable_paging: addr_1 = %p\n", (void *) addr_1);
 
 	volatile pml4_table_t *pml4e = (pml4_table_t *)addr_1;
 
 	volatile pae_page_directory_pointer_table_t *pdpt_base = (pae_page_directory_pointer_table_t*) ((char *) pml4e + 0x1000);
 
-	volatile pae_page_directory_pointer_table_t *pdpte = (pae_page_directory_pointer_table_t*) ((char *) pdpt_base + (257 * 8));
+	volatile pae_page_directory_pointer_table_t *pdpte = (pae_page_directory_pointer_table_t*) ((char *) pdpt_base + (256 * 8));
 
 	volatile pae_page_directory_table_t *pde = (pae_page_directory_table_t *) ((char *) pdpt_base + 0x1000);
 
@@ -402,6 +404,7 @@ void install_page(void)
 	pml4e->us = 1;
 	addr_2 = (unsigned long) pdpt_base;
 	pml4e->pdpt_phy_addr = (addr_2 >> 12) & 0x3FFFFFFFFF;
+//	pml4e->pdpt_phy_addr = ((addr_2 & 0xFFF) << 4) | ((addr_2 >> 28) & 0xF);
 	// pml4e->pdpt_phy_addr = addr_2;
 
 	// Print(L"@pml4e->pdpt_phy_addr = %p\n", (void *) pml4e->pdpt_phy_addr);
@@ -411,7 +414,9 @@ void install_page(void)
 	pdpte->us = 1;
 	unsigned long addr_3;
 	addr_3 = (unsigned long) pde;
-	pdpte->pd_phy_addr = (addr_3 >> 12) & 0xFFFFF;
+	// pdpte->pd_phy_addr = (addr_3 >> 12) & 0xFFFFF;
+	pdpte->pd_phy_addr = (addr_3 >> 12) & 0x3FFFFFFFFF;
+	// pdpte->pd_phy_addr = ((addr_3 & 0xFFF) << 4) | ((addr_3 >> 28) & 0xF);
 	// pdpte->pd_phy_addr = addr_3;
 
 	// Print(L"@pdpte->pd_phy_addr = %p\n", (void *) pdpte->pd_phy_addr);
@@ -422,6 +427,7 @@ void install_page(void)
 	// unsigned long addr_4 = (unsigned long) pt_base;
 	unsigned long addr_4 = (unsigned long) pte;
 	pde->pt_phy_addr = (addr_4 >> 12) & 0x3FFFFFFFFF;
+	// pde->pt_phy_addr = ((addr_4 & 0xFFF) << 4) | ((addr_4 >> 28) & 0xF);
 	// pde->pt_phy_addr = addr_4;
 
 	// Print(L"@pde->pt_phy_addr = %p\n", (void *) pde->pt_phy_addr);
@@ -431,6 +437,7 @@ void install_page(void)
 	pte->us = 1;
 	unsigned long addr_5 = (unsigned long) 0x4000000000;
 	pte->page_4k_phy_addr = (addr_5 >> 12) & 0x3FFFFFFFFF;
+	// pte->page_4k_phy_addr = ((addr_5 & 0xFFF) << 4) | ((addr_5 >> 28) & 0xF);
 	// pte->page_4k_phy_addr = addr_5;
 
 	// Print(L"@pte->page_4k_phy_addr = %p\n", (void *) pte->page_4k_phy_addr);
@@ -441,10 +448,13 @@ void install_page(void)
 	__asm__ __volatile__("cli");
 
 	// enable_paging(pml4e);
+	//
 	
-	__asm__("mov r8, %0\n\t"
-		"call enable_paging"
-		::"m" (pml4e):"r8");
+	__asm__("mov cr3, %0"::"r" (pml4e));
+	
+	// __asm__("mov r8, %0\n\t"
+	// 	"call enable_paging"
+	// 	::"m" (pml4e):"r8");
 	
 
 //	Print(L"@debug\n");
