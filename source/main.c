@@ -34,8 +34,8 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
  	 if(timer_init() == 1)
  	 	goto end;
  	
-// 	/* enable APIC interrupt controller */
-// 	enable_apic();
+ 	/* enable APIC interrupt controller */
+ 	enable_apic();
 // 
 // 
 // 	// /* call test timer function */
@@ -52,7 +52,7 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 // 		goto end;
 
 	 /* initialize the PS/2 controller */
-	if(init_ps2_controller() == 1)
+	if(init_ps2_controller(xsdp) == 1)
 		goto end;
 
 	

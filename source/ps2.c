@@ -4,12 +4,25 @@
 #include "ps2.h"
 #include <stdint.h>
 
-uint64_t timer_count = 10000;		/* timer count */
+uint64_t timer_count = 50000;		/* timer count */
 
 /* PS/2 controller initialization */
-int init_ps2_controller(void)
+int init_ps2_controller(uint64_t *xsdp)
 {
 	setup_timer();
+
+	uint64_t *madt = get_madt_pointer(xsdp);
+
+	if(madt == NULL)
+		return 1;
+
+	uint8_t value = *(volatile uint8_t *) ((char *) madt + 52 );
+
+
+
+	printk("@ioapic value = {d}\n", value);
+
+
 
 	/* disable devices */
 
@@ -88,6 +101,28 @@ int init_ps2_controller(void)
 
 	printk("@ps2: interrupts enabled!\n");
 
+
+	/* reset devices */
+
+	if(send_bytes_to_dev(0x60, 0xff) == 1)
+		return 1;
+
+	/*
+	 * while(inportb(0x60) != 0xfa);
+	 *
+	 * if(dual_channel_controller) {
+	 *	 if(send_bytes_to_dev(0x64, 0xd4) == 1)
+	 *		 return 1;
+	 *
+	 *	 if(send_bytes_to_dev(0x60, 0xff) == 1)
+	 *		return 1;
+	 *
+	 *	 while(inportb(0x60) != 0xfa);
+	 * }
+	 */
+
+	printk("@ps2: device(s) reset completed!\n");
+
 	return 0;
 }
 
@@ -117,7 +152,7 @@ int send_bytes_to_dev(uint16_t port_id, uint8_t value)
 
 	if(flag == 1)
 	{
-		printk("@kbd.c: error: time-out expired while checking for clear status of the bit #1 of status register!\n");
+		printk("@ps2: error: time-out expired while checking for clear status of the bit #1 of status register!\n");
 	} else {
 		outportb(port_id, value);
 	}
