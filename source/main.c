@@ -17,7 +17,7 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 		// printk("Raam Raam sa\n");
 
 
-	put_red_pixel();
+	// put_red_pixel();
 
 //	__asm__ volatile ("mov $60, %eax; mov $0, %edi; syscall "); 
 	
@@ -30,12 +30,12 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 
 	
 
- 	/* initialize the timer */
- 	 if(timer_init() == 1)
- 	 	goto end;
+ 	// /* initialize the timer */
+ 	//  if(timer_init() == 1)
+ 	//  	goto end;
  	
  	/* enable APIC interrupt controller */
- 	enable_apic();
+ 	// enable_apic();
 // 
 // 
 // 	// /* call test timer function */
@@ -47,13 +47,13 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 // 		goto end;
 // 
 // 
-// 	/* init nvme */
-// 	if(nvme_init(xsdp, sys_var_ptr) == 1)
-// 		goto end;
+ 	/* init nvme */
+ 	if(nvme_init(xsdp, sys_var_ptr) == 1)
+ 		goto end;
 
-	 /* initialize the PS/2 controller */
-	if(init_ps2_controller(xsdp) == 1)
-		goto end;
+// 	 /* initialize the PS/2 controller */
+// 	if(init_ps2_controller(xsdp) == 1)
+// 		goto end;
 
 	
 	// /* initialize the keyboard driver */
