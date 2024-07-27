@@ -15,6 +15,7 @@ volatile char *data_region_creation_addr;
 volatile char *nvme_asqb;
 volatile char *nvme_acqb;
 volatile char *nvme_atail;
+volatile char *nvme_ans = NULL;	// 4K Namespace Data
 char nvme_cc = 0x14;	// 4-byte Controller Configuration (CC) register
 
 unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
@@ -133,14 +134,21 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 		printk("nvme: fatal error! CSTS.CFS (1) is not 0!\n");
 		return 1;
 	}
-	
+
+
 	nvme_atail = data_region_creation_addr;
 
 	data_region_creation_addr = nvme_atail + 4;
 
+
+	/* save the identify controller structure */
 	save_controller_struct();
 
+	/* crete the first i/o completion and the i/o submission queues */
 	create_io_queues();
+
+	/* save the active namespace id list */
+	save_active_nsid_list();
 
 	printk("@Done!\n");
 
@@ -426,6 +434,28 @@ void save_controller_struct(void)
 
 	printk("@mdts = {d}\n", mdts);
 }
+
+void save_active_nsid_list(void)
+{
+	uint32_t cdw0 = 0x00000006;	// CDW0 CID 0, PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Identify (0x06)
+	uint32_t cdw1 = 0;	// CDW1 Ignored
+	uint32_t nvme_ID_CTRL = 0x02;		// CDW10 CNS. Identify Active Namespace ID list
+	uint32_t cdw11 = 0;	// CDW11 Ignored
+
+	nvme_ans = data_region_creation_addr;
+
+	data_region_creation_addr += 4096;
+
+
+	printk("nvme_ans val before submitting identify cmd = {p}\n", (void *) (*(volatile uint64_t *)nvme_ans));
+
+	
+	nvme_admin(cdw0, cdw1, nvme_ID_CTRL, cdw11, nvme_ans);
+	
+	
+	printk("nvme_ans val after receiving response = {p}\n", (void *) (*(volatile uint64_t *)nvme_ans));
+}
+
 
 /* 
  * set_admin_q_attrs
