@@ -27,6 +27,7 @@ int wait_for_reset_complete(void);
 void set_admin_q_attrs(void);
 char *get_next_4096_aligned_addr(void);
 void enable_controller(void);
+void create_io_queues(void);
 
 int nvme_init(void *xsdp, char *sys_var_ptr)
 {
@@ -133,6 +134,8 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 	}
 
 	save_controller_struct();
+
+	create_io_queues();
 
 	printk("@Done!\n");
 
@@ -362,14 +365,26 @@ void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, vo
 	if(a_tail_val>= 64)
 		a_tail_val = 0;
 
-
-	printk("nvme_CTRLID val before submitting identify cmd = {p}\n", (void *) (*(volatile uint64_t *)cdw6_7));
-	
-	
 	nvme_admin_savetail(a_tail_val, nvme_atail, tmp);
+}
 
+void create_io_queues(void)
+{	
+	uint32_t val1 = 0x00010005;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Completion Queue (0x05)
+	uint32_t val2 = 0; 	// CDW1 Ignored
+	uint32_t val3 = 0x003F0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
+	uint32_t val4= 0x00000001;		// CDW11 PC Enabled (0)
+	
+	data_region_creation_addr = nvme_acqb + 4096;
+	
+	volatile uint64_t *nvme_iocqb = data_region_creation_addr;			// CDW6-7 DPTR. 4K I/O Completion Queue Base Address
+	
+	data_region_creation_addr += 4096;
 
-	printk("nvme_CTRLID val after receiving response = {p}\n", (void *) (*(volatile uint64_t *)cdw6_7));
+	// Create I/O Completion Queue
+	nvme_admin(val1, val2, val3, val4, nvme_iocqb);
+
+	printk("@nvme: created the first io queue completion queue!\n");
 }
 
 void save_controller_struct(void)
@@ -386,7 +401,18 @@ void save_controller_struct(void)
 
 	data_region_creation_addr += 4096;
 
+	printk("nvme_CTRLID val before submitting identify cmd = {p}\n", (void *) (*(volatile uint64_t *)nvme_CTRLID));
+
 	nvme_admin(cdw0, cdw1, nvme_ID_CTRL, cdw11, nvme_CTRLID);
+	
+	printk("nvme_CTRLID val after receiving response = {p}\n", (void *) (*(volatile uint64_t *)nvme_CTRLID));
+
+
+	/* record the max. transfer size */
+
+	uint8_t mdts = *(volatile uint8_t *) ((char *) nvme_CTRLID + 77);
+
+	printk("@mdts = {d}\n", mdts);
 }
 
 /* 
