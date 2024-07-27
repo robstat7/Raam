@@ -56,9 +56,9 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 		goto end;
 
 	
-	// /* initialize the keyboard driver */
-	// if(init_keyboard_driver() == 1)
-	// 	goto end;
+	/* initialize the keyboard driver */
+	if(init_keyboard_driver() == 1)
+		goto end;
 
 	// uint8_t key;
 
