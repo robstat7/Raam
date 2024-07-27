@@ -16,6 +16,7 @@ volatile char *nvme_asqb;
 volatile char *nvme_acqb;
 volatile char *nvme_atail;
 volatile char *nvme_ans = NULL;	// 4K Namespace Data
+volatile char *nvme_nsid = NULL;	// 4K Namespace Identify Data
 char nvme_cc = 0x14;	// 4-byte Controller Configuration (CC) register
 
 unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
@@ -150,6 +151,9 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 	/* save the active namespace id list */
 	save_active_nsid_list();
 
+	/* save the identify namespace data */
+	save_identify_ns_struct();
+
 	printk("@Done!\n");
 
 	return 0;
@@ -230,36 +234,13 @@ int nvme_init_enable_wait(void)
 
 void nvme_admin_wait(volatile char *acqb_copy)
 {
-	// for(int i = 0; i < 200; i++)
-	// 	printk("{d}", *((char *) nvme_acqb + i));
-
-	// printk("\n");
-
 	uint64_t val;
-	// volatile uint32_t *phy_addr;
-        // uint32_t value;
-
-        // phy_addr = (uint32_t *) ((char *) phy_addr + (1 * 4));      /* get status/command from pcie device's register #1 */
-        // // phy_addr = (volatile uint16_t *) ((char *) phy_addr + 0x0A);
-
-        // value = *phy_addr;
-
-	// value >>= 16;
-
-        // printk("status reg value = {d}\n", value);
-
 
 	do{
 		val = *(volatile uint64_t *) acqb_copy;
-		// val = *(volatile uint64_t *) nvme_acqb;
-		// printk("@val={lld}\n", val);
 	}while(val == 0);
 	
-	printk("@val={lld}\n", val);
-
 	*(volatile uint64_t *) acqb_copy = 0; // Overwrite the old entry
-	// *(volatile uint64_t *) nvme_acqb = 0; // Overwrite the old entry
-	printk("@@done!!!\n");
 }	
 
 void nvme_admin_savetail(uint32_t a_tail_val, volatile char* nvme_atail, uint32_t old_tail_val)
@@ -270,11 +251,9 @@ void nvme_admin_savetail(uint32_t a_tail_val, volatile char* nvme_atail, uint32_
 
 	printk("@old_tail_val={d}\n", old_tail_val);
 
-
 	*nvme_atail = val;	// Save the tail for the next command
 
 	printk("@written tail_val_new={d}\n", val_new);
-
 
 
 	*((volatile uint32_t *) ((char *) nvme_base + 0x1000)) = val_new; // Write the new tail value
@@ -287,9 +266,6 @@ void nvme_admin_savetail(uint32_t a_tail_val, volatile char* nvme_atail, uint32_
 	// Check completion queue
 	old_tail_val = (old_tail_val << 4);	// Each entry is 16 bytes
 	old_tail_val = (uint8_t) old_tail_val + 8;	// Add 8 for DW3
-
-	// printk("@old_tail_val={d}\n", old_tail_val);
-	printk("@acqb_copy={p}\n", (volatile void *) acqb_copy);
 
 	acqb_copy += old_tail_val;
 
@@ -311,17 +287,11 @@ void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, vo
 	// Build the command at the expected location in the Submission ring
 	a_tail_val = *nvme_atail; // Get the current Admin tail value
 
-	// printk("@first a_tail_val={d}\n", a_tail_val);
-	
-	// printk("@admin tail value={d}\n", a_tail_val);
-
 	a_tail_val *= 64;			// Quick multiply by 64
 							//
 	a_tail_val_8 = (uint8_t) a_tail_val;
 
 	nvme_asqb_ptr += a_tail_val_8;
-
-	// printk("@nvme_asqb_ptr={p}\n", (void *) nvme_asqb_ptr);
 
 	// Build the structure
 	*(volatile uint32_t *) nvme_asqb_ptr = cdw0;	// CDW0
@@ -339,39 +309,16 @@ void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, vo
 	*(volatile uint32_t *) (nvme_asqb_ptr + 60) = 0;	// CDW15
 								//
 	
-	// *(volatile uint32_t *) nvme_asqb_ptr = 0;	// CDW15
-	// *(volatile uint32_t *) (nvme_asqb_ptr + 4) = 0;	// CDW14
-	// *(volatile uint32_t *) (nvme_asqb_ptr + 8) = 0;	// CDW13
-	// *(volatile uint32_t *) (nvme_asqb_ptr + 12) = 0;	// CDW12
-	// *(volatile uint32_t *) (nvme_asqb_ptr + 16) = cdw11;	// CDW11
-	// *(volatile uint32_t *) (nvme_asqb_ptr + 20) = cdw10;	// CDW10
-	// *(volatile uint64_t *) (nvme_asqb_ptr + 24) = 0;	// CDW8-9
-	// *(volatile uint64_t *) (nvme_asqb_ptr + 32) = (uint64_t) cdw6_7;	// CDW6-7
-	// *(volatile uint64_t *) (nvme_asqb_ptr + 40) = 0;	// CDW4-5
-	// *(volatile uint32_t *) (nvme_asqb_ptr + 48) = 0;	// CDW3
-	// *(volatile uint32_t *) (nvme_asqb_ptr + 52) = 0;	// CDW2
-	// *(volatile uint32_t *) (nvme_asqb_ptr + 56) = cdw1;	// CDW1
-	// *(volatile uint32_t *) (nvme_asqb_ptr + 60)= cdw0;	// CDW0
-
-
 	// Explicit memory barrier for use with GCC.
 	asm volatile ("": : :"memory");
 
-
-	// for(int i = 0; i < 64; i++)
-	// 	printk("{d}", *((volatile unsigned char *) nvme_asqb_ptr + i));
-
-	// printk("\n");
-
-
+	
 	// Start the Admin command by updating the tail doorbell
 	a_tail_val = 0;
 	a_tail_val = *nvme_atail; // Get the current Admin tail value
 	tmp = a_tail_val;	// Save the old Admin tail value for reading from the completion ring
 	a_tail_val++;			// Add 1 to it
 	
-	// printk("@a_tail_val={d}\n", a_tail_val);
-
 	if(a_tail_val>= 64)
 		a_tail_val = 0;
 
@@ -456,6 +403,26 @@ void save_active_nsid_list(void)
 	printk("nvme_ans val after receiving response = {p}\n", (void *) (*(volatile uint64_t *)nvme_ans));
 }
 
+void save_identify_ns_struct(void)
+{
+	uint32_t cdw0 = 0x00000006;	// CDW0 CID 0, PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Identify (0x06)
+	uint32_t cdw1 = 1;	// CDW1 NSID
+	uint32_t nvme_ID_CTRL = 0x00;		// CDW10 CNS. Identify Namespace data structure for the specified NSID
+	uint32_t cdw11 = 0;	// CDW11 Ignored
+
+	nvme_nsid = data_region_creation_addr;
+
+	data_region_creation_addr += 4096;
+
+
+	printk("nvme_nsid val before submitting identify cmd = {p}\n", (void *) (*(volatile uint64_t *)nvme_nsid));
+
+	
+	nvme_admin(cdw0, cdw1, nvme_ID_CTRL, cdw11, nvme_nsid);
+	
+	
+	printk("nvme_nsid val after receiving response = {p}\n", (void *) (*(volatile uint64_t *)nvme_nsid));
+}
 
 /* 
  * set_admin_q_attrs
