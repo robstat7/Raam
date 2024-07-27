@@ -60,16 +60,48 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 	if(init_keyboard_driver() == 1)
 		goto end;
 
-	// uint8_t key;
+	uint8_t key;
+	uint8_t last_key_pressed = 0x0;
+	char key_char;
 
-	// while(1) {
-	// 	key = inportb(0x60);
+	while(1) {
+		key = inportb(0x60);
 
-	// 	if(key == 0xfa || key == 0xab)
-	// 		continue;
+		/* if( key != last_key_pressed || key == 0xfa || key == 0xab || key == 0xaa || key == 0x0)
+		 *	continue;
+		 */
 
-	// 	printk("@key: {p}\n", (void *) key);
-	// }
+		if(key == last_key_pressed)
+			continue;
+
+
+		else if(key == 0x13)
+			key_char = 'r';
+
+		else if(key == 0x1e)
+			key_char = 'a';
+
+		else if(key == 0x32)
+			key_char = 'm';
+
+		else if(key == 0x39)
+			key_char = ' ';
+
+		else if(key == 0x1c)
+			key_char = 0xa;	/* enter key */
+		else if(key == 0x0e)
+			key_char = 0x8;	/* backspace */
+
+		else
+		{
+			last_key_pressed = key;
+			continue;
+		}
+
+		printk("{c}", key_char);
+
+		last_key_pressed = key;
+	}
 
 	/* print the command prompt */
 	// printk("# _");

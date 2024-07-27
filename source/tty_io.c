@@ -26,7 +26,8 @@ const int tty_border_y_initial = 9; /* in pixels */
 const int tty_page_x_coord = (2 * tty_border_x_initial) + (2 * font_width) + 5; /* tty visible page x coord */
 // const int tty_page_y_coord = 0; /* tty visible page y coord */
 const int tty_page_y_coord = ( 2 * tty_border_y_initial) + font_height + 5; /* tty visible page y coord */
-const int tty_page_width = 639;
+// const int tty_page_width = 639;
+const int tty_page_width = 610; /* previously tested value = 600 */
 const int line_separator_space = 2; /* in pixels */
 // const int raam_name_separator_space = 20; /* in pixels */
 // const int raam_name_separator_space = 25; /* in pixels */
@@ -49,16 +50,40 @@ void write_char(unsigned char c)
 	int cx,cy;
 	int mask[8]={128, 64, 32, 16, 8, 4, 2, 1};
 	int offset;
-
-	offset = (int) c;
-	offset = offset * 8;
-
-	if((int) c == 10) {	 /* LF */
+	
+	if((int)c == 10) {	 /* LF */
 		tty_x = tty_page_x_coord;
 		tty_y += font_height + line_separator_space;
 		return;
 	}
-	
+
+	else if(c == 0x8) {	/* backspace */
+		if(tty_x == tty_page_x_coord) {
+			tty_y -= line_separator_space - font_height;
+			tty_x = tty_page_width - font_width;
+		}
+
+		else
+			tty_x -= font_width;
+
+		c = ' ';
+
+		write_char(c);
+		
+		if(tty_x == tty_page_x_coord) {
+			tty_y -= line_separator_space - font_height;
+			tty_x = tty_page_width - font_width;
+		}
+
+		else
+			tty_x -= font_width;
+
+		return;
+	}
+
+
+	offset = (int) c;
+	offset = offset * 8;
 
 	for(cy=0;cy<8;cy++){
 		for(cx=0;cx<8;cx++){
