@@ -180,7 +180,7 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
 
 	/* initialize terminal output */
-	tty_out_init(frame_buffer);
+	// tty_out_init(frame_buffer);
 	// printk("hello");
 
 	/* fill terminal background color with white */
@@ -194,15 +194,16 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	
 	// setup and enable paging
 
-	// setup_and_enable_paging();
+	setup_and_enable_paging();
 
 	// Print(L"@done enabling paging\n");
 
 
 	// *(volatile uint32_t *) 0x4000000000 = 0xff0000;
+	*(volatile uint32_t *) frame_buffer.frame_buffer_base = 0xff0000;
 
 	/* jump to core */
-	main(xsdp, sys_var_ptr); // use this call atm
+	// main(xsdp, sys_var_ptr); // use this call atm
 	// main(xsdp, &memory_map_uefi);
 
 
@@ -385,7 +386,8 @@ void setup_and_enable_paging(void)
 
 	volatile pae_page_directory_pointer_table_t *pdpt_base = (pae_page_directory_pointer_table_t*) ((char *) pml4e + 0x1000);
 
-	volatile pae_page_directory_pointer_table_t *pdpte = (pae_page_directory_pointer_table_t*) ((char *) pdpt_base + (256 * 8));
+	// volatile pae_page_directory_pointer_table_t *pdpte = (pae_page_directory_pointer_table_t*) ((char *) pdpt_base + (256 * 8));
+	volatile pae_page_directory_pointer_table_t *pdpte = (pae_page_directory_pointer_table_t*) ((char *) pdpt_base + (2 * 8));
 
 	volatile pae_page_directory_table_t *pde = (pae_page_directory_table_t *) ((char *) pdpt_base + 0x1000);
 
@@ -435,7 +437,8 @@ void setup_and_enable_paging(void)
 	pte->p = 1;
 	pte->rw = 1;
 	pte->us = 1;
-	unsigned long addr_5 = (unsigned long) 0x4000000000;
+	// unsigned long addr_5 = (unsigned long) 0x4000000000;
+	unsigned long addr_5 = (unsigned long) 0x80000000;
 	pte->page_4k_phy_addr = (addr_5 >> 12) & 0x3FFFFFFFFF;
 	// pte->page_4k_phy_addr = ((addr_5 & 0xFFF) << 4) | ((addr_5 >> 28) & 0xF);
 	// pte->page_4k_phy_addr = addr_5;
