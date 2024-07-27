@@ -6,6 +6,10 @@
 
 uint64_t timer_count = 50000;		/* timer count */
 
+uint32_t read_ioapic_register(const uint32_t *apic_base, const uint8_t offset);
+void write_ioapic_register(const uint32_t *apic_base, const uint8_t offset, const uint32_t val);
+
+
 /* PS/2 controller initialization */
 int init_ps2_controller(uint64_t *xsdp)
 {
@@ -16,12 +20,40 @@ int init_ps2_controller(uint64_t *xsdp)
 	if(madt == NULL)
 		return 1;
 
-	uint8_t value = *(volatile uint8_t *) ((char *) madt + 52 );
+
+	uint32_t value = *(volatile uint32_t *) ((char *) madt + 40);
+
+	printk("@madt flags = {d}\n", value);
 
 
 
-	printk("@ioapic value = {d}\n", value);
 
+	// I/O APIC address is MADT base address + 44 + (32 * 8) i.e. madt + 300
+
+	uint32_t ioapic_addr = *(volatile uint32_t *) ((char *) madt + 304);
+
+
+	printk("@ioapic addr = {p}\n", (void *) ioapic_addr);
+	
+
+	uint32_t ioapicid = read_ioapic_register(ioapic_addr, 0);
+	
+	printk("@IOAPICID= {p}\n", (void *) ioapicid);
+
+
+	uint32_t ioredtbl0 = read_ioapic_register(ioapic_addr, 0x10);
+	uint32_t ioredtbl1 = read_ioapic_register(ioapic_addr, 0x12);
+	uint32_t ioredtbl2 = read_ioapic_register(ioapic_addr, 0x14);
+
+	printk("@ioredtbl0 = {p}\n", (void *) ioredtbl0);
+	printk("@ioredtbl1 = {p}\n", (void *) ioredtbl1);
+	printk("@ioredtbl2 = {p}\n", (void *) ioredtbl2);
+
+	// write_ioapic_register(ioapic_addr, 0x12, 0x21); //IOREDTBL1 (bits 31:0) = vector nr. (bits 0-7) = 0x21, other bits = 0
+	write_ioapic_register(ioapic_addr, 0x12, 0x10021); //IOREDTBL1 (bits 31:0) = vector nr. (bits 0-7) = 0x21, bit 16 = 1, other bits = 0
+	write_ioapic_register(ioapic_addr, 0x13, 0xf000000); //IOREDTBL1 (bits 63:32) = logical destination addr (bits 59-56) = 0xf (APIC ID), other bits = 0
+
+	/* TODO: fix IRQ1 is not firing. */
 
 
 	/* disable devices */
@@ -107,19 +139,18 @@ int init_ps2_controller(uint64_t *xsdp)
 	if(send_bytes_to_dev(0x60, 0xff) == 1)
 		return 1;
 
-	/*
-	 * while(inportb(0x60) != 0xfa);
-	 *
-	 * if(dual_channel_controller) {
-	 *	 if(send_bytes_to_dev(0x64, 0xd4) == 1)
-	 *		 return 1;
-	 *
-	 *	 if(send_bytes_to_dev(0x60, 0xff) == 1)
-	 *		return 1;
-	 *
-	 *	 while(inportb(0x60) != 0xfa);
-	 * }
-	 */
+	 while(inportb(0x60) != 0xfa);
+
+	 if(dual_channel_controller) {
+	 	 if(send_bytes_to_dev(0x64, 0xd4) == 1)
+	 		 return 1;
+
+	 	 if(send_bytes_to_dev(0x60, 0xff) == 1)
+	 		return 1;
+	 
+	 	 while(inportb(0x60) != 0xfa);
+	  }
+
 
 	printk("@ps2: device(s) reset completed!\n");
 
@@ -182,4 +213,20 @@ int is_dual_channel_controller(uint8_t cc_byte)
 		dual_channel_controller = 1;
 
 	return dual_channel_controller;
+}
+
+void write_ioapic_register(const uint32_t *apic_base, const uint8_t offset, const uint32_t val) 
+{
+    /* tell IOREGSEL where we want to write to */
+    *(volatile uint32_t*)(apic_base) = offset;
+    /* write the value to IOWIN */
+    *(volatile uint32_t*)(apic_base + 0x10) = val; 
+}
+ 
+uint32_t read_ioapic_register(const uint32_t *apic_base, const uint8_t offset)
+{
+    /* tell IOREGSEL where we want to read from */
+    *(volatile uint32_t*)(apic_base) = offset;
+    /* return the data from IOWIN */
+    return *(volatile uint32_t*)(apic_base + 0x10);
 }

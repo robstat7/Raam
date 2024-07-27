@@ -2,6 +2,12 @@
  * local apic (in x2apic mode) timer driver
  */
 #include "timer.h"
+#include "port_io.h"
+
+#define PIC1		0x20		/* IO base address for master PIC */
+#define PIC2		0xA0		/* IO base address for slave PIC */
+#define PIC1_DATA	(PIC1+1)
+#define PIC2_DATA	(PIC2+1)
 
 /*
  * initialize the timer
@@ -16,6 +22,9 @@ int timer_init(void)
 	char *gen_intel_msg = "GenuineIntel";
 
 	asm("cli");
+
+	// disable PIC to use lapic
+	pic_disable();
 
 	/* check for the "GenuineIntel" message */
 	__asm__("mov eax, 0\n\t"
@@ -263,4 +272,10 @@ uint64_t read_current_count(void)
 void stop_timer(void)
 {
 	set_initial_count(0);
+}
+
+//masking every single interrupt.
+void pic_disable(void) {
+    outportb(PIC1_DATA, 0xff);
+    outportb(PIC2_DATA, 0xff);
 }

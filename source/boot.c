@@ -180,12 +180,8 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
 
 	/* initialize terminal output */
-	// tty_out_init(frame_buffer);
-	// printk("hello");
+	tty_out_init(frame_buffer);
 
-	/* fill terminal background color with white */
-	// fill_tty_bgcolor();
-	
 	/* initialize gdt */
 	init_gdt();
 
@@ -194,15 +190,10 @@ efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 	
 	// setup and enable paging
 
-	setup_and_enable_paging();
-
-	// Print(L"@done enabling paging\n");
-
-
-	*(volatile uint32_t *) 0x4000000000 = 0xff0000;
+	// setup_and_enable_paging();
 
 	/* jump to core */
-	// main(xsdp, sys_var_ptr); // use this call atm
+	main(xsdp, sys_var_ptr); // use this call atm
 	// main(xsdp, &memory_map_uefi);
 
 
