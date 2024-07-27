@@ -14,6 +14,7 @@ volatile char *nvme_data_region;
 volatile char *data_region_creation_addr;
 volatile char *nvme_asqb;
 volatile char *nvme_acqb;
+volatile char *nvme_atail;
 char nvme_cc = 0x14;	// 4-byte Controller Configuration (CC) register
 
 unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
@@ -132,6 +133,10 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 		printk("nvme: fatal error! CSTS.CFS (1) is not 0!\n");
 		return 1;
 	}
+	
+	nvme_atail = data_region_creation_addr;
+
+	data_region_creation_addr = nvme_atail + 4;
 
 	save_controller_struct();
 
@@ -291,12 +296,9 @@ void nvme_admin_savetail(uint32_t a_tail_val, volatile char* nvme_atail, uint32_
 void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, volatile char* cdw6_7)
 {
 	volatile char *nvme_asqb_ptr = nvme_asqb;
-	volatile char *nvme_atail;
 	uint32_t tmp, a_tail_val = 0;
 	int64_t val2;
 	uint8_t a_tail_val_8;
-
-	nvme_atail = data_region_creation_addr;
 
 	// Build the command at the expected location in the Submission ring
 	a_tail_val = *nvme_atail; // Get the current Admin tail value
@@ -372,19 +374,31 @@ void create_io_queues(void)
 {	
 	uint32_t val1 = 0x00010005;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Completion Queue (0x05)
 	uint32_t val2 = 0; 	// CDW1 Ignored
-	uint32_t val3 = 0x003F0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
+	uint32_t val3 = 0x003f0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
 	uint32_t val4= 0x00000001;		// CDW11 PC Enabled (0)
-	
-	data_region_creation_addr = nvme_acqb + 4096;
 	
 	volatile uint64_t *nvme_iocqb = data_region_creation_addr;			// CDW6-7 DPTR. 4K I/O Completion Queue Base Address
 	
 	data_region_creation_addr += 4096;
 
-	// Create I/O Completion Queue
+	// Create the first I/O Completion Queue
 	nvme_admin(val1, val2, val3, val4, nvme_iocqb);
 
 	printk("@nvme: created the first io queue completion queue!\n");
+
+
+	// Create the first I/O Submission Queue
+	val1 = 0x00010001;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Submission Queue (0x01)
+	val3 = 0x003f0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
+	val4 = 0x00010001;		// CDW11 CQID 1 (31:16), PC Enabled (0)
+	
+	volatile uint64_t *nvme_iosqb = data_region_creation_addr;	// CDW6-7 DPTR. 4K I/O Submission Queue Base Address
+	
+	data_region_creation_addr += 4096;
+
+	nvme_admin(val1, val2, val3, val4, nvme_iosqb);
+	
+	printk("@nvme: created the first io submission queue!\n");
 }
 
 void save_controller_struct(void)
@@ -394,8 +408,6 @@ void save_controller_struct(void)
 	uint32_t nvme_ID_CTRL = 0x01;		// CDW10 CNS. Identify Controller data structure for the controller
 	uint32_t cdw11 = 0;	// CDW11 Ignored
 	volatile char *nvme_CTRLID;	// 4K Controller Identify Data
-
-	data_region_creation_addr = nvme_acqb + 4096;
 
 	nvme_CTRLID = data_region_creation_addr;
 
@@ -467,6 +479,9 @@ int configure_admin_q(void)
 	data_region_creation_addr = nvme_asqb + 4096;
 
 	nvme_acqb = data_region_creation_addr;
+
+	data_region_creation_addr = nvme_acqb + 4096;
+
 
 	printk("@new asqb={p}\n", (volatile void *) nvme_asqb);
 	printk("@new acqb={p}\n", (volatile void *) nvme_acqb);
