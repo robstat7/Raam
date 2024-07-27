@@ -234,13 +234,15 @@ void nvme_admin_wait(volatile char *acqb_copy)
 
 
 	do{
-		// val = *(volatile uint64_t *) acqb_copy;
-		val = *(volatile uint64_t *) nvme_acqb;
+		val = *(volatile uint64_t *) acqb_copy;
+		// val = *(volatile uint64_t *) nvme_acqb;
 		// printk("@val={lld}\n", val);
 	}while(val == 0);
+	
+	printk("@val={lld}\n", val);
 
-	// *(volatile uint64_t *) acqb_copy = 0; // Overwrite the old entry
-	*(volatile uint64_t *) nvme_acqb = 0; // Overwrite the old entry
+	*(volatile uint64_t *) acqb_copy = 0; // Overwrite the old entry
+	// *(volatile uint64_t *) nvme_acqb = 0; // Overwrite the old entry
 	printk("@@done!!!\n");
 }	
 
@@ -360,7 +362,14 @@ void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, vo
 	if(a_tail_val>= 64)
 		a_tail_val = 0;
 
+
+	printk("nvme_CTRLID val before submitting identify cmd = {p}\n", (void *) (*(volatile uint64_t *)cdw6_7));
+	
+	
 	nvme_admin_savetail(a_tail_val, nvme_atail, tmp);
+
+
+	printk("nvme_CTRLID val after receiving response = {p}\n", (void *) (*(volatile uint64_t *)cdw6_7));
 }
 
 void save_controller_struct(void)
