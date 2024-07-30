@@ -380,7 +380,8 @@ void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, vo
 
 void create_io_queues(void)
 {	
-	uint32_t cdw0 = 0x00010005;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Completion Queue (0x05)
+	// uint32_t cdw0 = 0x00010005;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Completion Queue (0x05)
+	uint32_t cdw0 = 0x00000005;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Completion Queue (0x05)
 	uint32_t cdw1 = 0; 	// CDW1 Ignored
 	uint32_t cdw10 = 0x003f0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
 	uint32_t cdw11 = 0x00000001;		// CDW11 PC Enabled (0)
@@ -396,7 +397,8 @@ void create_io_queues(void)
 
 
 	// Create the first I/O Submission Queue
-	cdw0  = 0x00010001;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Submission Queue (0x01)
+	// cdw0  = 0x00010001;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Submission Queue (0x01)
+	cdw0  = 0x00000001;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Submission Queue (0x01)
 	cdw10 = 0x003f0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
 	cdw11 = 0x00010001;		// CDW11 CQID 1 (31:16), PC Enabled (0)
 	
@@ -484,8 +486,7 @@ void read_nvme(void)
 {
 	uint32_t cdw0 = 0x00000002;	// CDW0 CID 0, PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command read (0x02)
 	uint32_t cdw1 = 1;	// CDW1 NSID
-	uint32_t cdw10 = 421914624;		// CDW10 
-	uint32_t cdw11 = 0;	// CDW11 
+	uint32_t cdw10_11 = 421914624;		// CDW10 
 	uint32_t cdw12 = 0;
 
 	nvme_read = data_region_creation_addr;
@@ -520,8 +521,7 @@ void read_nvme(void)
 	*(volatile uint64_t *) (nvme_iosqb_ptr + 16) = 0;	// CDW4-5
 	*(volatile uint64_t *) (nvme_iosqb_ptr + 24) = (uint64_t) nvme_read;	// CDW6-7
 	*(volatile uint64_t *) (nvme_iosqb_ptr + 32) = 0;	// CDW8-9
-	*(volatile uint32_t *) (nvme_iosqb_ptr + 40) = cdw10;	// CDW10
-	*(volatile uint32_t *) (nvme_iosqb_ptr + 44) = cdw11;	// CDW11
+	*(volatile uint64_t *) (nvme_iosqb_ptr + 40) = cdw10_11;	// CDW10_11
 	*(volatile uint32_t *) (nvme_iosqb_ptr + 48) = cdw12;	// CDW12
 	*(volatile uint32_t *) (nvme_iosqb_ptr + 52) = 0;	// CDW13
 	*(volatile uint32_t *) (nvme_iosqb_ptr + 56) = 0;	// CDW14
