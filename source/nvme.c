@@ -1,5 +1,5 @@
 /*
- * NVMe PCIe driver.
+ * NVMe over PCIe driver.
  */
 #include "string.h"
 #include "printk.h"
@@ -15,8 +15,12 @@ volatile char *data_region_creation_addr;
 volatile char *nvme_asqb;
 volatile char *nvme_acqb;
 volatile char *nvme_atail;
+volatile char *nvme_iotail;
 volatile char *nvme_ans = NULL;	// 4K Namespace Data
 volatile char *nvme_nsid = NULL;	// 4K Namespace Identify Data
+volatile char *nvme_read = NULL;	// 4K Namespace Identify Data
+volatile char *nvme_iosqb;
+volatile char *nvme_iocqb ;
 char nvme_cc = 0x14;	// 4-byte Controller Configuration (CC) register
 
 unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
@@ -149,10 +153,17 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 	create_io_queues();
 
 	/* save the active namespace id list */
-	save_active_nsid_list();
+	// save_active_nsid_list();
 
 	/* save the identify namespace data */
-	save_identify_ns_struct();
+	// save_identify_ns_struct();
+
+	nvme_iotail = data_region_creation_addr;
+
+	data_region_creation_addr = nvme_iotail + 4;
+
+	/* read 1 block from /dev/nvme0n1p6 partition */
+	read_nvme();
 
 	printk("@Done!\n");
 
@@ -274,6 +285,48 @@ void nvme_admin_savetail(uint32_t a_tail_val, volatile char* nvme_atail, uint32_
 	nvme_admin_wait(acqb_copy);
 }
 
+void nvme_io_wait(volatile uint64_t *iocqb_copy)
+{
+	uint64_t val;
+
+	do{
+		val = *(volatile uint64_t *) iocqb_copy;
+	}while(val == 0);
+	
+	*(volatile uint64_t *) iocqb_copy = 0; // Overwrite the old entry
+}	
+
+void nvme_io_savetail(uint32_t io_tail_val, volatile char* nvme_iotail, uint32_t old_tail_val)
+{
+	uint8_t val = (uint8_t) io_tail_val;
+	uint32_t val_new = val;
+	volatile char *iocqb_copy = nvme_iocqb;
+
+	printk("@old_tail_val={d}\n", old_tail_val);
+
+	*nvme_iotail = val;	// Save the tail for the next command
+
+	printk("@written tail_val_new={d}\n", val_new);
+
+
+	*((volatile uint32_t *) ((char *) nvme_base + 0x1008)) = val_new; // Write the new tail value
+
+
+	// Explicit memory barrier for use with GCC.
+	asm volatile ("": : :"memory");
+
+
+	// Check completion queue
+	old_tail_val = (old_tail_val << 4);	// Each entry is 16 bytes
+	old_tail_val = (uint8_t) old_tail_val + 8;	// Add 8 for DW3
+
+	iocqb_copy += old_tail_val;
+
+	printk("@iocqb_copy={p}\n", (volatile void *) iocqb_copy);
+	
+	nvme_io_wait(iocqb_copy);
+}
+
 /*
  * nvme_admin -- Perform an Admin operation on a nvme controller
  */
@@ -327,31 +380,31 @@ void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, vo
 
 void create_io_queues(void)
 {	
-	uint32_t val1 = 0x00010005;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Completion Queue (0x05)
-	uint32_t val2 = 0; 	// CDW1 Ignored
-	uint32_t val3 = 0x003f0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
-	uint32_t val4= 0x00000001;		// CDW11 PC Enabled (0)
+	uint32_t cdw0 = 0x00010005;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Completion Queue (0x05)
+	uint32_t cdw1 = 0; 	// CDW1 Ignored
+	uint32_t cdw10 = 0x003f0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
+	uint32_t cdw11 = 0x00000001;		// CDW11 PC Enabled (0)
 	
-	volatile uint64_t *nvme_iocqb = data_region_creation_addr;			// CDW6-7 DPTR. 4K I/O Completion Queue Base Address
+	nvme_iocqb = data_region_creation_addr;			// CDW6-7 DPTR. 4K I/O Completion Queue Base Address
 	
 	data_region_creation_addr += 4096;
 
 	// Create the first I/O Completion Queue
-	nvme_admin(val1, val2, val3, val4, nvme_iocqb);
+	nvme_admin(cdw0, cdw1, cdw10, cdw11, nvme_iocqb);
 
 	printk("@nvme: created the first io queue completion queue!\n");
 
 
 	// Create the first I/O Submission Queue
-	val1 = 0x00010001;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Submission Queue (0x01)
-	val3 = 0x003f0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
-	val4 = 0x00010001;		// CDW11 CQID 1 (31:16), PC Enabled (0)
+	cdw0  = 0x00010001;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Submission Queue (0x01)
+	cdw10 = 0x003f0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
+	cdw11 = 0x00010001;		// CDW11 CQID 1 (31:16), PC Enabled (0)
 	
-	volatile uint64_t *nvme_iosqb = data_region_creation_addr;	// CDW6-7 DPTR. 4K I/O Submission Queue Base Address
+	nvme_iosqb = data_region_creation_addr;	// CDW6-7 DPTR. 4K I/O Submission Queue Base Address
 	
 	data_region_creation_addr += 4096;
 
-	nvme_admin(val1, val2, val3, val4, nvme_iosqb);
+	nvme_admin(cdw0, cdw1, cdw10, cdw11, nvme_iosqb);
 	
 	printk("@nvme: created the first io submission queue!\n");
 }
@@ -373,6 +426,9 @@ void save_controller_struct(void)
 	nvme_admin(cdw0, cdw1, nvme_ID_CTRL, cdw11, nvme_CTRLID);
 	
 	printk("nvme_CTRLID val after receiving response = {p}\n", (void *) (*(volatile uint64_t *)nvme_CTRLID));
+
+
+	/* TODO: check if it is an i/o controller */
 
 
 	/* record the max. transfer size */
@@ -423,6 +479,78 @@ void save_identify_ns_struct(void)
 	
 	printk("nvme_nsid val after receiving response = {p}\n", (void *) (*(volatile uint64_t *)nvme_nsid));
 }
+
+void read_nvme(void)
+{
+	uint32_t cdw0 = 0x00000002;	// CDW0 CID 0, PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command read (0x02)
+	uint32_t cdw1 = 1;	// CDW1 NSID
+	uint32_t cdw10 = 421914624;		// CDW10 
+	uint32_t cdw11 = 0;	// CDW11 
+	uint32_t cdw12 = 0;
+
+	nvme_read = data_region_creation_addr;
+
+	data_region_creation_addr += 4096;
+
+
+	printk("nvme_read val before submitting identify cmd = {d}\n", *(volatile uint64_t *)nvme_read);
+
+	
+	volatile char *nvme_iosqb_ptr = nvme_iosqb;
+	uint32_t tmp, io_tail_val = 0;
+	int64_t val2;
+	uint8_t io_tail_val_8;
+
+	// Build the command at the expected location in the Submission ring
+	io_tail_val = *nvme_iotail; // Get the current io tail value
+
+	io_tail_val *= 64;			// Quick multiply by 64
+							//
+	io_tail_val_8 = (uint8_t) io_tail_val;
+
+	nvme_iosqb_ptr += io_tail_val_8;
+
+	printk("@nvme_iosqb_ptr before = {d}\n", *(volatile uint64_t *) nvme_iosqb_ptr);
+
+	// Build the structure
+	*(volatile uint32_t *) nvme_iosqb_ptr = cdw0;	// CDW0
+	*(volatile uint32_t *) (nvme_iosqb_ptr + 4) = cdw1;	// CDW1
+	*(volatile uint32_t *) (nvme_iosqb_ptr + 8) = 0;	// CDW2
+	*(volatile uint32_t *) (nvme_iosqb_ptr + 12) = 0;	// CDW3
+	*(volatile uint64_t *) (nvme_iosqb_ptr + 16) = 0;	// CDW4-5
+	*(volatile uint64_t *) (nvme_iosqb_ptr + 24) = (uint64_t) nvme_read;	// CDW6-7
+	*(volatile uint64_t *) (nvme_iosqb_ptr + 32) = 0;	// CDW8-9
+	*(volatile uint32_t *) (nvme_iosqb_ptr + 40) = cdw10;	// CDW10
+	*(volatile uint32_t *) (nvme_iosqb_ptr + 44) = cdw11;	// CDW11
+	*(volatile uint32_t *) (nvme_iosqb_ptr + 48) = cdw12;	// CDW12
+	*(volatile uint32_t *) (nvme_iosqb_ptr + 52) = 0;	// CDW13
+	*(volatile uint32_t *) (nvme_iosqb_ptr + 56) = 0;	// CDW14
+	*(volatile uint32_t *) (nvme_iosqb_ptr + 60) = 0;	// CDW15
+								//
+	
+	printk("@nvme_iosqb_ptr after = {d}\n", *(volatile uint64_t *) nvme_iosqb_ptr);
+
+
+	// Explicit memory barrier for use with GCC.
+	asm volatile ("": : :"memory");
+
+	
+	// Start the read command by updating the tail doorbell
+	io_tail_val = 0;
+	io_tail_val = *nvme_iotail; // Get the current io tail value
+	tmp = io_tail_val;	// Save the old io tail value for reading from the completion ring
+	io_tail_val++;			// Add 1 to it
+	
+	if(io_tail_val>= 64)
+		io_tail_val = 0;
+
+	nvme_io_savetail(io_tail_val, nvme_iotail, tmp);
+
+
+	printk("nvme_read val after submitting identify cmd = {p}\n", *(volatile uint64_t *)nvme_read);
+
+}
+
 
 /* 
  * set_admin_q_attrs
