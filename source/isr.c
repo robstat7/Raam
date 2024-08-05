@@ -23,7 +23,7 @@ void timer_handler(registers_t regs)
 {
 	uint32_t cpu_edx = 0x0, cpu_eax = 0x0;
 
-	printk("interrupt: timer: recieved interrupt: {d}\n", regs.int_no);
+	// printk("interrupt: timer: recieved interrupt: {d}\n", regs.int_no);
 	write_msr_reg(0x80b, &cpu_edx, &cpu_eax);
 }
 

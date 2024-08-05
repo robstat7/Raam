@@ -17,7 +17,7 @@ void enable_apic(void)
 
 	write_msr_reg(0x80f, &cpu_edx, &cpu_eax);
 
-	printk("@apic: started receiving interrupts!\n");
+	// printk("@apic: started receiving interrupts!\n");
 
 
 	/* set task priority to 0 to allow all */

@@ -23,7 +23,7 @@ int init_ps2_controller(uint64_t *xsdp)
 
 	uint32_t value = *(volatile uint32_t *) ((char *) madt + 40);
 
-	printk("@madt flags = {d}\n", value);
+	// printk("@madt flags = {d}\n", value);
 
 
 
@@ -33,21 +33,21 @@ int init_ps2_controller(uint64_t *xsdp)
 	uint32_t ioapic_addr = *(volatile uint32_t *) ((char *) madt + 304);
 
 
-	printk("@ioapic addr = {p}\n", (void *) ioapic_addr);
+	// printk("@ioapic addr = {p}\n", (void *) ioapic_addr);
 	
 
 	uint32_t ioapicid = read_ioapic_register(ioapic_addr, 0);
 	
-	printk("@IOAPICID= {p}\n", (void *) ioapicid);
+	// printk("@IOAPICID= {p}\n", (void *) ioapicid);
 
 
 	uint32_t ioredtbl0 = read_ioapic_register(ioapic_addr, 0x10);
 	uint32_t ioredtbl1 = read_ioapic_register(ioapic_addr, 0x12);
 	uint32_t ioredtbl2 = read_ioapic_register(ioapic_addr, 0x14);
 
-	printk("@ioredtbl0 = {p}\n", (void *) ioredtbl0);
-	printk("@ioredtbl1 = {p}\n", (void *) ioredtbl1);
-	printk("@ioredtbl2 = {p}\n", (void *) ioredtbl2);
+	// printk("@ioredtbl0 = {p}\n", (void *) ioredtbl0);
+	// printk("@ioredtbl1 = {p}\n", (void *) ioredtbl1);
+	// printk("@ioredtbl2 = {p}\n", (void *) ioredtbl2);
 
 	// write_ioapic_register(ioapic_addr, 0x12, 0x21); //IOREDTBL1 (bits 31:0) = vector nr. (bits 0-7) = 0x21, other bits = 0
 	write_ioapic_register(ioapic_addr, 0x12, 0x10021); //IOREDTBL1 (bits 31:0) = vector nr. (bits 0-7) = 0x21, bit 16 = 1, other bits = 0
@@ -71,15 +71,15 @@ int init_ps2_controller(uint64_t *xsdp)
 	
 	uint8_t cc_byte = read_controller_configuration_byte();
 
-	printk("@contr 1 cc_byte = {p}\n", (void *) cc_byte);
+	// printk("@contr 1 cc_byte = {p}\n", (void *) cc_byte);
 
 	int dual_channel_controller = is_dual_channel_controller(cc_byte);
 
-	printk("@contr 1 dual_channel_controller = {d}\n", dual_channel_controller);
+	// printk("@contr 1 dual_channel_controller = {d}\n", dual_channel_controller);
 
 	cc_byte &= 0xbc;	/* disable all IRQs and disable translation (clear bits 0, 1 and 6) */
 
-	printk("@contr 1 new cc_byte = {p}\n", (void *) cc_byte);
+	// printk("@contr 1 new cc_byte = {p}\n", (void *) cc_byte);
 
 	if(send_bytes_to_dev(0x64, 0x60) == 1)
 		return 1;
@@ -92,21 +92,21 @@ int init_ps2_controller(uint64_t *xsdp)
 		if(send_bytes_to_dev(0x64, 0xa8) == 1)	/* enable the second PS/2 port */
 			return 1;
 
-		printk("@ps2: second PS/2 port is enabled!\n");
+		// printk("@ps2: second PS/2 port is enabled!\n");
 
 		uint8_t cc_byte = read_controller_configuration_byte();
-		printk("@contr 2 cc_byte = {p}\n", (void *) cc_byte);
+		// printk("@contr 2 cc_byte = {p}\n", (void *) cc_byte);
 		int dual_channel_controller = !is_dual_channel_controller(cc_byte);
-		printk("@contr 2 dual_channel_controller = {d}\n", dual_channel_controller);
+		// printk("@contr 2 dual_channel_controller = {d}\n", dual_channel_controller);
 
 		if(dual_channel_controller) {
 			if(send_bytes_to_dev(0x64, 0xa7) == 1)	/* disable the second PS/2 port */
 				return 1;
 
-			printk("@ps2: second PS/2 port disabled!\n");
-			printk("@ps2: only 1 channel is present!\n");
+			// printk("@ps2: second PS/2 port disabled!\n");
+			// printk("@ps2: only 1 channel is present!\n");
 		} else {
-			printk("@ps2: 2 channels are present!\n");
+			// printk("@ps2: 2 channels are present!\n");
 		}
 	}
 
@@ -115,7 +115,7 @@ int init_ps2_controller(uint64_t *xsdp)
 	if(send_bytes_to_dev(0x64, 0xae) == 1)
 			return 1;
 
-	printk("@ps2: first port enabled!\n");
+	// printk("@ps2: first port enabled!\n");
 
 
 	/* enable interrupts */
@@ -131,7 +131,7 @@ int init_ps2_controller(uint64_t *xsdp)
 	if(send_bytes_to_dev(0x64, cc_byte) == 1)
 			return 1;
 
-	printk("@ps2: interrupts enabled!\n");
+	// printk("@ps2: interrupts enabled!\n");
 
 
 	/* reset devices */
@@ -152,7 +152,7 @@ int init_ps2_controller(uint64_t *xsdp)
 	  }
 
 
-	printk("@ps2: device(s) reset completed!\n");
+	// printk("@ps2: device(s) reset completed!\n");
 
 	return 0;
 }

@@ -9,26 +9,21 @@
 
 int main(void *xsdp, uint8_t *sys_var_ptr)
 {
-	/* initialize the global memory manager */
-	// init_global_mm();	
-	// mm_init();
+	printk("_/\\_ Welcome to Raam Computer Software System x86-64 version 0.02 _/\\_");
+	printk("\n");
+	printk("  ");
+	printk("\n");
+	printk("  ");
+	printk("\n");
+	printk("  ");
+	printk("\n");
+	printk("Raam Raam sa _/\\_ _/\\_ _/\\_");
+	printk("\n  \n  \n  \n");
 
+	printk("Type \"Raam\" name in capitalized case and press enter to continue ...");
+	printk("\n  \n  \n");
 
-		// printk("Raam Raam sa\n");
-
-
-	// put_red_pixel();
-
-//	__asm__ volatile ("mov $60, %eax; mov $0, %edi; syscall "); 
-	
-
-	// int b = 5/0;
-
-	// int * a = NULL;
-	// 
-	// *a = 5;
-
-	
+	printk("_ ");
 
  	/* initialize the timer */
  	 if(timer_init() == 1)
@@ -36,25 +31,10 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
  	
  	/* enable APIC interrupt controller */
  	enable_apic();
-// 
-// 
-// 	// /* call test timer function */
-// 	test_timer();
-// 	
-// 	
-// 	/* initialize the xhci host controller */
-// 	if(xhci_init(xsdp, sys_var_ptr) == 1)
-// 		goto end;
-// 
-// 
-// 	/* init nvme */
-// 	if(nvme_init(xsdp, sys_var_ptr) == 1)
-// 		goto end;
 
 	 /* initialize the PS/2 controller */
 	if(init_ps2_controller(xsdp) == 1)
 		goto end;
-
 	
 	/* initialize the keyboard driver */
 	if(init_keyboard_driver() == 1)
@@ -64,6 +44,7 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 	uint8_t last_key_pressed = 0x0;
 	char key_char;
 
+	/* scan code set is 1 */
 	while(1) {
 		key = inportb(0x60);
 
@@ -75,8 +56,8 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 			continue;
 
 
-		else if(key == 0x13)
-			key_char = 'r';
+		else if(key == 0x13 && last_key_pressed == 0x2a) /* r key pressed with left shift */
+			key_char = 'R';
 
 		else if(key == 0x1e)
 			key_char = 'a';

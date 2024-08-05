@@ -44,7 +44,7 @@ uint64_t * get_madt_pointer(uint64_t *xsdp)
 		return madt;
 	}
 
-	printk("@acpi: found madt. addr = {p}\n", (void *)madt);
+	// printk("@acpi: found madt. addr = {p}\n", (void *)madt);
 
 	return madt;
 }

@@ -132,7 +132,7 @@ int timer_init(void)
 		::"m" (value1):);
 	
 	if (value1 == 0xc00) {
-		printk("@timer: init: enabled the local APIC in x2APIC mode!\n");
+		// printk("@timer: init: enabled the local APIC in x2APIC mode!\n");
 	} else {
 		printk("error: timer: init: unable to enable the local APIC in x2APIC mode!\n");
 		return 1;
