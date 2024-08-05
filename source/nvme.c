@@ -143,7 +143,8 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 
 	nvme_atail = data_region_creation_addr;
 
-	data_region_creation_addr = nvme_atail + 4;
+	/* update data_region_creation_addr to the next 4096-byte aligned boundary to be reused */
+	data_region_creation_addr += 4096;
 
 
 	/* save the identify controller structure */
@@ -160,10 +161,10 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 
 	nvme_iotail = data_region_creation_addr;
 
-	data_region_creation_addr = nvme_iotail + 4;
+	data_region_creation_addr += 4096;
 
 	/* read 1 block from /dev/nvme0n1p6 partition */
-	read_nvme();
+	// read_nvme();
 
 	printk("@Done!\n");
 
@@ -250,6 +251,8 @@ void nvme_admin_wait(volatile char *acqb_copy)
 	do{
 		val = *(volatile uint64_t *) acqb_copy;
 	}while(val == 0);
+
+	printk("acq: status field value: {p}\n", (void *) *(volatile uint16_t *) ((char *) acqb_copy + 2));
 	
 	*(volatile uint64_t *) acqb_copy = 0; // Overwrite the old entry
 }	
@@ -276,7 +279,8 @@ void nvme_admin_savetail(uint32_t a_tail_val, volatile char* nvme_atail, uint32_
 
 	// Check completion queue
 	old_tail_val = (old_tail_val << 4);	// Each entry is 16 bytes
-	old_tail_val = (uint8_t) old_tail_val + 8;	// Add 8 for DW3
+	// old_tail_val = (uint8_t) old_tail_val + 8;	// Add 8 for DW3
+	old_tail_val = (uint8_t) old_tail_val + 12;	// Add 12 for DW3
 
 	acqb_copy += old_tail_val;
 
@@ -379,36 +383,25 @@ void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, vo
 }
 
 void create_io_queues(void)
-{	
-	// uint32_t cdw0 = 0x00010005;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Completion Queue (0x05)
-	uint32_t cdw0 = 0x00000005;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Completion Queue (0x05)
-	uint32_t cdw1 = 0; 	// CDW1 Ignored
-	uint32_t cdw10 = 0x003f0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
-	uint32_t cdw11 = 0x00000001;		// CDW11 PC Enabled (0)
-	
-	nvme_iocqb = data_region_creation_addr;			// CDW6-7 DPTR. 4K I/O Completion Queue Base Address
-	
-	data_region_creation_addr += 4096;
+{
+	/* create the first i/o completion queue */
 
-	// Create the first I/O Completion Queue
+	// uint32_t cdw0 = 0x5;	/* cdw0: cid 0, prp used (15:14 clear), fuse normal (bits 9:8 clear), command create i/o completion queue (0x05) */
+	uint32_t cdw0 = 0x00010005;	/* cdw0: cid 1, prp used (15:14 clear), fuse normal (bits 9:8 clear), command create i/o completion queue (0x05) */
+	uint32_t cdw1 = 0;	// CDW1 Ignored
+	// uint32_t cdw10 = 0x3f0001;	/* cdw10: queue size = 64 commands, qid = 1 */
+	uint32_t cdw10 = 0x003f0001;	/* cdw10: queue size = 64 commands, qid = 1 */
+	// uint32_t cdw11 = 0x1;		/* cdw11: physically contiguous (1<<0), interrupts disabled */
+	uint32_t cdw11 = 0x00000001;		/* cdw11: physically contiguous (1<<0), interrupts disabled */
+	
+	
+	nvme_iocqb = data_region_creation_addr;
+
+	data_region_creation_addr += 4096;
+	
+	printk("@nvme_iocqb = {p}\n", (void *) nvme_iocqb);
+
 	nvme_admin(cdw0, cdw1, cdw10, cdw11, nvme_iocqb);
-
-	printk("@nvme: created the first io queue completion queue!\n");
-
-
-	// Create the first I/O Submission Queue
-	// cdw0  = 0x00010001;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Submission Queue (0x01)
-	cdw0  = 0x00000001;	// CDW0 CID (31:16), PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Create I/O Submission Queue (0x01)
-	cdw10 = 0x003f0001;		// CDW10 QSIZE 64 entries (31:16), QID 1 (15:0)
-	cdw11 = 0x00010001;		// CDW11 CQID 1 (31:16), PC Enabled (0)
-	
-	nvme_iosqb = data_region_creation_addr;	// CDW6-7 DPTR. 4K I/O Submission Queue Base Address
-	
-	data_region_creation_addr += 4096;
-
-	nvme_admin(cdw0, cdw1, cdw10, cdw11, nvme_iosqb);
-	
-	printk("@nvme: created the first io submission queue!\n");
 }
 
 void save_controller_struct(void)
