@@ -174,6 +174,14 @@ void tty_out_init(struct frame_buffer_descriptor fb) {
 	draw_raam_names();
 
 	// write_chant_raam_name_msg_at_top();
+	
+	tty_border_x = 30;
+	tty_border_y = tty_border_y_initial - 4;
+	
+	char msg[43] = "|| Chant Raam name. Wake up your destiny ||";
+
+	write_top_border_eng_text(&msg, 43);
+
 }
 
 void fill_tty_bgcolor()
