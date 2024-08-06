@@ -4,7 +4,8 @@
 #include "ps2.h"
 #include <stdint.h>
 
-uint64_t timer_count = 50000;		/* timer count */
+// uint64_t timer_count = 900000;		/* timer count */
+uint64_t timer_count = 500000;		/* timer count */
 
 uint32_t read_ioapic_register(const uint32_t *apic_base, const uint8_t offset);
 void write_ioapic_register(const uint32_t *apic_base, const uint8_t offset, const uint32_t val);

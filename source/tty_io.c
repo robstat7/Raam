@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "string.h"
+#include "rtc.h"
 
 /* terminal output coordinates */
 int tty_x;
@@ -181,6 +182,13 @@ void tty_out_init(struct frame_buffer_descriptor fb) {
 	char msg[43] = "|| Chant Raam name. Wake up your destiny ||";
 
 	write_top_border_eng_text(&msg, 43);
+
+
+	/* display today's date */
+	
+	char d = get_day_of_month() + '0';
+
+	write_top_border_eng_text(&d, 1);
 
 }
 

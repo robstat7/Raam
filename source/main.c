@@ -26,8 +26,6 @@ int main(void *xsdp, uint8_t *sys_var_ptr)
 	printk("_ ");
 
 
-	read_cmos_reg();
-
  	/* initialize the timer */
  	 if(timer_init() == 1)
  	 	goto end;
