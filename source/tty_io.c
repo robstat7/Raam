@@ -186,6 +186,7 @@ void tty_out_init(struct frame_buffer_descriptor fb) {
 
 
 	/* display today's date and time */
+	/* rtc: status reg B value = 2 i.e. 24 hrs format is enabled and bcd mode is set. */
 	
 	char d = get_day_of_month() + '0';
 	char mon = get_month() + '0';
@@ -193,9 +194,10 @@ void tty_out_init(struct frame_buffer_descriptor fb) {
 	char sep[3] = "   ";
 	char sep2 = ' ';
 	char sep3 = ':';
-	char h = get_hour() + '0';
+	char h[2];
 	char min[2];
 	
+	convert_integer_to_char(get_hour(), h);
 	convert_integer_to_char(get_minute(), min);
 
 	write_top_border_eng_text(&sep, 3);
@@ -203,10 +205,10 @@ void tty_out_init(struct frame_buffer_descriptor fb) {
 	write_top_border_eng_text(&by, 1);
 	write_top_border_eng_text(&mon, 1);
 	write_top_border_eng_text(&sep2, 1);
-	write_top_border_eng_text(&h, 1);
+	write_top_border_eng_text(h, 2);
 	write_top_border_eng_text(&sep3, 1);
 	write_top_border_eng_text(min, 2);
-}
+	}
 
 void fill_tty_bgcolor()
 {
@@ -440,7 +442,7 @@ void convert_integer_to_char(int n, char *arr)
         // Separate last digit from
         // the number and add ASCII
         // value of character '0' is 48
-        arr1[++index] = n % 10 + '0';
+        arr1[++index] = (n % 10) + '0';
  
         // Truncate the last
         // digit from the number

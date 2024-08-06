@@ -5,8 +5,10 @@
 #define MONTH 0x08
 #define HOUR 0x04
 #define MINUTE 0x02
+#define StatusRegisterB 0x0b
 
 uint8_t get_day_of_month();
 uint8_t get_month();
 uint8_t get_hour();
 uint8_t get_minute();
+uint8_t read_status_reg_b();
