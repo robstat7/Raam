@@ -16,3 +16,18 @@ uint8_t get_month()
 	uint8_t m = inportb(0x71);
 	return m;
 }
+
+uint8_t get_hour()
+{
+	outportb(0x70, (NMI_disable_bit << 7) | (HOUR));
+	uint8_t h = inportb(0x71);
+	return h;
+}
+
+uint8_t get_minute()
+{
+	outportb(0x70, (NMI_disable_bit << 7) | (MINUTE));
+	uint8_t m = inportb(0x71);
+	return m;
+}
+

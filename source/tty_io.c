@@ -40,6 +40,7 @@ const int rectangle_width = 40;		/* rectanglular border width in pixels */
 struct frame_buffer_descriptor frame_buffer;
 
 void write_top_border_char(unsigned char c);
+void convert_integer_to_char(int n, char *arr);
 
 static inline void write_pixel(uint32_t pixel, int x, int y)
 {
@@ -184,18 +185,27 @@ void tty_out_init(struct frame_buffer_descriptor fb) {
 	write_top_border_eng_text(&msg, 43);
 
 
-	/* display today's date */
+	/* display today's date and time */
 	
 	char d = get_day_of_month() + '0';
-	char m = get_month() + '0';
+	char mon = get_month() + '0';
 	char by = '/';
 	char sep[3] = "   ";
+	char sep2 = ' ';
+	char sep3 = ':';
+	char h = get_hour() + '0';
+	char min[2];
+	
+	convert_integer_to_char(get_minute(), min);
 
 	write_top_border_eng_text(&sep, 3);
 	write_top_border_eng_text(&d, 1);
 	write_top_border_eng_text(&by, 1);
-	write_top_border_eng_text(&m, 1);
-
+	write_top_border_eng_text(&mon, 1);
+	write_top_border_eng_text(&sep2, 1);
+	write_top_border_eng_text(&h, 1);
+	write_top_border_eng_text(&sep3, 1);
+	write_top_border_eng_text(min, 2);
 }
 
 void fill_tty_bgcolor()
@@ -416,4 +426,30 @@ void write_chant_raam_name_msg_at_top(void)
 
 }
 
-
+// Function to convert integer to
+// character array
+void convert_integer_to_char(int n, char *arr)
+{
+    char arr1[3] = "000";
+  
+    // Separating integer into digits and
+    // accommodate it to character array
+    int index = 0;
+    while (n) {
+ 
+        // Separate last digit from
+        // the number and add ASCII
+        // value of character '0' is 48
+        arr1[++index] = n % 10 + '0';
+ 
+        // Truncate the last
+        // digit from the number
+        n /= 10;
+    }
+ 
+    // Reverse the array for result
+    int i;
+    for (i = 0; i < index; i++) {
+        arr[i] = arr1[index - i];
+    }
+}
