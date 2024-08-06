@@ -220,7 +220,7 @@ void check_cmd_set_supported(void)
 	volatile uint64_t *addr = (volatile uint64_t *) ((char *) nvme_base + nvme_cap);
 	uint64_t value;
 
-	*addr = value;
+	value = *addr;
 
 	printk("@cap register value={p}\n", (void *) value);
 }
@@ -386,12 +386,9 @@ void create_io_queues(void)
 {
 	/* create the first i/o completion queue */
 
-	// uint32_t cdw0 = 0x5;	/* cdw0: cid 0, prp used (15:14 clear), fuse normal (bits 9:8 clear), command create i/o completion queue (0x05) */
 	uint32_t cdw0 = 0x00010005;	/* cdw0: cid 1, prp used (15:14 clear), fuse normal (bits 9:8 clear), command create i/o completion queue (0x05) */
 	uint32_t cdw1 = 0;	// CDW1 Ignored
-	// uint32_t cdw10 = 0x3f0001;	/* cdw10: queue size = 64 commands, qid = 1 */
 	uint32_t cdw10 = 0x003f0001;	/* cdw10: queue size = 64 commands, qid = 1 */
-	// uint32_t cdw11 = 0x1;		/* cdw11: physically contiguous (1<<0), interrupts disabled */
 	uint32_t cdw11 = 0x00000001;		/* cdw11: physically contiguous (1<<0), interrupts disabled */
 	
 	
