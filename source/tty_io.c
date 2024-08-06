@@ -187,8 +187,14 @@ void tty_out_init(struct frame_buffer_descriptor fb) {
 	/* display today's date */
 	
 	char d = get_day_of_month() + '0';
+	char m = get_month() + '0';
+	char by = '/';
+	char sep[3] = "   ";
 
+	write_top_border_eng_text(&sep, 3);
 	write_top_border_eng_text(&d, 1);
+	write_top_border_eng_text(&by, 1);
+	write_top_border_eng_text(&m, 1);
 
 }
 
