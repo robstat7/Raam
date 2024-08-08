@@ -105,16 +105,6 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 
 	printk("@nvme_base={p}\n", (void *) nvme_base);
 
-	/* Mark controller memory as un-cacheable */
-        // uncacheable_memory();
-
-
-	check_cmd_set_supported();
-
-	/* enable pcie bus mastering */
-        enable_pci_bus_mastering();
-
-
 	/* reset the controller */
 	if(reset_controller() == 1) {
 		printk("nvme: error: the controller has had a fatal error!\n");
@@ -139,7 +129,6 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 		printk("nvme: fatal error! CSTS.CFS (1) is not 0!\n");
 		return 1;
 	}
-
 
 	nvme_atail = data_region_creation_addr;
 
@@ -272,11 +261,6 @@ void nvme_admin_savetail(uint32_t a_tail_val, volatile char* nvme_atail, uint32_
 
 	*((volatile uint32_t *) ((char *) nvme_base + 0x1000)) = val_new; // Write the new tail value
 
-
-	// Explicit memory barrier for use with GCC.
-	asm volatile ("": : :"memory");
-
-
 	// Check completion queue
 	old_tail_val = (old_tail_val << 4);	// Each entry is 16 bytes
 	// old_tail_val = (uint8_t) old_tail_val + 8;	// Add 8 for DW3
@@ -314,11 +298,6 @@ void nvme_io_savetail(uint32_t io_tail_val, volatile char* nvme_iotail, uint32_t
 
 
 	*((volatile uint32_t *) ((char *) nvme_base + 0x1008)) = val_new; // Write the new tail value
-
-
-	// Explicit memory barrier for use with GCC.
-	asm volatile ("": : :"memory");
-
 
 	// Check completion queue
 	old_tail_val = (old_tail_val << 4);	// Each entry is 16 bytes
@@ -366,10 +345,6 @@ void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, vo
 	*(volatile uint32_t *) (nvme_asqb_ptr + 60) = 0;	// CDW15
 								//
 	
-	// Explicit memory barrier for use with GCC.
-	asm volatile ("": : :"memory");
-
-	
 	// Start the Admin command by updating the tail doorbell
 	a_tail_val = 0;
 	a_tail_val = *nvme_atail; // Get the current Admin tail value
@@ -386,11 +361,10 @@ void create_io_queues(void)
 {
 	/* create the first i/o completion queue */
 
-	uint32_t cdw0 = 0x00010005;	/* cdw0: cid 1, prp used (15:14 clear), fuse normal (bits 9:8 clear), command create i/o completion queue (0x05) */
+	uint32_t cdw0 = 0x10005;	/* cdw0: cid 1, prp used (15:14 clear), fuse normal (bits 9:8 clear), command create i/o completion queue (0x05) */
 	uint32_t cdw1 = 0;	// CDW1 Ignored
-	uint32_t cdw10 = 0x003f0001;	/* cdw10: queue size = 64 commands, qid = 1 */
-	uint32_t cdw11 = 0x00000001;		/* cdw11: physically contiguous (1<<0), interrupts disabled */
-	
+	uint32_t cdw10 = 0x3f0001;	/* cdw10: queue size = 64 commands, qid = 1 */
+	uint32_t cdw11 = 0x1;		/* cdw11: physically contiguous (1<<0), interrupts disabled */
 	
 	nvme_iocqb = data_region_creation_addr;
 
@@ -418,10 +392,6 @@ void save_controller_struct(void)
 	nvme_admin(cdw0, cdw1, nvme_ID_CTRL, cdw11, nvme_CTRLID);
 	
 	printk("nvme_CTRLID val after receiving response = {p}\n", (void *) (*(volatile uint64_t *)nvme_CTRLID));
-
-
-	/* TODO: check if it is an i/o controller */
-
 
 	/* record the max. transfer size */
 
@@ -520,11 +490,6 @@ void read_nvme(void)
 	
 	printk("@nvme_iosqb_ptr after = {d}\n", *(volatile uint64_t *) nvme_iosqb_ptr);
 
-
-	// Explicit memory barrier for use with GCC.
-	asm volatile ("": : :"memory");
-
-	
 	// Start the read command by updating the tail doorbell
 	io_tail_val = 0;
 	io_tail_val = *nvme_iotail; // Get the current io tail value
