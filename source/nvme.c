@@ -27,7 +27,7 @@ unsigned char check_xsdt_checksum(uint64_t *xsdt, uint32_t xsdt_length);
 uint32_t check_mcfg_checksum(uint64_t *mcfg);
 void check_all_buses(uint16_t start, uint16_t end);
 int find_nvme_controller(uint16_t bus, uint8_t device, uint8_t function);
-volatile uint64_t *get_nvme_base(uint16_t bus, uint8_t device, uint8_t function);
+volatile uint64_t *get_nvme_base(uint16_t bus, uint8_t kbpo, uint8_t function);
 int reset_controller(void);
 int configure_admin_q(void);
 int wait_for_reset_complete(void);
@@ -361,9 +361,11 @@ void create_io_queues(void)
 {
 	/* create the first i/o completion queue */
 
-	uint32_t cdw0 = 0x10005;	/* cdw0: cid 1, prp used (15:14 clear), fuse normal (bits 9:8 clear), command create i/o completion queue (0x05) */
+	// uint32_t cdw0 = 0x10005;	/* cdw0: cid 1, prp used (15:14 clear), fuse normal (bits 9:8 clear), command create i/o completion queue (0x05) */
+	uint32_t cdw0 = 0x00000005;	// CDW0 CID 0, PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Identify (0x06)
 	uint32_t cdw1 = 0;	// CDW1 Ignored
-	uint32_t cdw10 = 0x3f0001;	/* cdw10: queue size = 64 commands, qid = 1 */
+	// uint32_t cdw10 = 0x3f0001;	/* cdw10: queue size = 64 commands, qid = 1 */
+	uint32_t cdw10 = 0xf0001;	/* cdw10: queue size = 16 commands, qid = 1 */
 	uint32_t cdw11 = 0x1;		/* cdw11: physically contiguous (1<<0), interrupts disabled */
 	
 	nvme_iocqb = data_region_creation_addr;
@@ -371,6 +373,23 @@ void create_io_queues(void)
 	data_region_creation_addr += 4096;
 	
 	printk("@nvme_iocqb = {p}\n", (void *) nvme_iocqb);
+
+
+	/* set CC.IOCQES to 16 commands (16 bytes) */
+	volatile uint32_t *addr = (volatile uint32_t *) ((char *) nvme_base + nvme_cc);
+	uint32_t value;
+
+	value = *addr;
+
+	printk("@create_io_queues: old CC value={d}\n", value);
+
+	// set CC.IOCQES to 16 and CC.EN (bit #0) to 1
+	value = 0x400001;
+
+	*addr = value;
+
+	printk("@create_io_queues: new CC value={p}\n", (void *) *addr);
+
 
 	nvme_admin(cdw0, cdw1, cdw10, cdw11, nvme_iocqb);
 }
@@ -396,8 +415,11 @@ void save_controller_struct(void)
 	/* record the max. transfer size */
 
 	uint8_t mdts = *(volatile uint8_t *) ((char *) nvme_CTRLID + 77);
+	
+	uint8_t cqes= *(volatile uint8_t *) ((char *) nvme_CTRLID + 513);
 
 	printk("@mdts = {d}\n", mdts);
+	printk("@cqes = {d}\n", cqes);
 }
 
 void save_active_nsid_list(void)
@@ -612,7 +634,7 @@ void enable_controller(void)
 
 	*addr = value;
 
-	printk("@new CC value={d}\n", *addr);
+	printk("@enable_controller: new CC value={d}\n", *addr);
 }
 
 int reset_controller(void)
