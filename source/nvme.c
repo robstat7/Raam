@@ -359,10 +359,24 @@ void nvme_admin(uint32_t cdw0, uint32_t cdw1, uint32_t cdw10, uint32_t cdw11, vo
 
 void create_io_queues(void)
 {
-	/* create the first i/o completion queue */
+	/* set cc.iocqes to 16 commands (16 bytes) and cc.iosqes to 64 */
+	volatile uint32_t *addr = (volatile uint32_t *) ((char *) nvme_base + nvme_cc);
+	uint32_t value;
 
-	// uint32_t cdw0 = 0x10005;	/* cdw0: cid 1, prp used (15:14 clear), fuse normal (bits 9:8 clear), command create i/o completion queue (0x05) */
-	uint32_t cdw0 = 0x00000005;	// CDW0 CID 0, PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command Identify (0x06)
+	value = *addr;
+
+	printk("@create_io_queues: old CC value={d}\n", value);
+
+	/* set cc.iocqes to 16, cc.iosqes to 64, and cc.en (bit #0) to 1 */
+	value = 0x460001;
+
+	*addr = value;
+
+	printk("@create_io_queues: new CC value={p}\n", (void *) *addr);
+
+
+	/* create the first i/o completion queue */
+	uint32_t cdw0 = 0x00000005;	// CDW0 CID 0, PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command create io completion queue (0x05)
 	uint32_t cdw1 = 0;	// CDW1 Ignored
 	// uint32_t cdw10 = 0x3f0001;	/* cdw10: queue size = 64 commands, qid = 1 */
 	uint32_t cdw10 = 0xf0001;	/* cdw10: queue size = 16 commands, qid = 1 */
@@ -374,24 +388,23 @@ void create_io_queues(void)
 	
 	printk("@nvme_iocqb = {p}\n", (void *) nvme_iocqb);
 
-
-	/* set CC.IOCQES to 16 commands (16 bytes) */
-	volatile uint32_t *addr = (volatile uint32_t *) ((char *) nvme_base + nvme_cc);
-	uint32_t value;
-
-	value = *addr;
-
-	printk("@create_io_queues: old CC value={d}\n", value);
-
-	// set CC.IOCQES to 16 and CC.EN (bit #0) to 1
-	value = 0x400001;
-
-	*addr = value;
-
-	printk("@create_io_queues: new CC value={p}\n", (void *) *addr);
-
-
 	nvme_admin(cdw0, cdw1, cdw10, cdw11, nvme_iocqb);
+
+
+	/* create the first i/o submission queue */
+	cdw0 = 0x00000001;	// CDW0 CID 0, PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command create io submission queue (0x01)
+	cdw1 = 0;	// CDW1 Ignored
+	cdw10 = 0x3f0001;	/* cdw10: queue size = 64 commands, qid = 1 */
+	// cdw11 = 0x1;		/* cdw11: cqid = 1, physically contiguous (1<<0) */
+	cdw11 = 0x10001;		/* cdw11: cqid = 1, physically contiguous (1<<0) */
+	
+	nvme_iosqb = data_region_creation_addr;
+
+	data_region_creation_addr += 4096;
+	
+	printk("@nvme_iosqb = {p}\n", (void *) nvme_iosqb);
+
+	nvme_admin(cdw0, cdw1, cdw10, cdw11, nvme_iosqb);
 }
 
 void save_controller_struct(void)
@@ -417,9 +430,11 @@ void save_controller_struct(void)
 	uint8_t mdts = *(volatile uint8_t *) ((char *) nvme_CTRLID + 77);
 	
 	uint8_t cqes= *(volatile uint8_t *) ((char *) nvme_CTRLID + 513);
+	uint8_t sqes= *(volatile uint8_t *) ((char *) nvme_CTRLID + 512);
 
 	printk("@mdts = {d}\n", mdts);
 	printk("@cqes = {d}\n", cqes);
+	printk("@sqes = {d}\n", sqes);
 }
 
 void save_active_nsid_list(void)
