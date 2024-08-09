@@ -153,7 +153,7 @@ int nvme_init(void *xsdp, char *sys_var_ptr)
 	data_region_creation_addr += 4096;
 
 	/* read 1 block from /dev/nvme0n1p6 partition */
-	// read_nvme();
+	read_nvme();
 
 	printk("@Done!\n");
 
@@ -541,6 +541,8 @@ void read_nvme(void)
 
 	printk("nvme_read val after submitting identify cmd = {p}\n", *(volatile uint64_t *)nvme_read);
 
+	for(int i=0; i<10; i++)
+		printk("{c}", nvme_read[i]);
 }
 
 
