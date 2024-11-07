@@ -11,17 +11,16 @@ section '.text' code executable readable
 include 'uefi.inc'
 
 start:
-; initialize UEFI library
+; initialize UEFI library.
 
 	InitializeLib
 	
-; CF is set if either the system table pointer is NULL or the first 4
-; bytes of the EFI_SYSTEM_TABLE_SIGNATURE is not equal to 0x20494249. In
-; this case, we will stop further execution and return.
+; `jc` is jump if carry. Symbol @f references the nearest following anonymous
+; label (@@). The carry flag is set on an error during library initialization.
 
 	jc @f
 	    
-	call set_1280_1024_video_mode
+	call set_1280_by_1024_video_mode
 	jc @f
 	
 ; call uefi function to print to screen
@@ -37,14 +36,14 @@ start:
 	retn
 
 ;
-; set_1280_1024_video_mode
+; set_1280_by_1024_video_mode
 ;
 ; This routine checks if GOP is supported, queries the available video
 ; modes, and get the mode number for 1280 x 1024 resolution. Set this
 ; mode. We will use this mode for better text visibility.
 ;
-set_1280_1024_video_mode:
-	call is_gop_supported
+set_1280_by_1024_video_mode:
+	call	check_if_gop_supported
 	mov	rbx,EFI_BUFFER_TOO_SMALL	
 	cmp	rax,rbx
 	jne	.error
@@ -56,14 +55,12 @@ set_1280_1024_video_mode:
 	ret
 
 ;
-; is_gop_supported
+; check_if_gop_supported
 ;
 ; This routine performs installation check on GOP. It must return buffer
 ; too small if GOP is supported.
 ;
-is_gop_supported:
-	xor	rax,rax
-	mov	qword[tmp],rax
+check_if_gop_supported:
 	uefi_call_wrapper	BootServices,LocateHandle,2,gopuuid,0,tmp,gop_handle
 	ret
 
