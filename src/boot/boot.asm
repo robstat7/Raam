@@ -23,7 +23,7 @@ start:
 
 	jc @f
 	    
-	call	check_if_gop_supported
+	call	get_framebuffer_info
 	jc @f
 	
 ; call uefi function to print to screen
@@ -39,17 +39,27 @@ start:
 	retn
 
 ;
-; check_if_gop_supported
+; get_framebuffer_info
 ;
-; This routine performs installation check on graphics output protocol
-; (GOP). As the buffer size is 0, calling EFI_BOOT_SERVICES.LocateHandle
-; function must return buffer too small. This will tell
-; GOP is supported.
+; This routine detects graphics output protocol (GOP) and gets the
+; framebuffer information.
 ;
-check_if_gop_supported:
-	uefi_call_wrapper	BootServices,LocateHandle,2,gopuuid,0,tmp,\
-				gop_handle ; invoke BS->LocateHandle function
-	mov	rbx,EFI_BUFFER_TOO_SMALL
+get_framebuffer_info:
+	call detect_gop
+	jc @f
+@@:
+	ret
+
+;
+; detect_gop
+;
+; This routine detects GOP.
+;
+detect_gop:
+	uefi_call_wrapper	BootServices,LocateProtocol,gopuuid,0,\
+				gopinterface
+					; invoke BS->LocateProtocol function
+	mov	rbx,EFI_SUCCESS
 	cmp	rax,rbx
 	jne	.error
 	ret
@@ -62,9 +72,7 @@ check_if_gop_supported:
 section '.data' data readable writeable
 
 _hello                                  du 'Hello World',13,10,0
-tmp:		dq			0
 gopuuid:	db			EFI_GRAPHICS_OUTPUT_PROTOCOL_UUID
-gop_handle:	dq			0
 gopinterface:	dq			0
 
 section '.reloc' fixups data discardable
