@@ -8,10 +8,12 @@ entry start
 
 section '.text' code executable readable
 
+; include UEFI library.
+
 include 'uefi.inc'
 
 start:
-; initialize UEFI library.
+; initialize UEFI library. Following is the name of a macroinstruction.
 
 	InitializeLib
 	
@@ -21,7 +23,7 @@ start:
 
 	jc @f
 	    
-	call set_1280_by_1024_video_mode
+	call	check_if_gop_supported
 	jc @f
 	
 ; call uefi function to print to screen
@@ -37,16 +39,17 @@ start:
 	retn
 
 ;
-; set_1280_by_1024_video_mode
+; check_if_gop_supported
 ;
-; This routine checks if graphics output protocol (GOP) is supported,
-; queries the available video modes, and get the mode number for 1280 x
-; 1024 resolution. Set this mode. We will use this mode for better text
-; visibility.
+; This routine performs installation check on graphics output protocol
+; (GOP). As the buffer size is 0, calling EFI_BOOT_SERVICES.LocateHandle
+; function must return buffer too small. This will tell
+; GOP is supported.
 ;
-set_1280_by_1024_video_mode:
-	call	check_if_gop_supported
-	mov	rbx,EFI_BUFFER_TOO_SMALL	
+check_if_gop_supported:
+	uefi_call_wrapper	BootServices,LocateHandle,2,gopuuid,0,tmp,\
+				gop_handle ; invoke BS->LocateHandle function
+	mov	rbx,EFI_BUFFER_TOO_SMALL
 	cmp	rax,rbx
 	jne	.error
 	ret
@@ -54,17 +57,6 @@ set_1280_by_1024_video_mode:
 	xor	rax,rax
 	mov	qword[gopinterface],rax
 	stc
-	ret
-
-;
-; check_if_gop_supported
-;
-; This routine performs installation check on GOP. It must return buffer
-; too small if GOP is supported.
-;
-check_if_gop_supported:
-	uefi_call_wrapper	BootServices,LocateHandle,2,gopuuid,0,tmp,\
-				gop_handle
 	ret
 
 section '.data' data readable writeable
