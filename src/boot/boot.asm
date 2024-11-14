@@ -15,8 +15,9 @@ start:
 
 	InitializeLib
 	
-; `jc` is jump if carry. Symbol @f references the nearest following anonymous
-; label (@@). The carry flag is set on an error during library initialization.
+; `jc` is jump if carry. Symbol @f references the nearest following
+; anonymous label i.e. @@. The carry flag is set on an error during
+; library initialization.
 
 	jc @f
 	    
@@ -38,9 +39,10 @@ start:
 ;
 ; set_1280_by_1024_video_mode
 ;
-; This routine checks if GOP is supported, queries the available video
-; modes, and get the mode number for 1280 x 1024 resolution. Set this
-; mode. We will use this mode for better text visibility.
+; This routine checks if graphics output protocol (GOP) is supported,
+; queries the available video modes, and get the mode number for 1280 x
+; 1024 resolution. Set this mode. We will use this mode for better text
+; visibility.
 ;
 set_1280_by_1024_video_mode:
 	call	check_if_gop_supported
@@ -61,17 +63,16 @@ set_1280_by_1024_video_mode:
 ; too small if GOP is supported.
 ;
 check_if_gop_supported:
-	uefi_call_wrapper	BootServices,LocateHandle,2,gopuuid,0,tmp,gop_handle
+	uefi_call_wrapper	BootServices,LocateHandle,2,gopuuid,0,tmp,\
+				gop_handle
 	ret
-
-; data
-tmp:		dq			0
-gopuuid:	db			EFI_GRAPHICS_OUTPUT_PROTOCOL_UUID
-gop_handle:	dq			0
-gopinterface:	dq			0
 
 section '.data' data readable writeable
 
 _hello                                  du 'Hello World',13,10,0
+tmp:		dq			0
+gopuuid:	db			EFI_GRAPHICS_OUTPUT_PROTOCOL_UUID
+gop_handle:	dq			0
+gopinterface:	dq			0
 
 section '.reloc' fixups data discardable
