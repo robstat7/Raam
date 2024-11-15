@@ -51,24 +51,24 @@ store_framebuffer_info:
 	call detect_gop
 	jc @f
 	mov	rax,qword[gopinterface]
-	mov	rax,qword[rax + EFI_GRAPHICS_OUTPUT_PROTOCOL.Mode]
-	mov	rbx,qword[rax + \
+	mov	rax,qword[rax+EFI_GRAPHICS_OUTPUT_PROTOCOL.Mode]
+	mov	rbx,qword[rax+\
 			  EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE.FrameBufferBase]
 	mov	qword[framebuffer_base],rbx
-	mov	rcx,qword[rax + \
+	mov	rcx,qword[rax+\
 			  EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE.FrameBufferSize]
 	mov	qword[framebuffer_size],rcx
-	mov	rax,qword[rax + EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE.ModeInfo]
+	mov	rax,qword[rax+EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE.ModeInfo]
 	xor	rdx,rdx
-	mov	edx,dword[rax + \
+	mov	edx,dword[rax+\
 		      EFI_GRAPHICS_OUTPUT_MODE_INFORMATION.HorizontalResolution]
 	mov	dword[horizontal_res],edx
 	xor	rdx,rdx
-	mov	edx,dword[rax + \
+	mov	edx,dword[rax+\
 			EFI_GRAPHICS_OUTPUT_MODE_INFORMATION.VerticalResolution]
 	mov	dword[vertical_res],edx
 	xor	rdx,rdx
-	mov	edx,dword[rax + \
+	mov	edx,dword[rax+\
 			EFI_GRAPHICS_OUTPUT_MODE_INFORMATION.PixelsPerScanline]
 	mov	dword[pixels_per_scanline],edx
 @@:
