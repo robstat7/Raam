@@ -21,25 +21,37 @@ start:
 ; anonymous label i.e. @@. The carry flag is set on an error during
 ; library initialization.
 
-	jc @f
+	jc	@f
 
+; call boot loader's main routine.
+
+	call bootloader_main
+@@:
+	mov eax,EFI_SUCCESS
+	retn
+
+;
+; bootloader_main
+;
+; This routine stores the framebuffer information, exits boot services,
+; and jumps to the kernel.
+;
+bootloader_main:
 ; first we store the framebuffer info that will be needed by the kernel
 ; to initialize the console output.
 
 	call	store_framebuffer_info
-	jc @f
+	jc	@f
 
-; call uefi function to print to screen
+; call uefi function to print to screen.
 
 	uefi_call_wrapper ConOut,OutputString,ConOut,_hello
 
 ; hang here
 
 	jmp	$
-
 @@:
-	mov eax,EFI_SUCCESS
-	retn
+	ret
 
 ;
 ; store_framebuffer_info
