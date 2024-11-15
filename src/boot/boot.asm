@@ -22,17 +22,20 @@ start:
 ; library initialization.
 
 	jc @f
-	    
+
+; first we store the framebuffer info that will be needed to print onto
+; the console.
+
 	call	store_framebuffer_info
 	jc @f
-	
+
 ; call uefi function to print to screen
 
 	uefi_call_wrapper ConOut,OutputString,ConOut,_hello
 
 ; hang here
 
-	jmp	$ 
+	jmp	$
 
 @@:
 	mov eax,EFI_SUCCESS
