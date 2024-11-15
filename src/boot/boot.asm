@@ -23,8 +23,8 @@ start:
 
 	jc @f
 
-; first we store the framebuffer info that will be needed to print onto
-; the console.
+; first we store the framebuffer info that will be needed by the kernel
+; to initialize the console output.
 
 	call	store_framebuffer_info
 	jc @f
