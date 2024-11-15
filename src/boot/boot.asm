@@ -23,7 +23,7 @@ start:
 
 	jc @f
 	    
-	call	get_framebuffer_info
+	call	store_framebuffer_info
 	jc @f
 	
 ; call uefi function to print to screen
@@ -39,14 +39,35 @@ start:
 	retn
 
 ;
-; get_framebuffer_info
+; store_framebuffer_info
 ;
-; This routine detects graphics output protocol (GOP) and gets the
+; This routine detects graphics output protocol (GOP) and stores the
 ; framebuffer information.
 ;
-get_framebuffer_info:
+store_framebuffer_info:
 	call detect_gop
 	jc @f
+	mov	rax,qword[gopinterface]
+	mov	rax,qword[rax + EFI_GRAPHICS_OUTPUT_PROTOCOL.Mode]
+	mov	rbx,qword[rax + \
+			  EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE.FrameBufferBase]
+	mov	qword[framebuffer_base],rbx
+	mov	rcx,qword[rax + \
+			  EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE.FrameBufferSize]
+	mov	qword[framebuffer_size],rcx
+	mov	rax,qword[rax + EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE.ModeInfo]
+	xor	rdx,rdx
+	mov	edx,dword[rax + \
+		      EFI_GRAPHICS_OUTPUT_MODE_INFORMATION.HorizontalResolution]
+	mov	dword[horizontal_res],edx
+	xor	rdx,rdx
+	mov	edx,dword[rax + \
+			EFI_GRAPHICS_OUTPUT_MODE_INFORMATION.VerticalResolution]
+	mov	dword[vertical_res],edx
+	xor	rdx,rdx
+	mov	edx,dword[rax + \
+			EFI_GRAPHICS_OUTPUT_MODE_INFORMATION.PixelsPerScanline]
+	mov	dword[pixels_per_scanline],edx
 @@:
 	ret
 
@@ -57,8 +78,7 @@ get_framebuffer_info:
 ;
 detect_gop:
 	uefi_call_wrapper	BootServices,LocateProtocol,gopuuid,0,\
-				gopinterface
-					; invoke BS->LocateProtocol function
+				gopinterface ;invoke BS->LocateProtocol function
 	mov	rbx,EFI_SUCCESS
 	cmp	rax,rbx
 	jne	.error
@@ -74,5 +94,10 @@ section '.data' data readable writeable
 _hello                                  du 'Hello World',13,10,0
 gopuuid:	db			EFI_GRAPHICS_OUTPUT_PROTOCOL_UUID
 gopinterface:	dq			0
+framebuffer_base:	dq		0
+framebuffer_size:	dq		0
+horizontal_res:		dw		0
+vertical_res:		dw		0
+pixels_per_scanline:	dw		0
 
 section '.reloc' fixups data discardable
