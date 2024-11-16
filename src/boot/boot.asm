@@ -73,7 +73,29 @@ get_memory_map:
 	call	get_memory_map_size
 	jc	@f
 	call	update_memory_map_size
+	call	allocate_pool_for_mem_map
+	jc	@f
 @@:
+	ret
+
+;
+; allocate_pool_for_mem_map
+;
+; This routine invokes BootServices->AllocatePool function and allocates
+; a new pool of memory for the memory map.
+;
+allocate_pool_for_mem_map:
+	uefi_call_wrapper	BootServices,AllocatePool,2,memory_map_size,\
+				memory_map	; 2 indicates EfiLoaderData
+	mov	rbx,EFI_SUCCESS
+	cmp	rax,rbx
+	jne	.error
+	ret
+.error:
+	uefi_call_wrapper	ConOut,OutputString,ConOut,error_msg2
+	xor	rax,rax
+	mov	qword[memory_map],rax
+	stc
 	ret
 
 ;
@@ -169,6 +191,7 @@ detect_gop:
 section '.data' data readable writeable
 
 error_msg1:	du	'fatal error: error getting memory map size',13,10,0
+error_msg2:	du	'error allocating memory map buffer',13,10,0
 gopuuid:		db		EFI_GRAPHICS_OUTPUT_PROTOCOL_UUID
 gopinterface:		dq		0
 framebuffer_base:	dq		0
@@ -179,5 +202,6 @@ pixels_per_scanline:	dw		0
 memory_map_size:	dq		0
 map_key:		dq		0
 desc_size:		dq		0
+memory_map:		dq		0
 
 section '.reloc' fixups data discardable
