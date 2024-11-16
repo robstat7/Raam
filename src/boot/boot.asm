@@ -70,6 +70,17 @@ exit_boot_services:
 ; this newly allocated pool.
 ;
 get_memory_map:
+	call	get_memory_map_size
+	jc	@f
+@@:
+	ret
+
+;
+; get_memory_map_size
+;
+; This routine gets the memory map size.
+;
+get_memory_map_size:
 	uefi_call_wrapper	BootServices,GetMemoryMap,memory_map_size,0,\
 				map_key,desc_size,0
 	mov	rbx,EFI_BUFFER_TOO_SMALL
