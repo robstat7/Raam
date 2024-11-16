@@ -42,15 +42,43 @@ bootloader_main:
 
 	call	store_framebuffer_info
 	jc	@f
-
-; call uefi function to print to screen.
-
-	uefi_call_wrapper ConOut,OutputString,ConOut,_hello
+	call	exit_boot_services
 
 ; hang here
 
 	jmp	$
 @@:
+	ret
+
+;
+; exit_boot_services
+;
+; This routine gets the memory map and tries to exit boot services 3
+; times.
+;
+exit_boot_services:
+	call	get_memory_map
+	jc	@f
+@@:
+	ret
+
+;
+; get_memory_map
+;
+; This routine gets the memory map size, updates it, and allocates a new
+; pool of memory for the memory map. Then it gets the memory map into
+; this newly allocated pool.
+;
+get_memory_map:
+	uefi_call_wrapper	BootServices,GetMemoryMap,memory_map_size,0,\
+				map_key,desc_size,0
+	mov	rbx,EFI_BUFFER_TOO_SMALL
+	cmp	rax,rbx
+	jne	.error
+	ret
+.error:
+	uefi_call_wrapper	ConOut,OutputString,ConOut,error_msg1
+	stc
 	ret
 
 ;
@@ -106,13 +134,16 @@ detect_gop:
 
 section '.data' data readable writeable
 
-_hello                                  du 'Hello World',13,10,0
-gopuuid:	db			EFI_GRAPHICS_OUTPUT_PROTOCOL_UUID
-gopinterface:	dq			0
+error_msg1:	du	'fatal error: error getting memory map size',13,10,0
+gopuuid:		db		EFI_GRAPHICS_OUTPUT_PROTOCOL_UUID
+gopinterface:		dq		0
 framebuffer_base:	dq		0
 framebuffer_size:	dq		0
 horizontal_res:		dw		0
 vertical_res:		dw		0
 pixels_per_scanline:	dw		0
+memory_map_size:	dq		0
+map_key:		dq		0
+desc_size:		dq		0
 
 section '.reloc' fixups data discardable
