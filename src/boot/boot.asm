@@ -134,6 +134,8 @@ get_memory_map_size:
 	ret
 .error:
 	uefi_call_wrapper	ConOut,OutputString,ConOut,error_msg1
+	xor	rax,rax
+	mov	qword[memory_map_size],rax
 	stc
 	ret
 
