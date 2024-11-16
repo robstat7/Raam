@@ -72,7 +72,30 @@ exit_boot_services:
 get_memory_map:
 	call	get_memory_map_size
 	jc	@f
+	call	update_memory_map_size
 @@:
+	ret
+
+;
+; update_memory_map_size
+;
+; This routine updates the memory map size. It basically performs
+; memory_map_size += 2 * descriptor_size. Allocating the pool creates at
+; least one new descriptor for the chunk of memory changed to
+; EfiLoaderData. Not sure that UEFI firmware must allocate on a memory
+; type boundary! If not, then two descriptors might be created.
+;
+; We will use this updated memory map size to allocate pool for the
+; memory map and to get memory map later.
+;
+update_memory_map_size:
+	mov	rax,qword[desc_size]
+	mov	bl,2
+	mul	bl
+	mov	rcx,qword[memory_map_size]
+	add	rcx,rax
+	clc
+	mov	qword[memory_map_size],rcx
 	ret
 
 ;
