@@ -75,6 +75,15 @@ get_memory_map:
 	call	update_memory_map_size
 	call	allocate_pool_for_mem_map
 	jc	@f
+	uefi_call_wrapper	BootServices,GetMemoryMap,memory_map_size,\
+				qword[memory_map],map_key,desc_size,0
+	mov	rbx,EFI_SUCCESS
+	cmp	rax,rbx
+	jne	.error
+	ret
+.error:
+	uefi_call_wrapper	ConOut,OutputString,ConOut,error_msg3
+	stc
 @@:
 	ret
 
@@ -194,6 +203,7 @@ section '.data' data readable writeable
 
 error_msg1:	du	'fatal error: error getting memory map size',13,10,0
 error_msg2:	du	'error allocating memory map buffer',13,10,0
+error_msg3:	du	'error getting memory map',13,10,0
 gopuuid:		db		EFI_GRAPHICS_OUTPUT_PROTOCOL_UUID
 gopinterface:		dq		0
 framebuffer_base:	dq		0
