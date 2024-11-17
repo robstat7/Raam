@@ -80,7 +80,7 @@ get_memory_map:
 	mov	rbx,EFI_SUCCESS
 	cmp	rax,rbx
 	jne	.error
-	ret
+	jmp	@f
 .error:
 	uefi_call_wrapper	ConOut,OutputString,ConOut,error_msg3
 	stc
