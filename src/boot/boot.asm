@@ -43,9 +43,11 @@ bootloader_main:
 	call	store_framebuffer_info
 	jc	@f
 	call	exit_boot_services
+	jc	.hang
 
-; hang here
+; hang here.
 
+.hang:
 	jmp	$
 @@:
 	ret
@@ -59,6 +61,19 @@ bootloader_main:
 exit_boot_services:
 	call	get_memory_map
 	jc	@f
+	xor	cx,cx
+exit_bs_loop:
+	uefi_call_wrapper	BootServices,ExitBootServices,\
+				qword[efi_handler],qword[map_key]
+	mov	rbx,EFI_SUCCESS
+	cmp	rax,rbx
+	je	@f
+	inc	cx
+	cmp	cx,3
+	jl	exit_bs_loop
+.error:
+	uefi_call_wrapper	ConOut,OutputString,ConOut,error_msg4
+	stc
 @@:
 	ret
 
@@ -204,6 +219,8 @@ section '.data' data readable writeable
 error_msg1:	du	'fatal error: error getting memory map size',13,10,0
 error_msg2:	du	'error allocating memory map buffer',13,10,0
 error_msg3:	du	'error getting memory map',13,10,0
+error_msg4:	du	'error: exit boot services: map key is incorrect',13,\
+			10,0
 gopuuid:		db		EFI_GRAPHICS_OUTPUT_PROTOCOL_UUID
 gopinterface:		dq		0
 framebuffer_base:	dq		0
