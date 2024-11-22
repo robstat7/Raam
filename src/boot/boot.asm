@@ -33,15 +33,18 @@ start:
 ;
 ; bootloader_main
 ;
-; This routine stores the framebuffer information, exits boot services,
-; and jumps to the kernel.
+; This routine stores the framebuffer information and exits the boot
+; services.
 ;
 bootloader_main:
 ; first we store the framebuffer info that will be needed by the kernel
-; to initialize the console output.
+; to initialize the terminal output.
 
 	call	store_framebuffer_info
 	jc	@f
+
+; now we exit the boot services.
+
 	call	exit_boot_services
 	jc	.hang
 
@@ -171,7 +174,7 @@ get_memory_map_size:
 ;
 store_framebuffer_info:
 	call detect_gop
-	jc @f
+	jc 	@f
 	mov	rax,qword[gopinterface]
 	mov	rax,qword[rax+EFI_GRAPHICS_OUTPUT_PROTOCOL.Mode]
 	mov	rbx,qword[rax+\
