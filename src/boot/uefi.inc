@@ -240,6 +240,14 @@ struc EFI_BLOCK_IO_MEDIA {
 }
 struct EFI_BLOCK_IO_MEDIA
 
+EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_UUID equ 22h,5bh,4eh,96h,59h,64h,0d2h,11h,8eh,\
+					 39h,00h,0a0h,0c9h,69h,72h,3bh
+struc EFI_SIMPLE_FILE_SYSTEM_PROTOCOL {
+ .Revision		int64
+ .OpenVolume		dptr
+}
+struct EFI_SIMPLE_FILE_SYSTEM_PROTOCOL
+
 EFI_GRAPHICS_OUTPUT_PROTOCOL_UUID equ 0deh, 0a9h, 42h,90h,0dch,023h,38h,04ah,96h,0fbh,7ah,0deh,0d0h,80h,51h,6ah
 struc EFI_GRAPHICS_OUTPUT_PROTOCOL {
  .QueryMode		dptr

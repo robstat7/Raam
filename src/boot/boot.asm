@@ -33,8 +33,8 @@ start:
 ;
 ; bootloader_main
 ;
-; This routine stores the framebuffer information and exits the boot
-; services.
+; This routine stores the framebuffer information, loads kernel, and
+; exits the boot services.
 ;
 bootloader_main:
 ; first we store the framebuffer info that will be needed by the kernel
@@ -42,6 +42,11 @@ bootloader_main:
 
 	call	store_framebuffer_info
 	jc	@f
+
+; load kernel into memory.
+
+	call	load_kernel
+	jc	.hang
 
 ; now we exit the boot services.
 
@@ -52,6 +57,45 @@ bootloader_main:
 
 .hang:
 	jmp	$
+@@:
+	ret
+
+;
+; load_kernel
+;
+load_kernel:
+	call	open_kernel_file
+	jc	@f
+@@:
+	ret
+
+;
+; open_kernel_file
+;
+open_kernel_file:
+	call	init_file_system_service	
+	jc	@f
+@@:
+	ret
+
+;
+; init_file_system_service
+;
+; This routine initializes the simple file system service. This will be
+; used to load the kernel binary.
+;
+init_file_system_service:
+	uefi_call_wrapper	BootServices,LocateProtocol,esfspuuid,0,\
+				esfspinterface
+	mov	rbx,EFI_SUCCESS
+	cmp	rax,rbx
+	jne	.error
+	jmp	@f
+.error:
+	xor	rax,rax
+	mov	qword[esfspinterface],rax
+	uefi_call_wrapper	ConOut,OutputString,ConOut,error_msg5
+	stc
 @@:
 	ret
 
@@ -224,6 +268,8 @@ error_msg2:	du	'error allocating memory map buffer',13,10,0
 error_msg3:	du	'error getting memory map',13,10,0
 error_msg4:	du	'error: exit boot services: map key is incorrect',13,\
 			10,0
+error_msg5: du  'fatal error: error locating simple file system protocol!',13,\
+		10,0
 gopuuid:		db		EFI_GRAPHICS_OUTPUT_PROTOCOL_UUID
 gopinterface:		dq		0
 framebuffer_base:	dq		0
@@ -235,5 +281,7 @@ memory_map_size:	dq		0
 map_key:		dq		0
 desc_size:		dq		0
 memory_map:		dq		0
+esfspuuid:		db		EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_UUID
+esfspinterface:		dq		0
 
 section '.reloc' fixups data discardable
