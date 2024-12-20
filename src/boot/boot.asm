@@ -75,6 +75,28 @@ load_kernel:
 open_kernel_file:
 	call	init_file_system_service	
 	jc	@f
+	call	open_volume
+	jc	@f
+@@:
+	ret
+
+;
+; open_volume
+;
+; This routine opens the root directory on a volume.
+;
+open_volume:
+	uefi_call_wrapper	qword[esfspinterface],OpenVolume,\
+				qword[esfspinterface],root_file_system
+	mov	rbx,EFI_SUCCESS
+	cmp	rax,rbx
+	jne	.error
+	jmp	@f
+.error:
+	xor	rax,rax
+	mov	qword[root_file_system],rax
+	uefi_call_wrapper	ConOut,OutputString,ConOut,error_msg6
+	stc
 @@:
 	ret
 
@@ -270,6 +292,7 @@ error_msg4:	du	'error: exit boot services: map key is incorrect',13,\
 			10,0
 error_msg5: du  'fatal error: error locating simple file system protocol!',13,\
 		10,0
+error_msg6: du  'error opening root volume',13,10,0
 gopuuid:		db		EFI_GRAPHICS_OUTPUT_PROTOCOL_UUID
 gopinterface:		dq		0
 framebuffer_base:	dq		0
@@ -283,5 +306,6 @@ desc_size:		dq		0
 memory_map:		dq		0
 esfspuuid:		db		EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_UUID
 esfspinterface:		dq		0
+root_file_system:	dq		0
 
 section '.reloc' fixups data discardable

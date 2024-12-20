@@ -398,7 +398,11 @@ else
      if defined EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE.#function
 		mov			rbx, [rbx + EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE.#function]
      else
+      if defined EFI_SIMPLE_FILE_SYSTEM_PROTOCOL.#function
+		mov	rbx,[rbx + EFI_SIMPLE_FILE_SYSTEM_PROTOCOL.#function]
+      else
 		mov			rbx, [rbx + function]
+      end if
      end if
     end if
    end if
