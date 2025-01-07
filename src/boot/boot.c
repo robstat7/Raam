@@ -27,8 +27,15 @@ end:
  * get_memory_map
  *
  * This function gets the memory map size, updates it, and allocates a new
- * pool of memory for the memory map.Then it gets the memory map into
+ * pool of memory for the memory map. Then it gets the memory map into
  * this newly allocated pool.
+ *
+ * NOTE: allocating the pool creates at least one new descriptor for
+ * the chunk of memory changed to EfiLoaderData. Not sure that UEFI
+ * firmware must allocate on a memory type boundary! If not, then two
+ * descriptors might be created.
+ * We will use this updated memory map size to allocate pool for the
+ * memory map and to get the memory map later.
  */
 EFI_STATUS get_memory_map(void)
 {
@@ -38,6 +45,9 @@ EFI_STATUS get_memory_map(void)
 	if(status != EFI_BUFFER_TOO_SMALL) {
 		goto end;
 	}
+
+	// updating memory map size. See the NOTE above
+	memory_map_size += 2 * desc_size;
 end:
 	return status;
 }
