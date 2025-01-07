@@ -58,7 +58,7 @@ EFI_STATUS allocate_pool_for_mem_map(void)
 
 	status = uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData,
 				   memory_map_size, (void **) &memory_map);
-	if (EFI_ERROR(status)) {
+	if(EFI_ERROR(status)) {
 		Print(L"fatal error: error allocating memory map buffer!\n");
 		memory_map = NULL;
 	}
