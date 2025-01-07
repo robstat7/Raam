@@ -2,6 +2,7 @@
  * boot time framebuffer related functions.
  */
 #include <boot/fb.h>
+#include <boot/boot_params.h>
 
 EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
 
@@ -20,8 +21,13 @@ EFI_STATUS store_framebuffer_info(void)
 		goto end;
 	}
 
-	Print(L"@native mode = %03d\n", gop->Mode->Mode);
-	for(;;);
+	boot_params.fb_info.fb_base = gop->Mode->FrameBufferBase;
+	boot_params.fb_info.horizontal_resolution =
+					gop->Mode->Info->HorizontalResolution;
+	boot_params.fb_info.vertical_resolution =
+					gop->Mode->Info->VerticalResolution;
+	boot_params.fb_info.pixels_per_scan_line =
+					gop->Mode->Info->PixelsPerScanLine;
 end:
 	return status;
 }
