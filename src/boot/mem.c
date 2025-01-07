@@ -4,6 +4,7 @@
 #include <boot/mem.h>
 
 UINTN memory_map_size = 0, desc_size = 0;
+UINTN map_key = 0;
 char *memory_map = NULL;
 
 /*
@@ -74,8 +75,6 @@ EFI_STATUS allocate_pool_for_mem_map(void)
 EFI_STATUS get_memory_map_size(void)
 {
 	EFI_STATUS status;
-
-	map_key = 0;
 
 	status = uefi_call_wrapper(BS->GetMemoryMap,5,&memory_map_size,0,
 				   &map_key,&desc_size,NULL);	
