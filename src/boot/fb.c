@@ -10,7 +10,9 @@ EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
  * store_framebuffer_info
  *
  * This function detects the graphics output protocol (GOP) and stores the
- * framebuffer information.
+ * framebuffer information. This information will be passed in the boot
+ * parameters to the kernel. Our terminal driver's initialization code will need
+ * this.
  */
 EFI_STATUS store_framebuffer_info(void)
 {
