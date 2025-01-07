@@ -4,6 +4,7 @@
 #include <boot/mem.h>
 
 UINTN memory_map_size = 0, desc_size = 0;
+char *memory_map = NULL;
 
 /*
  * get_memory_map
@@ -28,13 +29,36 @@ EFI_STATUS get_memory_map(void)
 		goto end;
 	}
 
-	status = EFI_SUCCESS;
-
 	// updating memory map size. See the NOTE above
 	memory_map_size += 2 * desc_size;
 
-	Print(L"@mmap_size = %d, desc_size = %d\n", memory_map_size, desc_size);
+	status = allocate_pool_for_mem_map();
+	if(EFI_ERROR(status)) {
+		goto end;
+	}
+
+	Print(L"@memory_map = %p\n", (void *) memory_map);
 end:
+	return status;
+}
+
+/*
+ * allocate_pool_for_mem_map
+ *
+ * This function invokes BootServices->AllocatePool function and
+ * allocates a new pool of memory for the memory map.
+ */
+EFI_STATUS allocate_pool_for_mem_map(void)
+{
+	EFI_STATUS status;
+
+	status = uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData,
+				   memory_map_size, (void **) &memory_map);
+	if (EFI_ERROR(status)) {
+		Print(L"fatal error: error allocating memory map buffer!\n");
+		memory_map = NULL;
+	}
+
 	return status;
 }
 
