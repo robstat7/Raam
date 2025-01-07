@@ -2,6 +2,8 @@ x86_64-elf-gcc boot/fb.c -c -fno-stack-protector -fpic -fshort-wchar -mno-red-zo
 
 x86_64-elf-gcc boot/boot.c -c -fno-stack-protector -fpic -fshort-wchar -mno-red-zone -I /usr/include/efi -I include/ -DEFI_FUNCTION_WRAPPER -o build/boot/boot.o
 
-x86_64-elf-ld build/boot/fb.o build/boot/boot.o /home/dileep/gnu-efi/x86_64/gnuefi/crt0-efi-x86_64.o -shared -Bsymbolic -L /home/dileep/gnu-efi/x86_64/lib/ -L /home/dileep/gnu-efi/x86_64/gnuefi/ -T /home/dileep/gnu-efi/gnuefi/elf_x86_64_efi.lds -o build/system.so -lefi -lgnuefi
+x86_64-elf-gcc boot/main.c -c -fno-stack-protector -fpic -fshort-wchar -mno-red-zone -I /usr/include/efi -I include/ -DEFI_FUNCTION_WRAPPER -o build/boot/main.o
+
+x86_64-elf-ld build/boot/fb.o build/boot/boot.o build/boot/main.o /home/dileep/gnu-efi/x86_64/gnuefi/crt0-efi-x86_64.o -shared -Bsymbolic -L /home/dileep/gnu-efi/x86_64/lib/ -L /home/dileep/gnu-efi/x86_64/gnuefi/ -T /home/dileep/gnu-efi/gnuefi/elf_x86_64_efi.lds -o build/system.so -lefi -lgnuefi
 
 x86_64-elf-objcopy -j .text -j .sdata -j .data -j .rodata -j .dynamic -j .dynsym -j .rel -j .rela -j .rel.* -j .rela.* -j .reloc --target efi-app-x86_64 --subsystem=10 build/system.so build/BOOTx64.EFI
