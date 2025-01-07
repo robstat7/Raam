@@ -37,7 +37,11 @@ EFI_STATUS get_memory_map(void)
 		goto end;
 	}
 
-	Print(L"@memory_map = %p\n", (void *) memory_map);
+	status = uefi_call_wrapper(BS->GetMemoryMap, 5, &memory_map_size,
+				   memory_map, &map_key, &desc_size, NULL);
+	if(EFI_ERROR(status)) {
+		Print(L"fatal error: error getting memory map!\n");
+	}
 end:
 	return status;
 }

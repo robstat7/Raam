@@ -18,6 +18,8 @@ EFI_STATUS exit_boot_services(void)
 	if(EFI_ERROR(status)) {
 		goto end;
 	}
+
+	Print(L"@got memory map!\n");
 end:
 	return status;
 }
