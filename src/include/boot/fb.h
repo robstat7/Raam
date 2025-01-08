@@ -5,10 +5,13 @@
 #include <efilib.h>
 
 struct fb_info {
-	unsigned long long fb_base;
+	unsigned long long fb_base;	// framebuffer base address
+
+	// horizontal and vertical screen resolutions
 	unsigned long horizontal_resolution;
 	unsigned long vertical_resolution;
-	unsigned long pixels_per_scan_line;
+
+	unsigned long pixels_per_scanline;
 };
 
 EFI_STATUS store_framebuffer_info(void);

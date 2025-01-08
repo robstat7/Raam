@@ -1,10 +1,12 @@
-void main(void)
-{
 /*
- * Interrupts are still disabled. Do necessary setups, then
- * enable them
+ * Raam Raam sa _/\_ _/\_ _/\_
+ *
+ * Kernel's main function.
  */
-	// tty_init();
+#include <raam/main.h>
+#include <raam/tty.h>
 
-	for(;;);
+void main(struct boot_params boot_params)
+{
+	tty_init(boot_params.fb_info);
 }

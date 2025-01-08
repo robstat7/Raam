@@ -5,6 +5,7 @@
 #include <boot/boot_params.h>
 
 EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
+struct boot_params boot_params;
 
 /*
  * store_framebuffer_info
@@ -28,7 +29,7 @@ EFI_STATUS store_framebuffer_info(void)
 					gop->Mode->Info->HorizontalResolution;
 	boot_params.fb_info.vertical_resolution =
 					gop->Mode->Info->VerticalResolution;
-	boot_params.fb_info.pixels_per_scan_line =
+	boot_params.fb_info.pixels_per_scanline =
 					gop->Mode->Info->PixelsPerScanLine;
 end:
 	return status;

@@ -5,12 +5,15 @@
  */
 #include <boot/fb.h>
 #include <boot/boot.h>
+#include <boot/boot_params.h>
+#include <raam/main.h>
 
 /*
  * efi_main
  *
  * This function initializes the UEFI library, stores the framebuffer
- * information, and exits the boot services.
+ * information, exits the boot services, and calls the kernel's main
+ * function passing the boot parameters.
  */
 EFI_STATUS
 EFIAPI
@@ -29,6 +32,9 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 	if(EFI_ERROR(status)) {
 		goto hang; 
 	}
+
+	/* call the kernel's main function */
+	main(boot_params);
 
 hang:
 	for(;;);
