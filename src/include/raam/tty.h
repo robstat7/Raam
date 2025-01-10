@@ -25,6 +25,6 @@ struct tty {
 
 void tty_init(struct fb_info_struct fb_info);
 void tty_put_char(char c);
-static inline void write_pixel(uint32_t pixel_color, int x, int y);
+static inline void tty_put_pixel(uint32_t pixel_color, int x, int y);
 
 #endif	// TTY_H

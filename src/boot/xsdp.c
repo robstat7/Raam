@@ -68,6 +68,7 @@ end:
 	return ret;
 }
 
+// TODO: Refactoring.
 // Returns 0 on success.
 // For ACPI 1.0 (the first structure) you add up every byte in the
 // structure and make sure the lowest byte of the result is equal to

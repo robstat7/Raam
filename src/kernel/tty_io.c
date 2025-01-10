@@ -43,7 +43,9 @@ void tty_put_char(char c)
 		for (int col = 0; col < 8; col++) {
 			// check if we need to write a pixel in the row pixels data
 			if(row_data & mask[col]) {	
-				write_pixel(default_tty.fg_color, default_tty.cursor_x + col, default_tty.cursor_y + row);
+				tty_put_pixel(default_tty.fg_color,
+					      default_tty.cursor_x + col,
+					      default_tty.cursor_y + row);
 			}
 		}
 	}
@@ -56,8 +58,11 @@ void tty_put_char(char c)
 	}
 }
 
-static inline void write_pixel(uint32_t pixel_color, int x, int y)
+static inline void tty_put_pixel(uint32_t pixel_color, int x, int y)
 {
-	volatile uint32_t *pixel_address = (volatile uint32_t *)(default_tty.fb_base + default_tty.pixels_per_scanline * y + x);
+	volatile uint32_t *pixel_address = (volatile uint32_t *)
+					   (default_tty.fb_base +
+					    default_tty.pixels_per_scanline * y
+					    + x);
 	*pixel_address = pixel_color;
 }

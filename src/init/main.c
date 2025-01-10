@@ -11,6 +11,8 @@ void main(struct boot_params boot_params)
 	tty_init(boot_params.fb_info);
 
 	// test
-	for(int i = 0; i < 1000; i++)
-		tty_put_char('a');
+	tty_put_char('A');
+	tty_put_char('b');
+	tty_put_char('Q');
+	tty_put_char('R');
 }
