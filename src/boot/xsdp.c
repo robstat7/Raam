@@ -9,27 +9,32 @@ void *xsdp = NULL;
  * get_xsdp_pointer
  *
  * This function gets the xsdp structure pointer by examining the EFI
- * Configuration Table within the EFI System Table.
- * The boot loader must retrieve the pointer to the xsdp
+ * Configuration Table within the EFI System Table. Returns 0 on success
+ * else -1.
+ * Note: The boot loader must retrieve the pointer to the xsdp
  * structure before assuming platform control via the EFI
  * ExitBootServices interface.
  */
 int get_xsdp_pointer(EFI_SYSTEM_TABLE *system_table)
 {
 	UINTN num_config_tables = system_table->NumberOfTableEntries;
-	int ret = 0;
-	struct xsdp_struct *table;
-	EFI_CONFIGURATION_TABLE *config_tables = system_table->ConfigurationTable;
+	EFI_CONFIGURATION_TABLE *config_tables =
+					system_table->ConfigurationTable;
+	int ret = 0;	// function default return value
+	struct xsdp_struct *table;	// pointer to an xsdp table
 
 	// check if any table has the valid efi guid for the xsdp structure
 	for(UINTN i = 0; i < num_config_tables; i++) {
-                if(CompareGuid(&config_tables[i].VendorGuid, &acpi_20_table_guid) == 0) {
-                        table = (struct xsdp_struct *) config_tables[i].VendorTable;
-			// found a xsdp table. It might be a valid xsdp. Perform
-			// validations.
+		if(CompareGuid(&config_tables[i].VendorGuid,
+			       &acpi_20_table_guid) == 0) {
+			// found an xsdp table.
+                        table = (struct xsdp_struct *)
+				 config_tables[i].VendorTable;
+			// It might be a valid xsdp. Perform validations.
 			// validation 1: check if ACPI version is >= 2.0
 			uint8_t revision = table->revision;	
 			if(revision == 0x2) {
+                        	/* store xsdp struct pointer */
 				xsdp = (void *) table;
 				break;
 			}
