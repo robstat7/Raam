@@ -38,6 +38,13 @@ void tty_put_char(char c)
 			}
 		}
 	}
+
+	// update tty cursors' positions 
+	default_tty.cursor_x += 8;	// 8 is the font width	
+	if(default_tty.cursor_x >= default_tty.horizontal_resolution) {
+		default_tty.cursor_x = 0;	// wrap around to the next line
+		default_tty.cursor_y += 16;	// move down by the font height
+	}
 }
 
 static inline void write_pixel(uint32_t pixel_color, int x, int y)
