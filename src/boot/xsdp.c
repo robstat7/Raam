@@ -69,6 +69,11 @@ end:
 }
 
 // Returns 0 on success.
+// For ACPI 1.0 (the first structure) you add up every byte in the
+// structure and make sure the lowest byte of the result is equal to
+// zero. For ACPI 2.0 and later you'd do exactly the same thing for the
+// original (ACPI 1.0) part of the second structure, and then do it
+// again for the fields that are part of the ACPI 2.0 extension.
 int8_t validate_checksum(struct xsdp_struct *table)
 {
 	int8_t *bytes = (int8_t *)table;
