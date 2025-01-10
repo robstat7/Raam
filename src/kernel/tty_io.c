@@ -58,6 +58,12 @@ void tty_put_char(char c)
 	}
 }
 
+/*
+ * tty_put_pixel
+ *
+ * This function puts a single pixel on the terminal. It should only be
+ * called by `tty_put_char`.
+ */
 static inline void tty_put_pixel(uint32_t pixel_color, int x, int y)
 {
 	volatile uint32_t *pixel_address = (volatile uint32_t *)
