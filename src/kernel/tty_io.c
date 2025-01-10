@@ -16,7 +16,7 @@ const unsigned char mask[8] = {128, 64, 32, 16, 8, 4, 2, 1};
  */
 void tty_init(struct fb_info_struct fb_info) 
 {
-	default_tty.fb_base = fb_info.fb_base;
+	default_tty.fb_base = (volatile uint32_t *) fb_info.fb_base;
 	default_tty.horizontal_resolution = fb_info.horizontal_resolution;
 	default_tty.vertical_resolution = fb_info.vertical_resolution;
 	default_tty.pixels_per_scanline = fb_info.pixels_per_scanline;
@@ -42,5 +42,6 @@ void tty_put_char(char c)
 
 static inline void write_pixel(uint32_t pixel_color, int x, int y)
 {
-	*((volatile uint32_t *)(((volatile uint32_t *) default_tty.fb_base) + default_tty.pixels_per_scanline * y + x)) = pixel_color;
+	volatile uint32_t *pixel_address = (volatile uint32_t *)(default_tty.fb_base + default_tty.pixels_per_scanline * y + x);
+	*pixel_address = pixel_color;
 }

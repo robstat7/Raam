@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 struct tty {
-	unsigned long long fb_base;	// framebuffer base address
+	volatile uint32_t *fb_base;	// framebuffer base address pointer
 
 	// horizontal and vertical screen resolutions
 	unsigned long horizontal_resolution;
