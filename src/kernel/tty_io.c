@@ -27,16 +27,13 @@ void tty_init(struct fb_info_struct fb_info)
 
 void tty_put_char(char c)
 {
-	// for(int r = 0; r < default_tty.vertical_resolution; r++)
-	// 	for(int c = 0; c < default_tty.horizontal_resolution; c++)
-	// 		write_pixel(default_tty.fg_color, default_tty.cursor_x + c, default_tty.cursor_y + r);
+	int offset = c * 16;	// 16 is the font height
 
-	int offset = c * 16;
-
-	for(int row = 0; row < 16; row++) {
+	for(int row = 0; row < 16; row++) {	// 16 rows in a 8x16 font
 		unsigned char row_data = fontdata_8x16[offset + row];
 		for (int col = 0; col < 8; col++) {
-			if(row_data & mask[col]) {
+			// check if we need to write a pixel in the row pixels data
+			if(row_data & mask[col]) {	
 				write_pixel(default_tty.fg_color, default_tty.cursor_x + col, default_tty.cursor_y + row);
 			}
 		}
