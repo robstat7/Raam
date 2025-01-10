@@ -20,34 +20,58 @@ int get_xsdp_pointer(EFI_SYSTEM_TABLE *system_table)
 	UINTN num_config_tables = system_table->NumberOfTableEntries;
 	EFI_CONFIGURATION_TABLE *config_tables =
 					system_table->ConfigurationTable;
-	int ret = 0;	// function default return value
-	struct xsdp_struct *table;	// pointer to an xsdp table
 
-	// check if any table has the valid efi guid for the xsdp structure
-	for(UINTN i = 0; i < num_config_tables; i++) {
-		if(CompareGuid(&config_tables[i].VendorGuid,
-			       &acpi_20_table_guid) == 0) {
-			// found an xsdp table.
-                        table = (struct xsdp_struct *)
-				 config_tables[i].VendorTable;
-			// It might be a valid xsdp. Perform validations.
-			// validation 1: check if ACPI version is >= 2.0
-			uint8_t revision = table->revision;	
-			if(revision == 0x2) {
-                        	/* store xsdp struct pointer */
-				xsdp = (void *) table;
+	int ret = find_valid_xsdp(num_config_tables, config_tables); 	
+
+	return ret;
+}
+
+// check if any table has the valid efi guid for the xsdp
+// structure. Returns 0 on success else -1.
+int find_valid_xsdp(UINTN num_tables, EFI_CONFIGURATION_TABLE *config_tables)
+{
+	int ret = 0;
+
+	for(UINTN i = 0; i < num_tables; i++) {
+		if(CompareGuid(&config_tables[i].VendorGuid, &acpi_20_table_guid) == 0) {
+			struct xsdp_struct *table = (struct xsdp_struct *)
+						   config_tables[i].VendorTable;
+			// found an xsdp table. Now validate it.
+			int success = validate_xsdp(table);
+			if(success == 0) {
+				xsdp = table;	
 				break;
 			}
 		}
 	}
 
-	if(xsdp == NULL) {                                                      
+	if(xsdp) {
+		Print(L"found xsdp strucutre pointer!\n");
+	} else {
 		Print(L"error: could not find XSDP structure pointer!\n");
 		ret = -1;
 	}
-	else {
-		Print(L"found xsdp strucutre pointer!\n");
-	}
-
+	
 	return ret;
+}
+
+// validates the xsdp table. Returns 0 on success else -1.
+int validate_xsdp(struct xsdp_struct *table)
+{
+	int success = check_valid_acpi_version(table);
+	if(success == -1) {
+		goto end;
+	}
+end:
+	return success;
+}
+
+// check if ACPI version is >= 2.0. Returns 0 on success else -1.
+int check_valid_acpi_version(struct xsdp_struct *table)
+{
+	if(table->revision == 2) {
+		return 0;
+	} else {
+		return -1;
+	}
 }
