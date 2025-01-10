@@ -41,7 +41,7 @@ void tty_put_char(char c)
 	for(int row = 0; row < 16; row++) {	// 16 rows in a 8x16 font
 		unsigned char row_data = fontdata_8x16[offset + row];
 		for (int col = 0; col < 8; col++) {
-			// check if we need to write a pixel in the row pixels data
+			// check if we need to put a pixel from the fonts row
 			if(row_data & mask[col]) {	
 				tty_put_pixel(default_tty.fg_color,
 					      default_tty.cursor_x + col,
