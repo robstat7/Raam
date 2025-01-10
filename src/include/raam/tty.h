@@ -2,6 +2,7 @@
 #define TTY_H
 
 #include <boot/fb.h>
+#include <stdint.h>
 
 struct tty {
 	unsigned long long fb_base;	// framebuffer base address
@@ -14,8 +15,13 @@ struct tty {
 
 	unsigned long cursor_x;		// current x-coordinate of the cursor
 	unsigned long cursor_y;		// current y-coordinate of the cursor
+
+	// tty foreground color
+	uint32_t fg_color;
 };
 
 void tty_init(struct fb_info fb_info);
+void tty_put_char(char c);
+static inline void write_pixel(uint32_t pixel_color, int x, int y);
 
 #endif	// TTY_H

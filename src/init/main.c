@@ -9,4 +9,6 @@
 void main(struct boot_params boot_params)
 {
 	tty_init(boot_params.fb_info);
+
+	tty_put_char('R');
 }
