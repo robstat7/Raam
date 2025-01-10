@@ -4,7 +4,8 @@
 #include <efi.h>
 #include <efilib.h>
 
-struct fb_info {
+// structure to hold the framebuffer information
+struct fb_info_struct {
 	unsigned long long fb_base;	// framebuffer base address
 
 	// horizontal and vertical screen resolutions

@@ -1,3 +1,6 @@
+/*
+ * 'tty.h' defines the structure used by tty_io.c.
+ */
 #ifndef TTY_H
 #define TTY_H
 
@@ -20,7 +23,7 @@ struct tty {
 	uint32_t fg_color;
 };
 
-void tty_init(struct fb_info fb_info);
+void tty_init(struct fb_info_struct fb_info);
 void tty_put_char(char c);
 static inline void write_pixel(uint32_t pixel_color, int x, int y);
 

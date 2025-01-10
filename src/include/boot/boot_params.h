@@ -4,7 +4,7 @@
 #include <boot/fb.h>
 
 struct boot_params {
-	struct fb_info	fb_info;
+	struct fb_info_struct fb_info;
 };
 
 extern struct boot_params boot_params;

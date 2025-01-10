@@ -1,5 +1,5 @@
 /*
- * terminal I/O related functions.
+ * terminal subsystem I/O related functions.
  */
 #include <raam/tty.h>
 #include <raam/font_8x16.h>
@@ -12,9 +12,9 @@ const unsigned char mask[8] = {128, 64, 32, 16, 8, 4, 2, 1};
 /*
  * tty_init
  *
- * Initialize the tty structure.
+ * This function initializes the tty structure.
  */
-void tty_init(struct fb_info fb_info) 
+void tty_init(struct fb_info_struct fb_info) 
 {
 	default_tty.fb_base = fb_info.fb_base;
 	default_tty.horizontal_resolution = fb_info.horizontal_resolution;
