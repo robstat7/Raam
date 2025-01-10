@@ -58,12 +58,36 @@ int find_valid_xsdp(UINTN num_tables, EFI_CONFIGURATION_TABLE *config_tables)
 // validates the xsdp table. Returns 0 on success else -1.
 int validate_xsdp(struct xsdp_struct *table)
 {
-	int success = check_valid_acpi_version(table);
-	if(success == -1) {
+	int ret = check_valid_acpi_version(table);
+	if(ret == -1) {
 		goto end;
 	}
+
+	ret = validate_checksum(table);
 end:
-	return success;
+	return ret;
+}
+
+// Returns 0 on success.
+int8_t validate_checksum(struct xsdp_struct *table)
+{
+	int8_t *bytes = (int8_t *)table;
+	int sum = 0;
+	uint8_t i;
+	
+	// sum RSDP region
+	for (i = RSDP_START_OFFSET; i <= RSDP_END_OFFSET; i++) {
+	    sum += bytes[i];
+	}
+	
+	// If RSDP checksum is valid, include XSDP region
+	if ((int8_t)sum == 0) {
+	    for (i = XSDP_START_OFFSET; i <= XSDP_END_OFFSET; i++) {
+	        sum += bytes[i];
+	    }
+	}
+	
+	return (int8_t)sum;
 }
 
 // check if ACPI version is >= 2.0. Returns 0 on success else -1.
