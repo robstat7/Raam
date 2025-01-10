@@ -25,6 +25,15 @@ void tty_init(struct fb_info_struct fb_info)
 	default_tty.fg_color = 0xffffff;	// white
 }
 
+/*
+ * tty_put_char
+ *
+ * This function puts a single character on the terminal. It uses the
+ * 8x16 font array to get the font's data and writes it to the
+ * framebuffer pixel by pixel. It only writes the "on" pixels with the
+ * foreground color. It then updates the cursors' positions to put the
+ * next character at the right place.
+ */
 void tty_put_char(char c)
 {
 	int offset = c * 16;	// 16 is the font height
