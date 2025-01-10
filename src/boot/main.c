@@ -5,6 +5,7 @@
  */
 #include <boot/fb.h>
 #include <boot/boot.h>
+#include <boot/xsdp.h>
 #include <boot/boot_params.h>
 #include <raam/main.h>
 
@@ -27,6 +28,13 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 	if(EFI_ERROR(status)) {
 		goto end;
 	}
+
+	// get the xsdp pointer
+	int ret = get_xsdp_pointer(system_table);
+	if(ret == -1) {
+		goto hang;
+	}
+	for(;;);
 
 	status = exit_boot_services(image_handle);
 	if(EFI_ERROR(status)) {
