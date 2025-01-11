@@ -63,37 +63,27 @@ int validate_xsdp(struct xsdp_struct *table)
 		goto end;
 	}
 
-	ret = validate_checksum(table);
+	uint32_t length = table->length;
+	ret = validate_checksum((uint8_t *) table, length);
 end:
 	return ret;
 }
 
-// TODO: Refactoring.
-// Returns 0 on success.
+// Returns 0 on success. 
 // For ACPI 1.0 (the first structure) you add up every byte in the
 // structure and make sure the lowest byte of the result is equal to
 // zero. For ACPI 2.0 and later you'd do exactly the same thing for the
 // original (ACPI 1.0) part of the second structure, and then do it
 // again for the fields that are part of the ACPI 2.0 extension.
-int8_t validate_checksum(struct xsdp_struct *table)
+uint8_t validate_checksum(const uint8_t *table, uint32_t length)
 {
-	int8_t *bytes = (int8_t *)table;
-	int sum = 0;
-	uint8_t i;
-	
-	// sum RSDP region
-	for (i = RSDP_START_OFFSET; i <= RSDP_END_OFFSET; i++) {
-	    sum += bytes[i];
+	uint32_t sum = 0;
+
+	for(uint32_t i = 0; i < length; i++) {
+		sum += table[i];
 	}
-	
-	// If RSDP checksum is valid, include XSDP region
-	if ((int8_t)sum == 0) {
-	    for (i = XSDP_START_OFFSET; i <= XSDP_END_OFFSET; i++) {
-	        sum += bytes[i];
-	    }
-	}
-	
-	return (int8_t)sum;
+
+	return (uint8_t) sum;
 }
 
 // check if ACPI version is >= 2.0. Returns 0 on success else -1.
