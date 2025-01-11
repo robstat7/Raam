@@ -5,6 +5,7 @@
 
 struct boot_params {
 	struct fb_info_struct fb_info;
+	const void *xsdp;	// pointer to xsdp structure
 };
 
 extern struct boot_params boot_params;

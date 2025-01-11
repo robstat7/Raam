@@ -1,9 +1,10 @@
 #include <boot/xsdp.h>
+#include <boot/boot_params.h>
 
 // EFI GUID for a pointer to the ACPI 2.0 or later specification XSDP structure
 EFI_GUID acpi_20_table_guid = ACPI_20_TABLE_GUID;
 
-void *xsdp = NULL;
+const void *xsdp = NULL;
 
 /*
  * get_xsdp_pointer
@@ -22,6 +23,12 @@ int get_xsdp_pointer(EFI_SYSTEM_TABLE *system_table)
 					system_table->ConfigurationTable;
 
 	int ret = find_valid_xsdp(num_config_tables, config_tables); 	
+
+	if(ret == 0) {	// success
+		// store xsdp pointer in the boot params to be passed
+		// to the kernel
+		boot_params.xsdp = xsdp;
+	}
 
 	return ret;
 }
