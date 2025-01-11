@@ -45,9 +45,7 @@ int find_valid_xsdp(UINTN num_tables, EFI_CONFIGURATION_TABLE *config_tables)
 		}
 	}
 
-	if(xsdp) {
-		Print(L"found xsdp strucutre pointer!\n");
-	} else {
+	if(xsdp == NULL) {
 		Print(L"error: could not find XSDP structure pointer!\n");
 		ret = -1;
 	}

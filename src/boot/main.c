@@ -34,7 +34,6 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 	if(ret == -1) {
 		goto hang;
 	}
-	for(;;);
 
 	status = exit_boot_services(image_handle);
 	if(EFI_ERROR(status)) {
