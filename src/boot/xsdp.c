@@ -69,12 +69,12 @@ end:
 	return ret;
 }
 
-// Returns 0 on success. 
-// For ACPI 1.0 (the first structure) you add up every byte in the
-// structure and make sure the lowest byte of the result is equal to
-// zero. For ACPI 2.0 and later you'd do exactly the same thing for the
-// original (ACPI 1.0) part of the second structure, and then do it
-// again for the fields that are part of the ACPI 2.0 extension.
+/*
+ * validate_checksum
+ *
+ * This function sums all the bytes of the table and returns the lowest
+ * byte of the sum. It returns 0 on success.
+ */
 uint8_t validate_checksum(const uint8_t *table, uint32_t length)
 {
 	uint32_t sum = 0;
