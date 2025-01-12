@@ -4,6 +4,7 @@
 #include <efi.h>
 #include <efilib.h>
 #include <stdint.h>
+#include <lib/checksum.h>
 
 #define RSDP_START_OFFSET 0
 #define RSDP_END_OFFSET 19
@@ -27,6 +28,5 @@ int get_xsdp_pointer(EFI_SYSTEM_TABLE *system_table);
 static int find_valid_xsdp(UINTN num_tables, EFI_CONFIGURATION_TABLE *tables);
 static int validate_xsdp(struct xsdp_struct *table);
 static int check_valid_acpi_version(struct xsdp_struct *table);
-static uint8_t validate_checksum(const uint8_t *table, uint32_t length);
 
 #endif	// XSDP_H

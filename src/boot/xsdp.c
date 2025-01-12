@@ -75,23 +75,6 @@ end:
 	return ret;
 }
 
-/*
- * validate_checksum
- *
- * This function sums all the bytes of the table and returns the lowest
- * byte of the sum. It returns 0 on success.
- */
-static uint8_t validate_checksum(const uint8_t *table, uint32_t length)
-{
-	uint32_t sum = 0;
-
-	for(uint32_t i = 0; i < length; i++) {
-		sum += table[i];
-	}
-
-	return (uint8_t) sum;
-}
-
 // check if ACPI version is >= 2.0. Returns 0 on success else -1.
 static int check_valid_acpi_version(struct xsdp_struct *table)
 {

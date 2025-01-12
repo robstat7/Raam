@@ -3,6 +3,7 @@
 
 #include <boot/xsdp.h>
 #include <raam/printk.h>
+#include <lib/checksum.h>
 
 struct acpi_sdt_header {
 	char signature[4];
@@ -20,7 +21,7 @@ struct xsdt_struct {
 	struct acpi_sdt_header h;
 };	
 
-void acpi_init(const struct xsdp_struct *xsdp);
-static void find_xsdt_table(const struct xsdp_struct *xsdp);
+int acpi_init(const struct xsdp_struct *xsdp);
+static int find_xsdt_table(const struct xsdp_struct *xsdp);
 
 #endif	// ACPI_H

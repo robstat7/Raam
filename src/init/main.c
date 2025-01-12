@@ -10,5 +10,10 @@
 void main(struct boot_params boot_params)
 {
 	tty_init(boot_params.fb_info);
-	acpi_init(boot_params.xsdp);
+	int ret = acpi_init(boot_params.xsdp);
+	if(ret == -1) {	// error
+		goto end;
+	}
+end:
+	return;
 }
