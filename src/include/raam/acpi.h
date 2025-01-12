@@ -23,5 +23,6 @@ struct xsdt_struct {
 
 int acpi_init(const struct xsdp_struct *xsdp);
 static int find_xsdt_table(const struct xsdp_struct *xsdp);
+static int get_mcfg_pointer(void);
 
 #endif	// ACPI_H
