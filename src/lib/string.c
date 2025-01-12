@@ -29,7 +29,7 @@ char* citoa(int num, char* str)
     // Process individual digits                                                
     while (num != 0) {                                                          
         int rem = num % base;                                                   
-        str[i++] = (rem > 9) ? (rem - 10) + 'a' : rem + '0';                    
+        str[i++] = rem + '0';                    
         num = num / base;                                                       
     }                                                                           
                                                                                 
