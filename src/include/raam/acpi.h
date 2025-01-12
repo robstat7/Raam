@@ -23,8 +23,8 @@ struct xsdt_struct {
 
 	// An array of 64-bit physical addresses that point to other
 	// DESCRIPTION_HEADERs
-	uint64_t *pointer_to_other_sdts;
-};	
+	uint64_t pointer_to_other_sdts[] __attribute__((aligned(4))); // Force 4-byte alignment
+}__attribute__((packed));	
 
 int acpi_init(const struct xsdp_struct *xsdp);
 static int find_xsdt_table(const struct xsdp_struct *xsdp);

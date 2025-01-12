@@ -29,18 +29,26 @@ static int get_mcfg_pointer(void)
 
 static int find_valid_mcfg(int enteries)
 {
-	char desc_header_sig[4];
-
 	int ret = 0;
 
+	//debug
+// 	uint64_t *expected_start = (uint64_t *)((char *)xsdt + sizeof(struct acpi_sdt_header));
+// if (xsdt->pointer_to_other_sdts != expected_start) {
+// 	printk("different addrs  ");
+// }
+// else {
+// 	printk("same addrs  ");
+// }
+// 
+// printk("differnce is {d}  ", xsdt->pointer_to_other_sdts - expected_start);
+// for(;;);	
+
 	for(int i = 0; i < enteries; i++) {
-		// const char *desc_header = (char *) xsdt->pointer_to_other_sdts[i];
-		const char *desc_header = (char*) ((uint64_t *) ((char *) xsdt + 36))[i];
-		strncpy(desc_header_sig, desc_header, 4);
-		printk(desc_header_sig);
-		printk("  ");
+		const struct acpi_sdt_header *desc_header =
+		      (struct acpi_sdt_header *) xsdt->pointer_to_other_sdts[i];
+		// const struct acpi_sdt_header *desc_header = (struct acpi_sdt_header *) ((uint64_t *) ((char *) xsdt + 36))[i];
 		/* check MCFG table signature */                                
-                if(strncmp(desc_header_sig, "MCFG", 4) == 0) {
+                if(strncmp(desc_header->signature, "MCFG", 4) == 0) {
 			printk("@found mcfg table!  ");
 		}
 	}
