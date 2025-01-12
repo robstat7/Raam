@@ -3,7 +3,7 @@
 
 #include <stdarg.h>
 #include <raam/tty.h>
-#include <raam/string.h>
+#include <lib/string.h>
 
 // states to use
 #define NORMAL			0

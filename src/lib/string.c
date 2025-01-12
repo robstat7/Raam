@@ -1,4 +1,4 @@
-#include <raam/string.h>
+#include <lib/string.h>
 
 /*                                                                              
  * convert integer to string.                                                   
