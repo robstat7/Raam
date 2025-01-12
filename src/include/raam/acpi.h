@@ -18,13 +18,17 @@ struct acpi_sdt_header {
 	uint32_t creator_revision;
 };
 
+// Note that the 'pointer_to_other_sdts' field as defined below should
+// be aligned to a 4-byte boundary and not the default 8-byte alignment
+// for a uint64_t. Source: XSDT - osdev wiki.
 struct xsdt_struct {
 	struct acpi_sdt_header h;
 
-	// An array of 64-bit physical addresses that point to other
+	// an array of 64-bit physical addresses that point to other
 	// DESCRIPTION_HEADERs
-	uint64_t pointer_to_other_sdts[] __attribute__((aligned(4))); // Force 4-byte alignment
-}__attribute__((packed));	
+	uint64_t pointer_to_other_sdts[] __attribute__((aligned(4)));
+						      // force 4-byte alignment
+}__attribute__((packed));	// force structure to be laid out with no gaps
 
 int acpi_init(const struct xsdp_struct *xsdp);
 static int find_xsdt_table(const struct xsdp_struct *xsdp);
