@@ -10,6 +10,13 @@ end:
 	return ret;
 }
 
+/*
+ * find_xsdt_table
+ *
+ * This function parses the xsdt address from the xsdp structure and
+ * then its length and validates its checksum. It returns 0 on a valid
+ * xsdt table else -1.
+ */
 static int find_xsdt_table(const struct xsdp_struct *xsdp)
 {
 	const struct xsdt_struct *xsdt = (struct xsdt_struct *)
