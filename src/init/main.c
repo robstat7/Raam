@@ -13,6 +13,8 @@ void main(struct boot_params boot_params)
 	tty_init(boot_params.fb_info);
 	// acpi_init(boot_params.xsdp);
 
-	int num = 256;
+	// test
+	int num = 2147483647;
+	printk("hello world {d} class", num);
 	printk("hello world {d} class", num);
 }

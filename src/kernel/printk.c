@@ -48,15 +48,23 @@ void printk(const char *format, ...)
 	va_end(args);	// clean up the va_list
 }
 
+/*
+ * print_arg
+ *
+ * This function prints the argument for the given specifier letter.
+ * Params:
+ * 	specifier	- like "d" for digit
+ *	args		- the pointer to va_list variable.
+ */
 static void print_arg(const char *specifier, va_list *args)
 {
-	int arg;
-	char str[60];
+	int int_arg;
+	char str[INT_MAX_CHARS];
 
 	switch(specifier[0]) {
 		case 'd':
-			arg = va_arg(*args, int);
-			citoa(arg, str);
+			int_arg = va_arg(*args, int);
+			citoa(int_arg, str);   // convert int argument to char *
 			printk(str);
 			break;
 	}
