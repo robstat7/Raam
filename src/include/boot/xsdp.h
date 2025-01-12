@@ -24,9 +24,9 @@ struct xsdp_struct {
 };
 
 int get_xsdp_pointer(EFI_SYSTEM_TABLE *system_table);
-int find_valid_xsdp(UINTN num_tables, EFI_CONFIGURATION_TABLE *tables);
-int validate_xsdp(struct xsdp_struct *table);
-int check_valid_acpi_version(struct xsdp_struct *table);
-uint8_t validate_checksum(const uint8_t *table, uint32_t length);
+static int find_valid_xsdp(UINTN num_tables, EFI_CONFIGURATION_TABLE *tables);
+static int validate_xsdp(struct xsdp_struct *table);
+static int check_valid_acpi_version(struct xsdp_struct *table);
+static uint8_t validate_checksum(const uint8_t *table, uint32_t length);
 
 #endif	// XSDP_H

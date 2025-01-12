@@ -35,7 +35,8 @@ int get_xsdp_pointer(EFI_SYSTEM_TABLE *system_table)
 
 // check if any table has the valid efi guid for the xsdp
 // structure. Returns 0 on success else -1.
-int find_valid_xsdp(UINTN num_tables, EFI_CONFIGURATION_TABLE *config_tables)
+static int find_valid_xsdp(UINTN num_tables,
+			   EFI_CONFIGURATION_TABLE *config_tables)
 {
 	int ret = 0;
 
@@ -61,7 +62,7 @@ int find_valid_xsdp(UINTN num_tables, EFI_CONFIGURATION_TABLE *config_tables)
 }
 
 // validates the xsdp table. Returns 0 on success else -1.
-int validate_xsdp(struct xsdp_struct *table)
+static int validate_xsdp(struct xsdp_struct *table)
 {
 	int ret = check_valid_acpi_version(table);
 	if(ret == -1) {
@@ -80,7 +81,7 @@ end:
  * This function sums all the bytes of the table and returns the lowest
  * byte of the sum. It returns 0 on success.
  */
-uint8_t validate_checksum(const uint8_t *table, uint32_t length)
+static uint8_t validate_checksum(const uint8_t *table, uint32_t length)
 {
 	uint32_t sum = 0;
 
@@ -92,7 +93,7 @@ uint8_t validate_checksum(const uint8_t *table, uint32_t length)
 }
 
 // check if ACPI version is >= 2.0. Returns 0 on success else -1.
-int check_valid_acpi_version(struct xsdp_struct *table)
+static int check_valid_acpi_version(struct xsdp_struct *table)
 {
 	if(table->revision == 2) {
 		return 0;
