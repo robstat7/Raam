@@ -4,7 +4,7 @@
 // EFI GUID for a pointer to the ACPI 2.0 or later specification XSDP structure
 EFI_GUID acpi_20_table_guid = ACPI_20_TABLE_GUID;
 
-const void *xsdp = NULL;
+struct xsdp_struct *xsdp = NULL;
 
 /*
  * get_xsdp_pointer

@@ -2,10 +2,11 @@
 #define BOOT_PARAMS_H
 
 #include <boot/fb.h>
+#include <boot/xsdp.h>
 
 struct boot_params {
 	struct fb_info_struct fb_info;
-	const void *xsdp;	// pointer to xsdp structure
+	const struct xsdp_struct *xsdp;	// pointer to xsdp structure
 };
 
 extern struct boot_params boot_params;
