@@ -4,6 +4,7 @@
 #include <boot/xsdp.h>
 #include <raam/printk.h>
 #include <lib/checksum.h>
+#include <lib/string.h>
 
 struct acpi_sdt_header {
 	char signature[4];
@@ -22,11 +23,12 @@ struct xsdt_struct {
 
 	// An array of 64-bit physical addresses that point to other
 	// DESCRIPTION_HEADERs
-	void *pointer_to_other_sdts;
+	uint64_t *pointer_to_other_sdts;
 };	
 
 int acpi_init(const struct xsdp_struct *xsdp);
 static int find_xsdt_table(const struct xsdp_struct *xsdp);
 static int get_mcfg_pointer(void);
+static int find_valid_mcfg(int enteries);
 
 #endif	// ACPI_H

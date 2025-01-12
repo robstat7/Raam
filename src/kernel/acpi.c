@@ -20,7 +20,30 @@ static int get_mcfg_pointer(void)
 	int enteries = (xsdt->h.length - sizeof(xsdt->h)) / xsdt_array_size;
 	int ret = 0;
 
-	printk("@enteries = {d}", enteries);
+	printk("@enteries = {d}  ", enteries);
+
+	ret = find_valid_mcfg(enteries);
+
+	return ret;
+}
+
+static int find_valid_mcfg(int enteries)
+{
+	char desc_header_sig[4];
+
+	int ret = 0;
+
+	for(int i = 0; i < enteries; i++) {
+		// const char *desc_header = (char *) xsdt->pointer_to_other_sdts[i];
+		const char *desc_header = (char*) ((uint64_t *) ((char *) xsdt + 36))[i];
+		strncpy(desc_header_sig, desc_header, 4);
+		printk(desc_header_sig);
+		printk("  ");
+		/* check MCFG table signature */                                
+                if(strncmp(desc_header_sig, "MCFG", 4) == 0) {
+			printk("@found mcfg table!  ");
+		}
+	}
 
 	return ret;
 }

@@ -2,8 +2,11 @@
 #define STRING_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 char* citoa(int num, char* str);
 void reverse(char str[], int length);
+int strncmp(const char * s1, const char * s2, size_t n);
+char *strncpy(char *dst, const char *src, size_t n);
 
 #endif	// STRING_H
