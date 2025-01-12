@@ -1,6 +1,7 @@
 #include <raam/acpi.h>
 
 struct xsdt_struct *xsdt;
+const int xsdt_array_size = 8;  // see definition of `xsdt_struct` in headerfile
 
 int acpi_init(const struct xsdp_struct *xsdp)
 {
@@ -16,10 +17,10 @@ end:
 
 static int get_mcfg_pointer(void)
 {
-	int enteries = (xsdt->h.length - sizeof(xsdt->h)) / 8;
+	int enteries = (xsdt->h.length - sizeof(xsdt->h)) / xsdt_array_size;
 	int ret = 0;
 
-	printk("@entries = {d}", enteries);
+	printk("@enteries = {d}", enteries);
 
 	return ret;
 }
@@ -36,6 +37,8 @@ static int find_xsdt_table(const struct xsdp_struct *xsdp)
 	xsdt = (struct xsdt_struct *) xsdp->xsdt_address;
 
 	int ret = 0;
+
+	printk("@xsdt->h.length = {d}  ", xsdt->h.length);
 
 	// validate checksum
 	if(validate_checksum((uint8_t *) xsdt, xsdt->h.length) != 0) {

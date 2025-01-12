@@ -19,6 +19,10 @@ struct acpi_sdt_header {
 
 struct xsdt_struct {
 	struct acpi_sdt_header h;
+
+	// An array of 64-bit physical addresses that point to other
+	// DESCRIPTION_HEADERs
+	void *pointer_to_other_sdts;
 };	
 
 int acpi_init(const struct xsdp_struct *xsdp);
