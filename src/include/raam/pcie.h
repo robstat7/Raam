@@ -11,13 +11,13 @@ struct enhanced_config_base_struct {
         uint32_t reserved;                                                      
 }__attribute__((packed));
 
-struct ecam_struct {
+struct pcie_ecam_struct {
 	uint64_t *base;
 	uint8_t start_bus_num;
 	uint8_t end_bus_num;
 };
 
-extern struct ecam_struct ecam;
+extern struct pcie_ecam_struct pcie_ecam;
 
 void pcie_init(void);
 
