@@ -88,24 +88,23 @@ char *strncpy(char *dst, const char *src, size_t n)
    return temp;                                                                 
 }
 
-// convert uint64_t number to hexadecimal string. `str` contains the result.
-void uint64_t_to_hex_string(uint64_t num, char *str)                                   
+// convert integer number to hexadecimal string. `str` contains the
+// result.
+// Implemented simple paper-pen method to convert decimal to hex number.
+void integer_to_hex_string(uint64_t num, char *str)                                   
 {                                                                               
 	const int base = 16;	// hexadecimal base
 	int i = 0;
 
 	if(num == 0) {
-		str[i] = '0';	
-		i++;
+		str[i++] = '0';	
 	} else {
 		while(num != 0) {
 			int r = num % base;
 			if (r < 10) {
-				str[i] = r + 48;	// '0' to '9'	
-				i++;
+				str[i++] = r + 48;	// '0' to '9'	
 			} else {
-				str[i] = r + 87;	// 'a' to 'f'
-				i++;
+				str[i++] = r + 87;	// 'a' to 'f'
 			}
 
 			num = num / base;
@@ -113,10 +112,8 @@ void uint64_t_to_hex_string(uint64_t num, char *str)
 	}
 
 	// append hex notation "0x" in reverse order
-	str[i] = 'x';
-	i++;
-	str[i] = '0';
-	i++;
+	str[i++] = 'x';
+	str[i++] = '0';
 	// append null character
 	str[i] = '\0';
 

@@ -9,6 +9,6 @@ char* citoa(int num, char* str);
 void reverse(char str[], int length);
 int strncmp(const char * s1, const char * s2, size_t n);
 char *strncpy(char *dst, const char *src, size_t n);
-void uint64_t_to_hex_string(uint64_t num, char *str);
+void integer_to_hex_string(uint64_t num, char *str);
 
 #endif	// STRING_H

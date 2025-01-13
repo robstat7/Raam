@@ -77,7 +77,7 @@ static void print_arg(const char *specifier, va_list *args)
 		case 'p':
 			void *void_ptr_arg = va_arg(*args, void *);
 			uint64_t addr = (uint64_t) void_ptr_arg;
-			uint64_t_to_hex_string(addr, str);
+			integer_to_hex_string(addr, str);
 			printk(str);
 			break;
 	}
