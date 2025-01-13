@@ -37,6 +37,13 @@ static int find_valid_mcfg(int enteries)
 		/* check MCFG table signature */                                
                 if(strncmp(desc_header->signature, "MCFG", 4) == 0) {
 			printk("@found mcfg table!  ");
+			// found mcfg table. Now validate it.
+			int success = validate_checksum((uint8_t *) desc_header,
+							desc_header->length);	
+			if(success == 0) {
+				printk("@checksum is valid!  ");
+				break;
+			}
 		}
 	}
 
