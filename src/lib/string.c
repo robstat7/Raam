@@ -87,3 +87,42 @@ char *strncpy(char *dst, const char *src, size_t n)
       *dst++ = *src++;                                                          
    return temp;                                                                 
 }
+
+void uint64_t_to_hex_string(uint64_t num, char *str)                                   
+{                                                                               
+        int i;                                                                  
+        int temp;                                                               
+        int ch;                                                                 
+        int r;                                                                  
+                                                                                
+        i = 0;                                                                  
+                                                                                
+        if(num == 0) {                                                          
+                str[i++] = '0';                                                 
+        } else {                                                                
+                /* if decimal number is not equal to zero then enter in to the loop and
+                 * execute the statements                                       
+                 */                                                             
+                while (num != 0) {                                              
+                        ch = num / 16;                                          
+                        r = ch * 16;                                            
+                        temp = num - r;                                         
+                                                                                
+                        /* convert decimal number in to a hexadecimal number */ 
+                        if(temp < 10)                                           
+                                temp = temp + 48;                               
+                        else                                                    
+                                temp = temp + 87;                               
+                                                                                
+                        str[i++] = temp;                                        
+                        num = num / 16;                                         
+                }                                                               
+        }                                                                       
+                                                                                
+        str[i++] = 'x';                                                         
+        str[i++] = '0';                                                         
+        str[i] = '\0';                                                          
+                                                                                
+        /* reverse the string */                                                
+        reverse(str, i);                                                        
+}

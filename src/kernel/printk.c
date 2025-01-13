@@ -36,6 +36,13 @@ void printk(const char *format, ...)
 					specifier = "d";
 				}
 				break;
+			case 'p':
+				if(state == NORMAL) {
+					tty_put_char(current);
+				} else {
+					specifier = "p";
+				}
+				break;
 			case '}':
 				print_arg(specifier, &args);			
 				state = NORMAL;
@@ -59,12 +66,18 @@ void printk(const char *format, ...)
 static void print_arg(const char *specifier, va_list *args)
 {
 	int int_arg;
-	char str[INT_MAX_CHARS];
+	char str[100];
 
 	switch(specifier[0]) {
 		case 'd':
 			int_arg = va_arg(*args, int);
 			citoa(int_arg, str);   // convert int argument to char *
+			printk(str);
+			break;
+		case 'p':
+			void *void_ptr_arg = va_arg(*args, void *);	
+			uint64_t addr = (uint64_t) void_ptr_arg;
+			uint64_t_to_hex_string(addr, str);
 			printk(str);
 			break;
 	}
