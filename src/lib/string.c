@@ -88,41 +88,38 @@ char *strncpy(char *dst, const char *src, size_t n)
    return temp;                                                                 
 }
 
+// convert uint64_t number to hexadecimal string. `str` contains the result.
 void uint64_t_to_hex_string(uint64_t num, char *str)                                   
 {                                                                               
-        int i;                                                                  
-        int temp;                                                               
-        int ch;                                                                 
-        int r;                                                                  
-                                                                                
-        i = 0;                                                                  
-                                                                                
-        if(num == 0) {                                                          
-                str[i++] = '0';                                                 
-        } else {                                                                
-                /* if decimal number is not equal to zero then enter in to the loop and
-                 * execute the statements                                       
-                 */                                                             
-                while (num != 0) {                                              
-                        ch = num / 16;                                          
-                        r = ch * 16;                                            
-                        temp = num - r;                                         
-                                                                                
-                        /* convert decimal number in to a hexadecimal number */ 
-                        if(temp < 10)                                           
-                                temp = temp + 48;                               
-                        else                                                    
-                                temp = temp + 87;                               
-                                                                                
-                        str[i++] = temp;                                        
-                        num = num / 16;                                         
-                }                                                               
-        }                                                                       
-                                                                                
-        str[i++] = 'x';                                                         
-        str[i++] = '0';                                                         
-        str[i] = '\0';                                                          
-                                                                                
-        /* reverse the string */                                                
-        reverse(str, i);                                                        
+	const int base = 16;	// hexadecimal base
+	int i = 0;
+
+	if(num == 0) {
+		str[i] = '0';	
+		i++;
+	} else {
+		while(num != 0) {
+			int r = num % base;
+			if (r < 10) {
+				str[i] = r + 48;	// '0' to '9'	
+				i++;
+			} else {
+				str[i] = r + 87;	// 'a' to 'f'
+				i++;
+			}
+
+			num = num / base;
+		}
+	}
+
+	// append hex notation "0x" in reverse order
+	str[i] = 'x';
+	i++;
+	str[i] = '0';
+	i++;
+	// append null character
+	str[i] = '\0';
+
+	// reverse the string
+	reverse(str, i);
 }

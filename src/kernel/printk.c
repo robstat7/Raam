@@ -66,7 +66,7 @@ void printk(const char *format, ...)
 static void print_arg(const char *specifier, va_list *args)
 {
 	int int_arg;
-	char str[100];
+	char str[100];	// randomly choosing a larger array
 
 	switch(specifier[0]) {
 		case 'd':
@@ -75,7 +75,7 @@ static void print_arg(const char *specifier, va_list *args)
 			printk(str);
 			break;
 		case 'p':
-			void *void_ptr_arg = va_arg(*args, void *);	
+			void *void_ptr_arg = va_arg(*args, void *);
 			uint64_t addr = (uint64_t) void_ptr_arg;
 			uint64_t_to_hex_string(addr, str);
 			printk(str);
