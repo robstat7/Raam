@@ -1,16 +1,18 @@
 #include <raam/pcie.h>
 #include <raam/acpi.h>
 
+struct ecam_struct ecam;
+
+// get and store ECAM base address and starting and ending pcie bus numbers.
 void pcie_init(void)
 {
-	int enteries = (acpi_tables.mcfg->h.length - (sizeof(struct acpi_sdt_header) + sizeof(uint64_t))) / sizeof(struct enhanced_config_base_struct);
+	// in most systems there is only one PCI segment group -
+	// (PCI segment group number 0). Hence use 0 index.
+	ecam.base = (uint64_t *) acpi_tables.mcfg->e[0].base_addr;
+	ecam.start_bus_num = acpi_tables.mcfg->e[0].start_bus_num;
+	ecam.end_bus_num = acpi_tables.mcfg->e[0].end_bus_num;
 
-	printk("@enteries = {d}  ", enteries);
-
-	for(int i = 0; i < enteries; i++) {
-		if(acpi_tables.mcfg->e[i].pci_seg_grp_num == 0x0) {
-			printk("@found pci seg grp num 0  ");
-			break;
-		}
-	}
+	printk("@ecam.base = {d}  ", ecam.base);
+	printk("@start_bus_num = {d}  ", ecam.start_bus_num);
+	printk("@end_bus_num = {d}  ", ecam.end_bus_num);
 }

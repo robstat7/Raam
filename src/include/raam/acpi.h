@@ -17,7 +17,7 @@ struct acpi_sdt_header {
 	uint32_t oem_revision;
 	uint32_t creator_id;
 	uint32_t creator_revision;
-};
+}__attribute__((packed));;
 
 // Note that the 'pointer_to_other_sdts' field as defined below should
 // be aligned to a 4-byte boundary and not the default 8-byte alignment
@@ -35,11 +35,11 @@ struct mcfg_struct {
 	struct acpi_sdt_header h;
 	uint64_t reserved;
 	struct enhanced_config_base_struct e[];
-};
+}__attribute__((packed));;
 
 struct acpi_tables_struct {
 	struct mcfg_struct *mcfg;
-};
+}__attribute__((packed));;
 
 extern struct acpi_tables_struct acpi_tables;
 
