@@ -3,6 +3,8 @@
 struct xsdt_struct *xsdt;
 const int xsdt_array_size = 8;  // see definition of `xsdt_struct` in headerfile
 
+struct acpi_tables_struct acpi_tables;
+
 int acpi_init(const struct xsdp_struct *xsdp)
 {
 	int ret = find_xsdt_table(xsdp);
@@ -29,6 +31,7 @@ static int get_mcfg_pointer(void)
 
 static int find_valid_mcfg(int enteries)
 {
+	acpi_tables.mcfg = NULL;
 	int ret = 0;
 
 	for(int i = 0; i < enteries; i++) {
@@ -40,9 +43,16 @@ static int find_valid_mcfg(int enteries)
 			int success = validate_checksum((uint8_t *) desc_header,
 							desc_header->length);
 			if(success == 0) {
+				acpi_tables.mcfg = (struct mcfg_struct *)
+								   desc_header;
 				break;
 			}
 		}
+	}
+
+	if(acpi_tables.mcfg == NULL) {
+		printk("error: could not find MCFG table!\n");
+		ret = -1;
 	}
 
 	return ret;

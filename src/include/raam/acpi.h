@@ -30,6 +30,20 @@ struct xsdt_struct {
 						      // force 4-byte alignment
 }__attribute__((packed));	// force structure to be laid out with no gaps
 
+struct enhanced_config_base_struct {
+	char signature[4];
+};
+
+struct mcfg_struct {
+	struct acpi_sdt_header h;
+	uint64_t reserved;
+	struct enhanced_config_base_struct e[];
+};
+
+struct acpi_tables_struct {
+	struct mcfg_struct *mcfg;
+};
+
 int acpi_init(const struct xsdp_struct *xsdp);
 static int find_xsdt_table(const struct xsdp_struct *xsdp);
 static int get_mcfg_pointer(void);
