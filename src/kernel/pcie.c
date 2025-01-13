@@ -3,5 +3,14 @@
 
 void pcie_init(void)
 {
-	printk("@pci_seg_grp_num = {d}  ", acpi_tables.mcfg->e[0].pci_seg_grp_num);	
+	int enteries = (acpi_tables.mcfg->h.length - (sizeof(struct acpi_sdt_header) + sizeof(uint64_t))) / sizeof(struct enhanced_config_base_struct);
+
+	printk("@enteries = {d}  ", enteries);
+
+	for(int i = 0; i < enteries; i++) {
+		if(acpi_tables.mcfg->e[i].pci_seg_grp_num == 0x0) {
+			printk("@found pci seg grp num 0  ");
+			break;
+		}
+	}
 }
