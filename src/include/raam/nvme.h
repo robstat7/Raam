@@ -3,6 +3,24 @@
 
 #include <stdint.h>
 
+struct common_config_space_header_struct {
+	uint16_t vendor_id;
+	uint16_t dev_id;
+	uint16_t cmd;
+	uint16_t status;
+	uint8_t revision_id;
+
+	// class code fields
+	uint8_t prog_if;
+	uint8_t subclass;
+	uint8_t class_code;
+
+	uint8_t cache_line_size;
+	uint8_t latency_timer;
+	uint8_t header_type;
+	uint8_t bist;
+}__attribute__((packed));
+
 void nvme_init(void);
 static void find_controller(void);
 static void check_all_buses(void);

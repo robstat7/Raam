@@ -92,11 +92,12 @@ static uint16_t get_vendor_id(uint32_t bus, uint32_t dev, uint32_t func)
 	// cast the calculated address to a pointer to the vendor ID field.
 	// note: the vendor id is located at offset 0x00 of the configuration
 	// space.
-	volatile uint16_t *phy_addr = (uint16_t *)
+	volatile struct common_config_space_header_struct *h =
+				(struct common_config_space_header_struct *)
 				get_config_space_phy_mmio_addr(bus, dev, func);
 
 	// read the vendor id from the calculated address.
-	uint16_t vendor_id = *phy_addr;
+	uint16_t vendor_id = h->vendor_id;
 
 	return vendor_id;
 }
