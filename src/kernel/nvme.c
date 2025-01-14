@@ -5,9 +5,26 @@
 #include <raam/pcie.h>
 #include <raam/printk.h>
 
-void nvme_init(void)
+int nvme_init(void)
 {
-	find_controller();
+	struct nvme_pcie_dev_struct nvme;
+	nvme.found = 0;		// found is false
+
+	int ret = 0;
+
+	find_controller(&nvme);
+
+	if(nvme.found == 0) {
+		printk("nvme: error: couldn't find the controller!\n");
+		ret = -1;
+		goto end;
+	} else {
+		printk("@nvme: found controller. bus {d}, dev {d}, func {d}  ",
+		       nvme.bus, nvme.dev, nvme.func);
+	}
+
+end:
+	return ret;
 }
 
 /*
@@ -15,23 +32,24 @@ void nvme_init(void)
  *
  * This function finds the nvme controller on all the pcie buses.
  */
-static void find_controller(void)
+static void find_controller(struct nvme_pcie_dev_struct *nvme)
 {
 	uint16_t bus;                                                              
 	uint8_t dev;	// device
-	int found = 0;
 
 	for(bus = pcie_ecam.start_bus_num; bus <= pcie_ecam.end_bus_num;
 	    bus++) {
 		for(dev = 0; dev < 32; dev++) {	// there can be up to 32 devices
 						// on a bus
 			if(check_device_for_controller(bus, dev) == 0) {
-				printk("@found nvme controller: bus {d}, "
-				       "dev {d}, func {d}  ", bus, dev, 0);
-				found = 1;
+				/* found the controller. Store details. */
+				nvme->bus = bus;
+				nvme->dev = dev;
+				nvme->func = 0;	// mostly single-function dev
+				nvme->found = 1; // found is true
 				break;
 			}
-			if(found == 1) {
+			if(nvme->found == 1) {
 				break;
 			}
 		}

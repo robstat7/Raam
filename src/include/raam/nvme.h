@@ -7,8 +7,6 @@
 #define NVME_SUBCLASS		0x08	/* Non-Volatile Memory Controller */
 #define NVME_PROG_IF		0x02	/* NVM Express */
 
-#define PCI_INVALID_VENDOR_ID	0xffff
-
 struct common_config_space_header_struct {
 	uint16_t vendor_id;
 	uint16_t dev_id;
@@ -27,8 +25,15 @@ struct common_config_space_header_struct {
 	uint8_t bist;
 }__attribute__((packed));
 
-void nvme_init(void);
-static void find_controller(void);
+struct nvme_pcie_dev_struct {
+	int found;
+	uint16_t bus;
+	uint8_t dev;
+	uint8_t func;
+};	
+
+int nvme_init(void);
+static void find_controller(struct nvme_pcie_dev_struct *nvme);
 static int check_device_for_controller(uint16_t bus, uint8_t dev);
 static uint64_t get_config_space_phy_mmio_addr(uint32_t bus, uint32_t dev,
 					       uint32_t func);

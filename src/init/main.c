@@ -12,13 +12,17 @@
 void main(struct boot_params boot_params)
 {
 	tty_init(boot_params.fb_info);
+
 	int ret = acpi_init(boot_params.xsdp);
 	if(ret == -1) {		// error
 		goto end;
 	}
 
 	pcie_init();
-	nvme_init();
+
+	if(nvme_init() == -1) {
+		goto end;
+	}
 end:
 	return;
 }
