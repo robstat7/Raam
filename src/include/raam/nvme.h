@@ -3,6 +3,12 @@
 
 #include <stdint.h>
 
+#define NVME_CLASS_CODE		0x01	/* Mass Storage Controller */
+#define NVME_SUBCLASS		0x08	/* Non-Volatile Memory Controller */
+#define NVME_PROG_IF		0x02	/* NVM Express */
+
+#define PCI_INVALID_VENDOR_ID	0xffff
+
 struct common_config_space_header_struct {
 	uint16_t vendor_id;
 	uint16_t dev_id;
@@ -23,10 +29,7 @@ struct common_config_space_header_struct {
 
 void nvme_init(void);
 static void find_controller(void);
-static void check_all_buses(void);
-static int check_device(uint16_t bus, uint8_t dev);
-static uint16_t get_vendor_id(uint32_t bus, uint32_t dev, uint32_t func);
-static int search_for_controller(uint32_t bus, uint32_t dev, uint32_t func);
+static int check_device_for_controller(uint16_t bus, uint8_t dev);
 static uint64_t get_config_space_phy_mmio_addr(uint32_t bus, uint32_t dev,
 					       uint32_t func);
 
