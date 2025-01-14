@@ -15,7 +15,8 @@ struct pcie_ecam_struct {
 	uint64_t *base;
 	uint8_t start_bus_num;
 	uint8_t end_bus_num;
-};
+}__attribute__((packed));
+
 
 extern struct pcie_ecam_struct pcie_ecam;
 

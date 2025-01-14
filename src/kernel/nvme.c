@@ -8,6 +8,8 @@
 void nvme_init(void)
 {
 	find_controller();
+	
+	// search_for_controller(2,0,0);
 }
 
 /*
@@ -24,12 +26,24 @@ static void check_all_buses(void)
 {
 	uint16_t bus;                                                              
 	uint8_t dev;	// device
+	int found = 0;
+
+	printk("@pcie_ecam.base = {p}  ", pcie_ecam.base);
+	printk("@pcie_ecam.start_bus_num = {d}  ", pcie_ecam.start_bus_num);
+	printk("@pcie_ecam.end_bus_num = {d}  ", pcie_ecam.end_bus_num);
 
 	for(bus = pcie_ecam.start_bus_num; bus <= pcie_ecam.end_bus_num;
 	    bus++) {
 		for(dev = 0; dev < 32; dev++) {	// there can be up to 32 devices
 						// on a bus
-			check_device(bus, dev);
+			if(check_device(bus, dev) == 0) {
+				printk("@found nvme controller: bus {d}, dev {d}, func {d}  ", bus, dev, 0);
+				found = 1;
+				break;
+			}
+			if(found == 1) {
+				break;
+			}
 		}
 	}
 }
@@ -44,11 +58,10 @@ static int check_device(uint16_t bus, uint8_t dev)
 	
 	vendor_id = get_vendor_id(bus, dev, func);
 	if (vendor_id == 0xffff) {        /* device doesn't exist */
-		printk("@device doesn't exist!  ");
 		ret = -1;
 		goto end;
-	} else {
-		printk("@vendor_id = {p}  ", (void *) vendor_id);
+	} else {			// device exists.
+		ret = search_for_controller(bus, dev, func);
 	}
 end:
 	return ret;
@@ -102,4 +115,44 @@ static uint16_t get_vendor_id(uint32_t bus, uint32_t dev, uint32_t func)
 	uint16_t vendor_id = *phy_addr;
 
 	return vendor_id;
+}
+
+static uint64_t get_config_space_mmio_addr(uint32_t bus, uint32_t dev,
+					   uint32_t func)
+{
+	// calculate the physical MMIO address of the PCI configuration space
+	// for the function.
+
+	uint64_t mmio_start_physical_addr = (uint64_t) pcie_ecam.base;
+
+	// compute the address using the ECAM layout formula:
+	uint64_t config_space_mmio_addr = mmio_start_physical_addr +
+					  (bus << 20 | dev << 15 | func << 12);
+
+	return config_space_mmio_addr;
+}
+
+static int search_for_controller(uint32_t bus, uint32_t dev, uint32_t func)
+{
+	char *start_phy_addr = (char *) get_config_space_mmio_addr(bus, dev, func);
+	volatile uint32_t *phy_addr = (uint32_t *) (start_phy_addr + 8);
+	uint32_t val = *phy_addr;
+	val = val >> 8;
+	int ret;
+
+	if(val == 0x00010802) {  // class code = 0x1, subclass code = 0x8,
+				   // prog if = 0x2
+		ret = 0;
+	} else {
+		ret = -1;	
+	}
+
+	// debug
+	// if(bus == 2 && dev == 0 && func == 0) {
+		printk("@bus = {d}, dev = {d}, func = {d}  ", bus, dev, func);
+		printk("@val = {p}    ", (void *) val);
+	//}
+
+
+	return ret;
 }
