@@ -7,49 +7,53 @@
 
 int nvme_init(void)
 {
-	struct nvme_pcie_dev_struct nvme;
-	nvme.found = 0;		// found is false
+	struct nvme_pcie_dev_info_struct controller;
+	controller.found = 0;		// found is false
 
 	int ret = 0;
 
-	find_controller(&nvme);
+	find_controller(&controller);
 
-	if(nvme.found == 0) {
+	if(controller.found == 0) {
 		printk("nvme: error: couldn't find the controller!\n");
 		ret = -1;
 		goto end;
-	} else {
-		printk("@nvme: found controller. bus {d}, dev {d}, func {d}  ",
-		       nvme.bus, nvme.dev, nvme.func);
 	}
-
 end:
 	return ret;
 }
 
 /*
  * find_controller
- *
+ * ---------------
  * This function finds the nvme controller on all the pcie buses.
+ *
+ * Parameters:
+ *   nvme  - pointer to nvme device struct to store nvme info 
+ *
+ * Returns:
+ *   void
+ * 
+ * Note:
+ *   - only function 0 is probed because most NVMe controllers are
+ *     single-function device.
  */
-static void find_controller(struct nvme_pcie_dev_struct *nvme)
+static void find_controller(struct nvme_pcie_dev_info_struct *controller)
 {
-	uint16_t bus;                                                              
-	uint8_t dev;	// device
+	const uint8_t func = 0;		/* probe function 0 */
 
-	for(bus = pcie_ecam.start_bus_num; bus <= pcie_ecam.end_bus_num;
-	    bus++) {
-		for(dev = 0; dev < 32; dev++) {	// there can be up to 32 devices
-						// on a bus
-			if(check_device_for_controller(bus, dev) == 0) {
+	for(uint16_t bus = pcie_ecam.start_bus_num;
+	    bus <= pcie_ecam.end_bus_num; bus++) {
+		for(uint8_t dev = 0; dev < MAX_PCI_BUS_DEV; dev++) {
+			if(check_function(bus, dev, func) == 0) {
 				/* found the controller. Store details. */
-				nvme->bus = bus;
-				nvme->dev = dev;
-				nvme->func = 0;	// mostly single-function dev
-				nvme->found = 1; // found is true
+				controller->bus = bus;
+				controller->dev = dev;
+				controller->func = func;
+				controller->found = 1; // found is true
 				break;
 			}
-			if(nvme->found == 1) {
+			if(controller->found == 1) {
 				break;
 			}
 		}
@@ -57,7 +61,7 @@ static void find_controller(struct nvme_pcie_dev_struct *nvme)
 }
 
 /*
- * check_device_for_controller
+ * check_function
  * ---------------------------
  * This function checks all the devices' function 0 on a given bus to
  * find the controller.
@@ -71,17 +75,14 @@ static void find_controller(struct nvme_pcie_dev_struct *nvme)
  *   0 if the controller is found else -1.
  *
  * Notes:
- *   - function 0 is probed because most NVMe controllers are
- *     single-function device.
  *   - `volatile` is used for MMIO access to ensure that the compiler
  *     won't optimize hardware reads (we won't read cached values).
  *   - The Class Code, Subclass, and Prog IF register values are used
  *     to identify the device's type, the device's function, and the
  *     device's register-level programming interface.
  */
-static int check_device_for_controller(uint16_t bus, uint8_t dev)
+static int check_function(uint16_t bus, uint8_t dev, uint8_t func)
 {
-	const uint8_t func = 0;		/* probe function 0 */
 	uint16_t vendor_id;
 	int ret = -1;
 

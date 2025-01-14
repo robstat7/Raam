@@ -5,6 +5,8 @@
 
 #define PCI_INVALID_VENDOR_ID	0xffff
 
+#define MAX_PCI_BUS_DEV		32
+
 struct enhanced_config_base_struct {                                            
         uint64_t base_addr;                                                    
         uint16_t pci_seg_grp_num;                                               
