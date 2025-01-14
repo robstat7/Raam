@@ -5,12 +5,6 @@
 #include <raam/pcie.h>
 #include <raam/printk.h>
 
-struct controller_info_struct {
-	int16_t detected_bus_num;
-	int16_t detected_device_num;
-	int16_t detected_function_num;
-}controller_info;
-
 void nvme_init(void)
 {
 	find_controller();
@@ -29,37 +23,83 @@ static void find_controller(void)
 static void check_all_buses(void)
 {
 	uint16_t bus;                                                              
-	uint8_t device;                                                            
-	int found = 0;	
+	uint8_t dev;	// device
 
 	for(bus = pcie_ecam.start_bus_num; bus <= pcie_ecam.end_bus_num;
 	    bus++) {
-		for(device = 0; device < 32; device++) {
-			check_device(bus, device);
+		for(dev = 0; dev < 32; dev++) {	// there can be up to 32 devices
+						// on a bus
+			check_device(bus, dev);
 		}
 	}
 }
 
-static void check_device(uint16_t bus, uint8_t dev)
+// This function checks all the devices on a given bus to find the controller.
+static int check_device(uint16_t bus, uint8_t dev)
 {
-	uint8_t func = 0;
+	uint8_t func = 0;	// function 0 is used to probe whether a device
+				// is present at a given bus and device address
 	uint16_t vendor_id;
+	int ret = 0;
 	
 	vendor_id = get_vendor_id(bus, dev, func);
-	if (vendor_id == 0xFFFF)        /* device doesn't exist */
+	if (vendor_id == 0xffff) {        /* device doesn't exist */
 		printk("@device doesn't exist!  ");
-	else
-		printk("vendor_id = {p}  ", (void *) vendor_id);
+		ret = -1;
+		goto end;
+	} else {
+		printk("@vendor_id = {p}  ", (void *) vendor_id);
+	}
+end:
+	return ret;
 }
 
+/*
+ * get_vendor_id
+ *
+ * This function reads the vendor id of a PCIe device given its bus,
+ * device, and function numbers.
+ *
+ * Parameters:
+ *   bus  - The PCIe bus number (0-255)
+ *   dev  - The device number on the specified bus (0-31)
+ *   func - The function number within the device (0-7)
+ *
+ * Returns:
+ *   The 16-bit vendor ID of the specified PCIe function. If the vendor
+ *   ID is 0xffff, the specified function does not exist.
+ *
+ * Notes:
+ *   - This function assumes the use of a PCIe ECAM (Enhanced
+ *     Configuration Access Mechanism) to access PCI configuration
+ *     space.
+ *   - The base address of the ECAM region is stored in `pcie_ecam.base`.
+ *   - The PCI configuration space for each function is 4096 bytes in size.
+ *   - The ECAM layout formula can be found at:
+ *     https://wiki.osdev.org/PCI_Express#Enhanced_Configuration_Mechanism
+ *
+ * Specification used:
+ *   PCI Express® Base Specification Revision 5.0 (section 7.5.1.1.1
+ *   Vendor ID Register (Offset 00h))
+ */
 static uint16_t get_vendor_id(uint32_t bus, uint32_t dev, uint32_t func)
 {
-	// determine where the (4096-byte) area for a function's PCI
-	// configuration space is.
-	uint64_t mmio_start_physical_addr = (uint64_t) pcie_ecam.base;
-	uint64_t addr = mmio_start_physical_addr + (bus << 20 | dev << 15 | func << 12);
-	volatile uint64_t *phy_addr = (uint64_t *) addr;
+	// calculate the physical MMIO address of the PCI configuration space
+	// for the function.
 
-	uint16_t vendor_id = *(volatile uint16_t *) phy_addr;
+	uint64_t mmio_start_physical_addr = (uint64_t) pcie_ecam.base;
+
+	// compute the address using the ECAM layout formula:
+	uint64_t config_space_mmio_addr = mmio_start_physical_addr +
+					  (bus << 20 | dev << 15 | func << 12);
+
+	// cast the calculated address to a pointer to the vendor ID field.
+	// note: the vendor id is located at offset 0x00 of the configuration
+	// space.
+	volatile uint16_t *phy_addr = (uint16_t *) config_space_mmio_addr;
+
+	// read the vendor id from the calculated address.
+	uint16_t vendor_id = *phy_addr;
+
 	return vendor_id;
 }
