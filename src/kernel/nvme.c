@@ -8,8 +8,6 @@
 void nvme_init(void)
 {
 	find_controller();
-	
-	// search_for_controller(2,0,0);
 }
 
 /*
@@ -28,16 +26,13 @@ static void check_all_buses(void)
 	uint8_t dev;	// device
 	int found = 0;
 
-	printk("@pcie_ecam.base = {p}  ", pcie_ecam.base);
-	printk("@pcie_ecam.start_bus_num = {d}  ", pcie_ecam.start_bus_num);
-	printk("@pcie_ecam.end_bus_num = {d}  ", pcie_ecam.end_bus_num);
-
 	for(bus = pcie_ecam.start_bus_num; bus <= pcie_ecam.end_bus_num;
 	    bus++) {
 		for(dev = 0; dev < 32; dev++) {	// there can be up to 32 devices
 						// on a bus
 			if(check_device(bus, dev) == 0) {
-				printk("@found nvme controller: bus {d}, dev {d}, func {d}  ", bus, dev, 0);
+				printk("@found nvme controller: bus {d}, "
+				       "dev {d}, func {d}  ", bus, dev, 0);
 				found = 1;
 				break;
 			}
@@ -51,7 +46,7 @@ static void check_all_buses(void)
 // This function checks all the devices on a given bus to find the controller.
 static int check_device(uint16_t bus, uint8_t dev)
 {
-	uint8_t func = 0;	// function 0 is used to probe whether a device
+	const uint8_t func = 0;	// function 0 is used to probe whether a device
 				// is present at a given bus and device address
 	uint16_t vendor_id;
 	int ret = 0;
@@ -86,10 +81,7 @@ end:
  *   - This function assumes the use of a PCIe ECAM (Enhanced
  *     Configuration Access Mechanism) to access PCI configuration
  *     space.
- *   - The base address of the ECAM region is stored in `pcie_ecam.base`.
  *   - The PCI configuration space for each function is 4096 bytes in size.
- *   - The ECAM layout formula can be found at:
- *     https://wiki.osdev.org/PCI_Express#Enhanced_Configuration_Mechanism
  *
  * Specification used:
  *   PCI Express® Base Specification Revision 5.0 (section 7.5.1.1.1
@@ -97,19 +89,11 @@ end:
  */
 static uint16_t get_vendor_id(uint32_t bus, uint32_t dev, uint32_t func)
 {
-	// calculate the physical MMIO address of the PCI configuration space
-	// for the function.
-
-	uint64_t mmio_start_physical_addr = (uint64_t) pcie_ecam.base;
-
-	// compute the address using the ECAM layout formula:
-	uint64_t config_space_mmio_addr = mmio_start_physical_addr +
-					  (bus << 20 | dev << 15 | func << 12);
-
 	// cast the calculated address to a pointer to the vendor ID field.
 	// note: the vendor id is located at offset 0x00 of the configuration
 	// space.
-	volatile uint16_t *phy_addr = (uint16_t *) config_space_mmio_addr;
+	volatile uint16_t *phy_addr = (uint16_t *)
+				get_config_space_phy_mmio_addr(bus, dev, func);
 
 	// read the vendor id from the calculated address.
 	uint16_t vendor_id = *phy_addr;
@@ -117,24 +101,33 @@ static uint16_t get_vendor_id(uint32_t bus, uint32_t dev, uint32_t func)
 	return vendor_id;
 }
 
-static uint64_t get_config_space_mmio_addr(uint32_t bus, uint32_t dev,
+/*
+ * get_config_space_phy_mmio_addr
+ *
+ * This function returns the physical MMIO address of the PCI
+ * configuration space for the function.
+ *
+ * Notes:
+ *   - The ECAM layout formula can be found at:
+ *     https://wiki.osdev.org/PCI_Express#Enhanced_Configuration_Mechanism
+ *   - The base address of the ECAM region is stored in `pcie_ecam.base`.
+ */
+static uint64_t get_config_space_phy_mmio_addr(uint32_t bus, uint32_t dev,
 					   uint32_t func)
 {
-	// calculate the physical MMIO address of the PCI configuration space
-	// for the function.
-
 	uint64_t mmio_start_physical_addr = (uint64_t) pcie_ecam.base;
 
 	// compute the address using the ECAM layout formula:
-	uint64_t config_space_mmio_addr = mmio_start_physical_addr +
+	uint64_t config_space_mmio_phy_addr = mmio_start_physical_addr +
 					  (bus << 20 | dev << 15 | func << 12);
 
-	return config_space_mmio_addr;
+	return config_space_mmio_phy_addr;
 }
 
 static int search_for_controller(uint32_t bus, uint32_t dev, uint32_t func)
 {
-	char *start_phy_addr = (char *) get_config_space_mmio_addr(bus, dev, func);
+	char *start_phy_addr = (char *)
+				get_config_space_phy_mmio_addr(bus, dev, func);
 	volatile uint32_t *phy_addr = (uint32_t *) (start_phy_addr + 8);
 	uint32_t val = *phy_addr;
 	val = val >> 8;
@@ -144,15 +137,8 @@ static int search_for_controller(uint32_t bus, uint32_t dev, uint32_t func)
 				   // prog if = 0x2
 		ret = 0;
 	} else {
-		ret = -1;	
+		ret = -1;
 	}
-
-	// debug
-	// if(bus == 2 && dev == 0 && func == 0) {
-		printk("@bus = {d}, dev = {d}, func = {d}  ", bus, dev, func);
-		printk("@val = {p}    ", (void *) val);
-	//}
-
 
 	return ret;
 }
