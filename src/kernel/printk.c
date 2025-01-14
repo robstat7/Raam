@@ -1,4 +1,5 @@
 #include <raam/printk.h>
+#include <raam/tty.h>
 
 /*
  * printk

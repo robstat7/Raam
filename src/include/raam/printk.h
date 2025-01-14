@@ -2,7 +2,6 @@
 #define PRINTK_H
 
 #include <stdarg.h>
-#include <raam/tty.h>
 #include <lib/string.h>
 
 // states to use

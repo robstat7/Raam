@@ -7,6 +7,7 @@
 #include <raam/tty.h>
 #include <raam/acpi.h>
 #include <raam/pcie.h>
+#include <raam/nvme.h>
 
 void main(struct boot_params boot_params)
 {
@@ -17,6 +18,7 @@ void main(struct boot_params boot_params)
 	}
 
 	pcie_init();
+	nvme_init();
 end:
 	return;
 }
