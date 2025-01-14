@@ -44,21 +44,24 @@ static void check_all_buses(void)
 }
 
 // This function checks all the devices on a given bus to find the controller.
+// Returns 0 on finding the controller else -1.
 static int check_device(uint16_t bus, uint8_t dev)
 {
 	const uint8_t func = 0;	// function 0 is used to probe whether a device
 				// is present at a given bus and device address
 	uint16_t vendor_id;
-	int ret = 0;
+	int ret = -1;
+
+	volatile struct common_config_space_header_struct *h =
+				(struct common_config_space_header_struct *)
+				get_config_space_phy_mmio_addr(bus, dev, func);
 	
-	vendor_id = get_vendor_id(bus, dev, func);
-	if (vendor_id == 0xffff) {        /* device doesn't exist */
-		ret = -1;
-		goto end;
-	} else {			// device exists.
-		ret = search_for_controller(bus, dev, func);
+	if (h->vendor_id != 0xffff) {        /* device exists */
+		if(h->class_code == 0x1 && h->subclass == 0x8 &&
+		   h->prog_if == 0x2) {
+			ret = 0;
+		}
 	}
-end:
 	return ret;
 }
 
@@ -89,9 +92,6 @@ end:
  */
 static uint16_t get_vendor_id(uint32_t bus, uint32_t dev, uint32_t func)
 {
-	// cast the calculated address to a pointer to the vendor ID field.
-	// note: the vendor id is located at offset 0x00 of the configuration
-	// space.
 	volatile struct common_config_space_header_struct *h =
 				(struct common_config_space_header_struct *)
 				get_config_space_phy_mmio_addr(bus, dev, func);
@@ -127,19 +127,20 @@ static uint64_t get_config_space_phy_mmio_addr(uint32_t bus, uint32_t dev,
 
 static int search_for_controller(uint32_t bus, uint32_t dev, uint32_t func)
 {
-	char *start_phy_addr = (char *)
-				get_config_space_phy_mmio_addr(bus, dev, func);
-	volatile uint32_t *phy_addr = (uint32_t *) (start_phy_addr + 8);
-	uint32_t val = *phy_addr;
-	val = val >> 8;
-	int ret;
-
-	if(val == 0x00010802) {  // class code = 0x1, subclass code = 0x8,
-				   // prog if = 0x2
-		ret = 0;
-	} else {
-		ret = -1;
-	}
-
-	return ret;
+//	volatile struct common_config_space_header_struct *h =
+//				(struct common_config_space_header_struct *)
+//				get_config_space_phy_mmio_addr(bus, dev, func);
+//	volatile uint32_t *phy_addr = (uint32_t *) (start_phy_addr + 8);
+//	uint32_t val = *phy_addr;
+//	val = val >> 8;
+//	int ret;
+//
+//	if(val == 0x00010802) {  // class code = 0x1, subclass code = 0x8,
+//				   // prog if = 0x2
+//		ret = 0;
+//	} else {
+//		ret = -1;
+//	}
+//
+//	return ret;
 }
