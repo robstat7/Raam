@@ -15,7 +15,7 @@ int nvme_init(void)
 	find_controller(&controller);
 
 	if(controller.found == 0) {
-		printk("nvme: error: couldn't find the controller!\n");
+		printk("error: nvme: couldn't find the controller!\n");
 		ret = -1;
 		goto end;
 	}
