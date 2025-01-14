@@ -1,4 +1,5 @@
 #include <raam/acpi.h>
+#include <raam/printk.h>
 
 struct xsdt_struct *xsdt;
 const int xsdt_array_size = 8;  // see definition of `xsdt_struct` in headerfile

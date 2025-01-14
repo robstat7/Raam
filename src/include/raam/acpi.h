@@ -2,7 +2,6 @@
 #define ACPI_H
 
 #include <boot/xsdp.h>
-#include <raam/printk.h>
 #include <lib/checksum.h>
 #include <lib/string.h>
 #include <raam/pcie.h>
