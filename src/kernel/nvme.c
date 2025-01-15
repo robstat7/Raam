@@ -5,7 +5,7 @@
 #include <raam/pcie.h>
 #include <raam/printk.h>
 
-volatile uint64_t *nvme_base;
+volatile struct register_map_struct *register_map;
 
 int nvme_init(void)
 {
@@ -23,9 +23,57 @@ int nvme_init(void)
 	}
 
 	/* get nvme base address */
-	get_nvme_base(&controller);
+	uint64_t *nvme_base = get_nvme_base(&controller);
+
+	/* initialize the register map pointer */
+	register_map = (struct register_map_struct *) nvme_base;
+
+	if(reset_controller() == false) {
+		printk("error: nvme: the controller had a fatal error!\n");
+		ret = -1;
+		goto end;
+	}
+
+	printk("nvme: reset completed!  ");
+
 end:
 	return ret;
+}
+
+/*                                                                              
+ * wait_for_reset_complete                                                      
+ *                                                                              
+ * wait for the controller to indicate that the previous reset is complete by   
+ * waiting for CSTS.RDY to become ‘0'.                                          
+ */                                                                             
+bool wait_for_reset_complete(void)                                               
+{
+	uint32_t csts_val;
+
+        do {                                                                    
+        	csts_val = register_map->csts;                                                           
+                if((csts_val & 0x2) != 0x0) {   // CSTS.CFS (bit #1) should be 0. If not the controller has had a fatal error
+                        return false;                                               
+                }                                                               
+        } while((csts_val & 0x1) != 0x0);    // Wait for CSTS.RDY (bit #0) to become 0
+                                                                                
+        return true;                                                               
+}
+
+bool reset_controller(void)
+{
+	uint32_t cc_val = register_map->cc;	
+
+	printk("@old cc value = {d}  ", cc_val);
+
+	if((cc_val & 0x1) != 0x0) {              // clear CC.EN (bit #0) to 0    
+                cc_val &= 0xfffffffe;                                            
+                register_map->cc = cc_val;                                                  
+        }
+
+	printk("@new cc value = {d}  ", register_map->cc);
+
+	return wait_for_reset_complete();
 }
 
 /*
@@ -47,12 +95,12 @@ end:
  *                 struct nvme_pcie_dev_info_struct
  *
  * returns:
- *   void
+ *   nvme base address (a uint64 pointer)
  *
  * resources used:
  *    - https://wiki.osdev.org/PCI
  */
-void get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info)
+uint64_t *get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info)
 {
 	uint64_t base_addr;
 
@@ -78,9 +126,9 @@ void get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info)
 		}
 
 		base_addr &= ~0xf;  /* clear the lowest 4 bits */
-		nvme_base = (uint64_t *) base_addr;
+		uint64_t *nvme_base = (uint64_t *) base_addr;
 
-		printk("@nvme_base = {p}  ", nvme_base);
+		return nvme_base;
 	}
 }
 

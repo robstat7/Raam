@@ -2,6 +2,7 @@
 #define NVME_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define NVME_CLASS_CODE		0x01	/* Mass Storage Controller */
 #define NVME_SUBCLASS		0x08	/* Non-Volatile Memory Controller */
@@ -57,11 +58,35 @@ struct header_type_0_table_struct {
 	uint8_t max_latency;
 }__attribute__((packed));
 
+struct register_map_struct {
+	uint64_t cap;
+	uint32_t version;
+	uint32_t intms;
+	uint32_t intmc;
+	uint32_t cc;
+	uint32_t reserved;
+	uint32_t csts;
+	uint32_t nssr;
+	uint32_t aqa;
+	uint64_t asq;
+	uint64_t acq;
+	uint32_t cmbloc;
+	uint32_t cmbsz;
+	uint32_t bpinfo;
+	uint32_t bprsel;
+	uint64_t bpmbl;
+	char reserved1[3760];
+	char reserved2[256];
+	uint32_t sq0tdbl;
+	uint32_t cq0hdbl;
+}__attribute__((packed));
+	
 int nvme_init(void);
 static void find_controller(struct nvme_pcie_dev_info_struct *controller);
 static int check_function(uint16_t bus, uint8_t dev, uint8_t func);
 static uint64_t get_config_space_phy_mmio_addr(uint32_t bus, uint32_t dev,
 					       uint32_t func);
-void get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info);
+uint64_t *get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info);
+bool reset_controller(void);
 
 #endif	// NVME_H
