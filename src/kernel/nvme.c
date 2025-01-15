@@ -7,7 +7,7 @@
 
 volatile struct register_map_struct *register_map;
 
-int nvme_init(void)
+int nvme_init(const uint8_t *system_variables)
 {
 	struct nvme_pcie_dev_info_struct controller;
 	controller.found = 0;		// found is false
@@ -35,6 +35,12 @@ int nvme_init(void)
 	}
 
 	printk("nvme: reset completed!  ");
+
+	printk("@system_variables = {p}  ", (void *) system_variables);
+
+	for(int i = 0; i < 500; i++) {
+		printk("{d}", system_variables[i]);
+	}
 
 	configure_admin_queues();
 

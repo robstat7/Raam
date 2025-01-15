@@ -20,7 +20,7 @@ void main(struct boot_params boot_params)
 
 	pcie_init();
 
-	if(nvme_init() == -1) {
+	if(nvme_init(boot_params.system_variables) == -1) {
 		goto end;
 	}
 end:

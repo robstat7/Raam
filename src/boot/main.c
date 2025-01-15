@@ -6,6 +6,7 @@
 #include <boot/fb.h>
 #include <boot/boot.h>
 #include <boot/xsdp.h>
+#include <boot/mem.h>
 #include <boot/boot_params.h>
 #include <raam/main.h>
 
@@ -34,6 +35,11 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 	if(ret == -1) {
 		goto hang;
 	}
+
+	/* allocate and clear 2 MiB of memory for system variables */           
+        if(allocate_sys_variables_mem() == -1) {                     
+                goto hang;                                                       
+        }    
 
 	status = exit_boot_services(image_handle);
 	if(EFI_ERROR(status)) {

@@ -2,6 +2,7 @@
  * boot time memory related functions.
  */
 #include <boot/mem.h>
+#include <boot/boot_params.h>
 
 UINTN memory_map_size = 0, desc_size = 0;
 UINTN map_key = 0;
@@ -84,4 +85,43 @@ EFI_STATUS get_memory_map_size(void)
 	}
 
 	return status;
+}
+
+/**
+ * allocate_sys_variables_mem
+ * ---------------------------
+ * allocates and clears 2 MiB of memory for system variables. A system
+ * variable is a variable used by the kernel to store important
+ * configuration data or state information that is critical for system
+ * operation and management. Example use case is in the NVMe driver.
+ * It also stores the pointer in the boot params.
+ *
+ * @param void
+ * @return 0 on success, -1 on failure.
+ */
+int allocate_sys_variables_mem(void)
+{
+	uint8_t **sys_var_ptr_ptr;
+
+	const UINTN MEMORY_SIZE = 2 * 1024 * 1024; // 2 MiB
+	// Memory type for allocation
+	const EFI_MEMORY_TYPE MEMORY_TYPE = EfiLoaderData;
+
+	// allocate 2 MiB of memory
+	EFI_STATUS status = uefi_call_wrapper(BS->AllocatePool, 3, MEMORY_TYPE,
+					MEMORY_SIZE, (void **) sys_var_ptr_ptr);
+	if (EFI_ERROR(status)) {
+	    Print(L"error: allocate_pool failed with status %x!\n", status);
+	    *sys_var_ptr_ptr = NULL; // ensure the pointer is null on failure
+	    return -1;
+	}
+	
+	// clear the allocated memory by setting it to 0
+	uefi_call_wrapper(BS->SetMem, 3, (void *) *sys_var_ptr_ptr,
+			  MEMORY_SIZE, 0);
+
+	/* store the sys var pointer in the boot params */
+	boot_params.system_variables = *sys_var_ptr_ptr;	
+	
+	return 0;
 }

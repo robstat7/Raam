@@ -83,7 +83,7 @@ struct register_map_struct {
 	uint32_t sq1tdbl;
 }__attribute__((packed));
 	
-int nvme_init(void);
+int nvme_init(const uint8_t *system_variables);
 static void find_controller(struct nvme_pcie_dev_info_struct *controller);
 static int check_function(uint16_t bus, uint8_t dev, uint8_t func);
 static uint64_t get_config_space_phy_mmio_addr(uint32_t bus, uint32_t dev,
