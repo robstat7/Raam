@@ -5,6 +5,8 @@
 #include <raam/pcie.h>
 #include <raam/printk.h>
 
+volatile uint64_t *nvme_base;
+
 int nvme_init(void)
 {
 	struct nvme_pcie_dev_info_struct controller;
@@ -19,8 +21,39 @@ int nvme_init(void)
 		ret = -1;
 		goto end;
 	}
+
+	/* get nvme base address */
+	get_nvme_base(&controller);
 end:
 	return ret;
+}
+
+void get_nvme_base(struct nvme_pcie_dev_info_struct *controller)
+{
+	uint64_t base_addr;
+
+	volatile struct common_config_space_header_struct *h =
+				(struct common_config_space_header_struct *)
+				get_config_space_phy_mmio_addr(controller->bus,
+							      controller->dev,
+							      controller->func);
+
+	if(h->header_type == 0x0) {	// a general device
+		volatile struct header_type_0_table_struct *h0_table =
+					(struct header_type_0_table_struct *) h;
+		if((h0_table->bar0 & 0x6) == 0x4) {
+			base_addr = h0_table->bar1;
+			base_addr <<= 32;
+			base_addr |= (uint64_t) h0_table->bar0;
+		} else if((h0_table->bar0 & 0x6) == 0x0) {
+			base_addr = h0_table->bar0;
+		}
+
+		base_addr &= 0xfffffffffffffff0;
+		nvme_base = (uint64_t *) base_addr;
+
+		printk("@nvme_base = {p}  ", nvme_base);
+	}
 }
 
 /*
