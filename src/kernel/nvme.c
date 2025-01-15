@@ -36,8 +36,26 @@ int nvme_init(void)
 
 	printk("nvme: reset completed!  ");
 
+	configure_admin_q();
+
 end:
 	return ret;
+}
+
+/*                                                                              
+ * configure_admin_q                                                            
+ *                                                                              
+ * configure the admin queue                                                    
+ */                                                                           
+void configure_admin_q(void)                                                    
+{                                                                               
+	// I. set admin queue attributes
+	// 64 commands each for ACQS (27:16) and ASQS (11:00).
+        // Both are 0’s based values i.e. the value is 63.
+
+	register_map->aqa = 0x003f003f;
+                                                                                
+        printk("@aqa register value={p}  ", (void *) register_map->aqa);                
 }
 
 /*                                                                              
