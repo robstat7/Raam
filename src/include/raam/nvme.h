@@ -90,6 +90,6 @@ static uint64_t get_config_space_phy_mmio_addr(uint32_t bus, uint32_t dev,
 					       uint32_t func);
 uint64_t *get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info);
 bool reset_controller(void);
-void configure_admin_q(void);
+void configure_admin_queues(void);
 
 #endif	// NVME_H

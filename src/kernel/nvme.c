@@ -36,26 +36,35 @@ int nvme_init(void)
 
 	printk("nvme: reset completed!  ");
 
-	configure_admin_q();
+	configure_admin_queues();
 
 end:
 	return ret;
 }
 
-/*                                                                              
- * configure_admin_q                                                            
- *                                                                              
- * configure the admin queue                                                    
- */                                                                           
-void configure_admin_q(void)                                                    
-{                                                                               
-	// I. set admin queue attributes
-	// 64 commands each for ACQS (27:16) and ASQS (11:00).
-        // Both are 0’s based values i.e. the value is 63.
+/**
+ * configure_admin_queues
+ * ----------------------
+ * Configures the admin submission and completion queues by setting the
+ * admin queue attributes (AQA). The attributes include the admin
+ * completion queue size (ACQS) and the admin submission queue size
+ * (ASQS). Both are set to 64 commands/entries, which are 0-based values
+ * (i.e., 63).
+ */
+void configure_admin_queues(void)
+{
+    /* define the 0-based size of admin queues (63 for 64 commands). */
+    const uint32_t QUEUE_SIZE = 0x3f;
 
-	register_map->aqa = 0x003f003f;
-                                                                                
-        printk("@aqa register value={p}  ", (void *) register_map->aqa);                
+    /* combine ACQS (bits 27:16) and ASQS (bits 11:0) into the
+       AQA register value. */
+    uint32_t aqa_value = (QUEUE_SIZE << 16) | QUEUE_SIZE;
+
+    /* set the admin queue attributes register (AQA). */
+    register_map->aqa = aqa_value;
+
+    printk("Admin Queue Attributes (AQA) Register Value: {p}  ",
+	   (void *) register_map->aqa);
 }
 
 /*                                                                              
