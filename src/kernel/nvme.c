@@ -28,28 +28,56 @@ end:
 	return ret;
 }
 
-void get_nvme_base(struct nvme_pcie_dev_info_struct *controller)
+/*
+ * get_nvme_base
+ * -------------
+ * this function gets the nvme base address that we will use to
+ * initialize the controller. First we get the header type that
+ * identifies the layout of the rest of the header beginning at byte
+ * 0x10 of the common header. If it is a standard header, we will read
+ * the bar0 address and check if the bits 2-1 of the register is 0x2 or
+ * 0x0 that means the base register is either 64-bit or 32-bit wide
+ * respectively. If its 64-bit wide, the upper 32-bit are stored in bar1
+ * register. Lastely, we clear the lowest 4 bits of the final base
+ * address as they are not part of the address; instead, they serve
+ * other purposes.
+ *
+ * parameters:
+ *   controller  - controller info pointer of type
+ *                 struct nvme_pcie_dev_info_struct
+ *
+ * returns:
+ *   void
+ *
+ * resources used:
+ *    - https://wiki.osdev.org/PCI
+ */
+void get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info)
 {
 	uint64_t base_addr;
 
 	volatile struct common_config_space_header_struct *h =
-				(struct common_config_space_header_struct *)
-				get_config_space_phy_mmio_addr(controller->bus,
-							      controller->dev,
-							      controller->func);
+			(struct common_config_space_header_struct *)
+			get_config_space_phy_mmio_addr(controller_info->bus,
+						       controller_info->dev,
+						       controller_info->func);
 
-	if(h->header_type == 0x0) {	// a general device
+	if(h->header_type == STANDARD_HEADER) {
 		volatile struct header_type_0_table_struct *h0_table =
 					(struct header_type_0_table_struct *) h;
-		if((h0_table->bar0 & 0x6) == 0x4) {
-			base_addr = h0_table->bar1;
-			base_addr <<= 32;
-			base_addr |= (uint64_t) h0_table->bar0;
-		} else if((h0_table->bar0 & 0x6) == 0x0) {
-			base_addr = h0_table->bar0;
+		if((h0_table->bar0 & PCI_BAR_TYPE_MASK) == 0x4) { // Type is 0x2
+			// i.e. base register is 64-bit wide
+			base_addr = h0_table->bar1; // get upper 32 bits first
+			base_addr <<= 32;	// left shift them
+			// now store lower 32 bits of the base address
+			base_addr |= h0_table->bar0;
+		} else if((h0_table->bar0 & PCI_BAR_TYPE_MASK) == 0x0) {
+			// Type is 0
+			// i.e. base register is 32-bit wide
+			base_addr = h0_table->bar0;	// obvious
 		}
 
-		base_addr &= 0xfffffffffffffff0;
+		base_addr &= ~0xf;  /* clear the lowest 4 bits */
 		nvme_base = (uint64_t *) base_addr;
 
 		printk("@nvme_base = {p}  ", nvme_base);

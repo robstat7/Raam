@@ -7,6 +7,9 @@
 #define NVME_SUBCLASS		0x08	/* Non-Volatile Memory Controller */
 #define NVME_PROG_IF		0x02	/* NVM Express */
 
+/* header type */
+#define STANDARD_HEADER		0x0
+
 struct common_config_space_header_struct {
 	uint16_t vendor_id;
 	uint16_t dev_id;
@@ -59,6 +62,6 @@ static void find_controller(struct nvme_pcie_dev_info_struct *controller);
 static int check_function(uint16_t bus, uint8_t dev, uint8_t func);
 static uint64_t get_config_space_phy_mmio_addr(uint32_t bus, uint32_t dev,
 					       uint32_t func);
-void get_nvme_base(struct nvme_pcie_dev_info_struct *controller);
+void get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info);
 
 #endif	// NVME_H
