@@ -46,34 +46,30 @@ end:
  * wait for the controller to indicate that the previous reset is complete by   
  * waiting for CSTS.RDY to become ‘0'.                                          
  */                                                                             
-bool wait_for_reset_complete(void)                                               
-{
-	uint32_t csts_val;
+bool wait_for_reset_complete(void)                                              
+{                                                                               
+	/* poll until CSTS.RDY (bit #0) becomes 0, or return false if CSTS.CFS
+	   (bit #1) is set */
+	while (register_map->csts & 0x1) {
+		/* check if CSTS.CFS (bit #1) is set (fatal error) */
+		if (register_map->csts & 0x2) {  
+			return false;                                                       
+		}                                                                       
+	}                                                                           
+	                                                                            
+	return true;                                                                
+}                   
 
-        do {                                                                    
-        	csts_val = register_map->csts;                                                           
-                if((csts_val & 0x2) != 0x0) {   // CSTS.CFS (bit #1) should be 0. If not the controller has had a fatal error
-                        return false;                                               
-                }                                                               
-        } while((csts_val & 0x1) != 0x0);    // Wait for CSTS.RDY (bit #0) to become 0
-                                                                                
-        return true;                                                               
-}
-
-bool reset_controller(void)
-{
-	uint32_t cc_val = register_map->cc;	
-
-	printk("@old cc value = {d}  ", cc_val);
-
-	if((cc_val & 0x1) != 0x0) {              // clear CC.EN (bit #0) to 0    
-                cc_val &= 0xfffffffe;                                            
-                register_map->cc = cc_val;                                                  
-        }
-
-	printk("@new cc value = {d}  ", register_map->cc);
-
-	return wait_for_reset_complete();
+bool reset_controller(void)                                                     
+{                                                                               
+	printk("@old cc value = {d}  ", register_map->cc);                            
+	                                                                            
+	/* clear CC.EN (bit #0) if it is set */
+	register_map->cc &= ~0x1;                                                   
+	                                                                            
+	printk("@new cc value = {d}  ", register_map->cc);                            
+	                                                                            
+	return wait_for_reset_complete();                                           
 }
 
 /*

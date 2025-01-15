@@ -58,13 +58,14 @@ struct header_type_0_table_struct {
 	uint8_t max_latency;
 }__attribute__((packed));
 
+/* please see NVM Express Revision 1.3 - 3.1 Register Definition */
 struct register_map_struct {
 	uint64_t cap;
-	uint32_t version;
+	uint32_t vs;
 	uint32_t intms;
 	uint32_t intmc;
 	uint32_t cc;
-	uint32_t reserved;
+	uint32_t reserved1;
 	uint32_t csts;
 	uint32_t nssr;
 	uint32_t aqa;
@@ -75,10 +76,11 @@ struct register_map_struct {
 	uint32_t bpinfo;
 	uint32_t bprsel;
 	uint64_t bpmbl;
-	char reserved1[3760];
-	char reserved2[256];
+	char reserved2[3760];
+	char reserved3[256];
 	uint32_t sq0tdbl;
 	uint32_t cq0hdbl;
+	uint32_t sq1tdbl;
 }__attribute__((packed));
 	
 int nvme_init(void);
