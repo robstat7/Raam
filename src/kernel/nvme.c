@@ -70,6 +70,7 @@ end:
 	return ret;
 }
 
+// TODO: add comments and refactor
 static void nvme_admin_wait(uint32_t *acqb_ptr)                                         
 {                                                                               
         uint32_t val;                                                           
@@ -79,13 +80,16 @@ static void nvme_admin_wait(uint32_t *acqb_ptr)
                                                                                 
         }while(val == 0);                                                       
                                                                                 
-        printk("acq: status field plus phase tag value: {p}  ", (void *) *(uint16_t *) ((char *) acqb_ptr + 2));
+        printk("acq: status field plus phase tag value: {p}  ",
+	       (void *) *(uint16_t *) ((char *) acqb_ptr + 2));
                                                                                 
-        *acqb_ptr = 0; // Overwrite the old entry                             
+        *acqb_ptr = 0; /* overwrite the old entry */
 }
 
-static void nvme_admin_savetail(const uint32_t admin_tail_val, char* nvme_admin_tail,
-			 uint32_t old_admin_tail_val)
+// TODO: add comments and refactor
+static void nvme_admin_savetail(const uint32_t admin_tail_val,
+				char* nvme_admin_tail,
+			 	uint32_t old_admin_tail_val)
 {
 	*nvme_admin_tail = admin_tail_val;
 
@@ -100,6 +104,7 @@ static void nvme_admin_savetail(const uint32_t admin_tail_val, char* nvme_admin_
 	nvme_admin_wait((uint32_t *) acqb_ptr);
 }
 
+// TODO: add comments and refactor
 /*
  * nvme_admin
  * ----------
@@ -149,6 +154,7 @@ static void nvme_admin(const uint32_t cdw0, const uint32_t cdw1,
 			    old_admin_tail_val);
 }
 
+// TODO: add comments and refactor
 static void save_controller_struct(void)
 {
 	/* cdw0 cid 0, prp used (bits 15:14 clear), fuse normal
@@ -305,7 +311,8 @@ static bool reset_controller(void)
  * resources used:
  *    - https://wiki.osdev.org/PCI
  */
-static uint64_t *get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info)
+static uint64_t *get_nvme_base(struct nvme_pcie_dev_info_struct
+			       *controller_info)
 {
 	uint64_t base_addr;
 

@@ -88,7 +88,8 @@ static void find_controller(struct nvme_pcie_dev_info_struct *controller);
 static int check_function(uint16_t bus, uint8_t dev, uint8_t func);
 static uint64_t get_config_space_phy_mmio_addr(uint32_t bus, uint32_t dev,
 					       uint32_t func);
-static uint64_t *get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info);
+static uint64_t *get_nvme_base(struct nvme_pcie_dev_info_struct
+			       *controller_info);
 static bool reset_controller(void);
 static bool wait_for_reset_complete(void);
 static void configure_admin_queues(void);
