@@ -7,8 +7,10 @@
 
 volatile struct register_map_struct *register_map;
 char *data_region_creation_addr;
-volatile char *nvme_asqb;
-volatile char *nvme_acqb;
+char *nvme_asqb;	/* admin submission queue base addr 4K aligned */
+char *nvme_acqb;	/* admin completion queue base addr 4K aligned */
+char *nvme_ctrl_id;     /* 4K controller identify data */
+char *nvme_admin_tail;
 
 int nvme_init(const uint8_t *system_variables)
 {
@@ -55,8 +57,118 @@ int nvme_init(const uint8_t *system_variables)
                 return -1;                                                       
         } 
 
+	/* assign address for the nvme admin tail value store */
+	nvme_admin_tail = data_region_creation_addr;
+
+	/* update address to point to next 4096 bytes alligned address */
+	data_region_creation_addr += 4096;
+
+	/* save the identify controller structure */                            
+        save_controller_struct();
+
 end:
 	return ret;
+}
+
+void nvme_admin_wait(uint32_t *acqb_ptr)                                         
+{                                                                               
+        uint32_t val;                                                           
+                                                                                
+        do{                                                                     
+                val = *acqb_ptr;                                              
+                                                                                
+        }while(val == 0);                                                       
+                                                                                
+        printk("acq: status field plus phase tag value: {p}  ", (void *) *(uint16_t *) ((char *) acqb_ptr + 2));
+                                                                                
+        *acqb_ptr = 0; // Overwrite the old entry                             
+}
+
+void nvme_admin_savetail(const uint32_t admin_tail_val, char* nvme_admin_tail,
+			 uint32_t old_admin_tail_val)
+{
+	*nvme_admin_tail = admin_tail_val;
+
+	register_map->sq0tdbl = admin_tail_val;
+
+	/* check completion queue */
+	old_admin_tail_val *= 16;	/* each entry is 16 bytes */
+	old_admin_tail_val += 12;	/* add 12 for double word 3 */
+
+	char *acqb_ptr = nvme_acqb + old_admin_tail_val;
+
+	nvme_admin_wait((uint32_t *) acqb_ptr);
+}
+
+/*
+ * nvme_admin
+ * ----------
+ * This function performs an admin operation on the controller.
+ */
+void nvme_admin(const uint32_t cdw0, const uint32_t cdw1, const uint32_t cdw10,
+		const uint32_t cdw11, const char *cdw6_7)
+{
+	/* build the command at the expected location in the submission ring */
+
+	/* get the current admin tail value. Valid values are 0 to 63. */
+	int admin_tail_val = *nvme_admin_tail;
+	/* multiply by 64 as we are using 64 entries */
+	admin_tail_val *= 64;
+	/* find the pointer in the submission ring */
+	char *asqb_ptr = nvme_asqb + admin_tail_val;
+
+	/* build the structure */
+        *(uint32_t *) asqb_ptr = cdw0;	/* cdw0 */
+        *(uint32_t *) (asqb_ptr + 4) = cdw1;	/* cdw1 */
+        *(uint32_t *) (asqb_ptr + 8) = 0;	/* cdw2 */
+        *(uint32_t *) (asqb_ptr + 12) = 0;	/* cdw3 */
+        *(uint64_t *) (asqb_ptr + 16) = 0;	/* cdw4-5 */
+        *(uint64_t *) (asqb_ptr + 24) = (uint64_t) cdw6_7;	/* cdw6-7 */
+        *(uint64_t *) (asqb_ptr + 32) = 0;	/* cdw8-9 */
+        *(uint32_t *) (asqb_ptr + 40) = cdw10;	/* cdw10 */
+        *(uint32_t *) (asqb_ptr + 44) = cdw11;	/* cdw11 */
+        *(uint32_t *) (asqb_ptr + 48) = 0;	/* cdw12 */
+        *(uint32_t *) (asqb_ptr + 52) = 0;	/* cdw13 */
+        *(uint32_t *) (asqb_ptr + 56) = 0;	/* cdw14 */
+        *(uint32_t *) (asqb_ptr + 60) = 0;	/* cdw15 */
+
+	/* start the admin command by updating the tail doorbell */
+
+	/* get the current admin tail value */
+	admin_tail_val = *nvme_admin_tail;
+	/* save the old admin tail value for reading from the completion ring */
+	uint32_t old_admin_tail_val = admin_tail_val;
+	admin_tail_val++;
+
+	if(admin_tail_val == 64) {
+		admin_tail_val = 0; /* wrap after 64 commands */
+	}
+
+	nvme_admin_savetail(admin_tail_val, nvme_admin_tail,
+			    old_admin_tail_val);
+}
+
+void save_controller_struct(void)
+{
+	/* cdw0 cid 0, prp used (bits 15:14 clear), fuse normal
+	  (bits 9:8 clear), command Identify (0x06) */
+	const uint32_t cdw0 = 0x6;
+	const uint32_t cdw1 = 0;	/* cdw1 ignored */
+	/* cdw10 CNS. Identify controller data structure for the controller */
+	const uint32_t nvme_id_ctrl = 0x01;
+	const uint32_t cdw11 = 0;     /* cdw11 ignored */
+
+	nvme_ctrl_id = data_region_creation_addr;
+
+	data_region_creation_addr += 4096;
+
+	printk("@nvme_ctrl_id val before submitting identify cmd = {p}  ",
+	       (void *) (*(uint64_t *)nvme_ctrl_id));
+
+	nvme_admin(cdw0, cdw1, nvme_id_ctrl, cdw11, nvme_ctrl_id);
+
+	printk("@nvme_ctrl_id val after submitting identify cmd = {p}  ",
+	       (void *) (*(uint64_t *)nvme_ctrl_id));
 }
 
 bool nvme_init_enable_wait(void)

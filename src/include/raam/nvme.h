@@ -93,5 +93,6 @@ bool reset_controller(void);
 void configure_admin_queues(void);
 char *align_to_4096(char *addr);
 bool nvme_init_enable_wait(void);
+void save_controller_struct(void);
 
 #endif	// NVME_H
