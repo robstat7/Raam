@@ -41,7 +41,7 @@ int nvme_init(const uint8_t *system_variables)
 
 	printk("@system_variables = {p}  ", (void *) system_variables);
 
-	data_region_creation_addr = system_variables;
+	data_region_creation_addr = (char *) system_variables;
 
 	configure_admin_queues();
 
@@ -49,63 +49,67 @@ end:
 	return ret;
 }
 
-char *get_next_4096_aligned_addr(void)                                          
-{                                                                               
-        char *new_addr = data_region_creation_addr;                             
-                                                                                
-        while((((uint64_t) new_addr) % 4096) != 0) {                            
-                new_addr++;                                                     
-        }                                                                       
-                                                                                
-        data_region_creation_addr = new_addr;                                   
-                                                                                
-        return new_addr;                                                        
+/* 
+ * align_to_4096
+ * -------------
+ * This function aligns a given address to the next 4KB boundary.
+ */
+char *align_to_4096(char *addr)
+{
+	uint64_t address = (uint64_t) addr;
+
+	/* if the address is not aligned, the remainder tells us how far
+	   the address is from the previous 4KB boundary. */
+	if(address % 4096 != 0) {
+		address += 4096 - (address % 4096);
+	}
+
+	return (char *) address;
 }
 
-/**
+/*
  * configure_admin_queues
  * ----------------------
  * Configures the admin submission and completion queues by setting the
- * admin queue attributes (AQA). The attributes include the admin
+ * admin queue attributes (AQA) first. The attributes include the admin
  * completion queue size (ACQS) and the admin submission queue size
  * (ASQS). Both are set to 64 commands/entries, which are 0-based values
  * (i.e., 63).
+ * Then set up the admin submission queue base and completion queue base
+ * addresses (asqb and acqb) and set admin submission queue (asq) and
+ * admin completion queue (acq) registers of the controller.
  */
 void configure_admin_queues(void)
 {
-    /* define the 0-based size of admin queues (63 for 64 commands). */
-    const uint32_t QUEUE_SIZE = 0x3f;
+	/* define the 0-based size of admin queues (63 for 64 commands). */
+	const uint32_t QUEUE_SIZE = 0x3f;
+	
+	/* combine ACQS (bits 27:16) and ASQS (bits 11:0) into the
+	   AQA register value. */
+	uint32_t aqa_value = (QUEUE_SIZE << 16) | QUEUE_SIZE;
+	
+	/* set the admin queue attributes register (AQA). */
+	register_map->aqa = aqa_value;
+	
+	printk("admin queue attributes (aqa) register value: {p}  ",
+	       (void *) register_map->aqa);
 
-    /* combine ACQS (bits 27:16) and ASQS (bits 11:0) into the
-       AQA register value. */
-    uint32_t aqa_value = (QUEUE_SIZE << 16) | QUEUE_SIZE;
-
-    /* set the admin queue attributes register (AQA). */
-    register_map->aqa = aqa_value;
-
-    printk("Admin Queue Attributes (AQA) Register Value: {p}  ",
-	   (void *) register_map->aqa);
-
-	/* get the next 4096 aligned address in the data region to be assigned as asqb */
-        nvme_asqb = get_next_4096_aligned_addr();                               
-                                                                                
-        /* set data region creation address to the next 4096 aligned address */ 
-        data_region_creation_addr = nvme_asqb + 4096;                           
-                                                                                
-        nvme_acqb = data_region_creation_addr;                                  
-                                                                                
-        data_region_creation_addr = nvme_acqb + 4096;                           
-                                                                                
-                                                                                
-        printk("@new asqb={p}  ", (void *) nvme_asqb);             
-        printk("@new acqb={p} ", (void *) nvme_acqb);             
-                                                                                
-        register_map->asq = (uint64_t) nvme_asqb;       // ASQB 4K aligned (63:12)      
-        register_map->acq = (uint64_t) nvme_acqb;       // ACQB 4K aligned (63:12)      
-                                                                                
-        printk("@read asq register={p}  ", (void *) register_map->asq);    
-        printk("@read acq register={p}  ", (void *) register_map->acq);    
-                                                                                
+	// set up asq and acq memory regions, ensuring 4KB alignment
+	nvme_asqb = align_to_4096(data_region_creation_addr);
+	data_region_creation_addr = nvme_asqb + 4096;
+	
+	nvme_acqb = align_to_4096(data_region_creation_addr);
+	data_region_creation_addr = nvme_acqb + 4096;
+	
+	printk("@new asqb={p}", (void *) nvme_asqb);
+	printk("@new acqb={p}", (void *) nvme_acqb);
+	
+	// Set asq and acq registers in the controller (must be 4KB aligned)
+	register_map->asq = (uint64_t) nvme_asqb;
+	register_map->acq = (uint64_t) nvme_acqb;
+	
+	printk("@read asq register={p}", (void *) register_map->asq);
+	printk("@read acq register={p}", (void *) register_map->acq);
 }
 
 /*                                                                              
