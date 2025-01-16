@@ -6,6 +6,9 @@
 #include <raam/printk.h>
 
 volatile struct register_map_struct *register_map;
+char *data_region_creation_addr;
+volatile char *nvme_asqb;
+volatile char *nvme_acqb;
 
 int nvme_init(const uint8_t *system_variables)
 {
@@ -38,14 +41,25 @@ int nvme_init(const uint8_t *system_variables)
 
 	printk("@system_variables = {p}  ", (void *) system_variables);
 
-	for(int i = 0; i < 500; i++) {
-		printk("{d}", system_variables[i]);
-	}
+	data_region_creation_addr = system_variables;
 
 	configure_admin_queues();
 
 end:
 	return ret;
+}
+
+char *get_next_4096_aligned_addr(void)                                          
+{                                                                               
+        char *new_addr = data_region_creation_addr;                             
+                                                                                
+        while((((uint64_t) new_addr) % 4096) != 0) {                            
+                new_addr++;                                                     
+        }                                                                       
+                                                                                
+        data_region_creation_addr = new_addr;                                   
+                                                                                
+        return new_addr;                                                        
 }
 
 /**
@@ -71,6 +85,27 @@ void configure_admin_queues(void)
 
     printk("Admin Queue Attributes (AQA) Register Value: {p}  ",
 	   (void *) register_map->aqa);
+
+	/* get the next 4096 aligned address in the data region to be assigned as asqb */
+        nvme_asqb = get_next_4096_aligned_addr();                               
+                                                                                
+        /* set data region creation address to the next 4096 aligned address */ 
+        data_region_creation_addr = nvme_asqb + 4096;                           
+                                                                                
+        nvme_acqb = data_region_creation_addr;                                  
+                                                                                
+        data_region_creation_addr = nvme_acqb + 4096;                           
+                                                                                
+                                                                                
+        printk("@new asqb={p}  ", (void *) nvme_asqb);             
+        printk("@new acqb={p} ", (void *) nvme_acqb);             
+                                                                                
+        register_map->asq = (uint64_t) nvme_asqb;       // ASQB 4K aligned (63:12)      
+        register_map->acq = (uint64_t) nvme_acqb;       // ACQB 4K aligned (63:12)      
+                                                                                
+        printk("@read asq register={p}  ", (void *) register_map->asq);    
+        printk("@read acq register={p}  ", (void *) register_map->acq);    
+                                                                                
 }
 
 /*                                                                              
