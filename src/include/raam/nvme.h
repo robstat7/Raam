@@ -92,5 +92,6 @@ uint64_t *get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info);
 bool reset_controller(void);
 void configure_admin_queues(void);
 char *align_to_4096(char *addr);
+bool nvme_init_enable_wait(void);
 
 #endif	// NVME_H

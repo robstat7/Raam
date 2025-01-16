@@ -45,15 +45,34 @@ int nvme_init(const uint8_t *system_variables)
 
 	configure_admin_queues();
 
-	// enable the controller - set CC.EN (bit #0) to 1                                              
+	/* enable the controller - set CC.EN (bit #0) to 1 */
         register_map->cc |= 0x1;
         
 	printk("@new CC value={d} ", register_map->cc);            
+
+	if(nvme_init_enable_wait() == false) {                                      
+                printk("fatal error: nvme: CSTS.CFS (bit #1) is not 0!\n");         
+                return -1;                                                       
+        } 
 
 end:
 	return ret;
 }
 
+bool nvme_init_enable_wait(void)
+{ 
+	/* poll until CSTS.RDY (bit #0) becomes 1, or return false if CSTS.CFS
+	   (bit #1) is set */
+	while((register_map->csts & 0x1) != 0x1) {
+		/* check if CSTS.CFS (bit #1) is set (fatal error) */
+		if(register_map->csts & 0x2) {
+			return false;
+		}
+	}
+
+	return true;
+}
+                                                                               
 /* 
  * align_to_4096
  * -------------
