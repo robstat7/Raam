@@ -88,11 +88,19 @@ static void find_controller(struct nvme_pcie_dev_info_struct *controller);
 static int check_function(uint16_t bus, uint8_t dev, uint8_t func);
 static uint64_t get_config_space_phy_mmio_addr(uint32_t bus, uint32_t dev,
 					       uint32_t func);
-uint64_t *get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info);
-bool reset_controller(void);
-void configure_admin_queues(void);
+static uint64_t *get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info);
+static bool reset_controller(void);
+static bool wait_for_reset_complete(void);
+static void configure_admin_queues(void);
 char *align_to_4096(char *addr);
-bool nvme_init_enable_wait(void);
-void save_controller_struct(void);
+static bool nvme_init_enable_wait(void);
+static void save_controller_struct(void);
+static void nvme_admin(const uint32_t cdw0, const uint32_t cdw1,                
+                       const uint32_t cdw10, const uint32_t cdw11,              
+                       const char *cdw6_7);
+static void nvme_admin_savetail(const uint32_t admin_tail_val,
+				char* nvme_admin_tail,
+				uint32_t old_admin_tail_val);
+static void nvme_admin_wait(uint32_t *acqb_ptr);
 
 #endif	// NVME_H

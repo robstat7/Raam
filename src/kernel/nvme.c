@@ -70,7 +70,7 @@ end:
 	return ret;
 }
 
-void nvme_admin_wait(uint32_t *acqb_ptr)                                         
+static void nvme_admin_wait(uint32_t *acqb_ptr)                                         
 {                                                                               
         uint32_t val;                                                           
                                                                                 
@@ -84,7 +84,7 @@ void nvme_admin_wait(uint32_t *acqb_ptr)
         *acqb_ptr = 0; // Overwrite the old entry                             
 }
 
-void nvme_admin_savetail(const uint32_t admin_tail_val, char* nvme_admin_tail,
+static void nvme_admin_savetail(const uint32_t admin_tail_val, char* nvme_admin_tail,
 			 uint32_t old_admin_tail_val)
 {
 	*nvme_admin_tail = admin_tail_val;
@@ -105,8 +105,9 @@ void nvme_admin_savetail(const uint32_t admin_tail_val, char* nvme_admin_tail,
  * ----------
  * This function performs an admin operation on the controller.
  */
-void nvme_admin(const uint32_t cdw0, const uint32_t cdw1, const uint32_t cdw10,
-		const uint32_t cdw11, const char *cdw6_7)
+static void nvme_admin(const uint32_t cdw0, const uint32_t cdw1,
+		       const uint32_t cdw10, const uint32_t cdw11,
+		       const char *cdw6_7)
 {
 	/* build the command at the expected location in the submission ring */
 
@@ -148,7 +149,7 @@ void nvme_admin(const uint32_t cdw0, const uint32_t cdw1, const uint32_t cdw10,
 			    old_admin_tail_val);
 }
 
-void save_controller_struct(void)
+static void save_controller_struct(void)
 {
 	/* cdw0 cid 0, prp used (bits 15:14 clear), fuse normal
 	  (bits 9:8 clear), command Identify (0x06) */
@@ -171,7 +172,7 @@ void save_controller_struct(void)
 	       (void *) (*(uint64_t *)nvme_ctrl_id));
 }
 
-bool nvme_init_enable_wait(void)
+static bool nvme_init_enable_wait(void)
 { 
 	/* poll until CSTS.RDY (bit #0) becomes 1, or return false if CSTS.CFS
 	   (bit #1) is set */
@@ -215,7 +216,7 @@ char *align_to_4096(char *addr)
  * addresses (asqb and acqb) and set admin submission queue (asq) and
  * admin completion queue (acq) registers of the controller.
  */
-void configure_admin_queues(void)
+static void configure_admin_queues(void)
 {
 	/* define the 0-based size of admin queues (63 for 64 commands). */
 	const uint32_t QUEUE_SIZE = 0x3f;
@@ -254,7 +255,7 @@ void configure_admin_queues(void)
  * wait for the controller to indicate that the previous reset is complete by   
  * waiting for CSTS.RDY to become ‘0'.                                          
  */                                                                             
-bool wait_for_reset_complete(void)                                              
+static bool wait_for_reset_complete(void)                                              
 {                                                                               
 	/* poll until CSTS.RDY (bit #0) becomes 0, or return false if CSTS.CFS
 	   (bit #1) is set */
@@ -268,7 +269,7 @@ bool wait_for_reset_complete(void)
 	return true;                                                                
 }                   
 
-bool reset_controller(void)                                                     
+static bool reset_controller(void)                                                     
 {                                                                               
 	printk("@old cc value = {d}  ", register_map->cc);                            
 	                                                                            
@@ -304,7 +305,7 @@ bool reset_controller(void)
  * resources used:
  *    - https://wiki.osdev.org/PCI
  */
-uint64_t *get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info)
+static uint64_t *get_nvme_base(struct nvme_pcie_dev_info_struct *controller_info)
 {
 	uint64_t base_addr;
 
