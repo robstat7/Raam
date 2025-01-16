@@ -45,6 +45,11 @@ int nvme_init(const uint8_t *system_variables)
 
 	configure_admin_queues();
 
+	// enable the controller - set CC.EN (bit #0) to 1                                              
+        register_map->cc |= 0x1;
+        
+	printk("@new CC value={d} ", register_map->cc);            
+
 end:
 	return ret;
 }
