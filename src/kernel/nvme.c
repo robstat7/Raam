@@ -17,6 +17,7 @@ char *controller_identify_prp_base; 	/* 4K controller identify PRP base
 					   address */
 /* address to store 1 byte current admin submission queue tail doorbell value */
 char *admin_sq_tail_doorbell;
+char *nvme_iocqb;
 
 int nvme_init(const uint8_t *system_variables)
 {
@@ -72,8 +73,32 @@ int nvme_init(const uint8_t *system_variables)
 	/* get the identify controller data structure */
         get_identify_controller_data_structure();
 
+	/* create the first IO completion and submission queues */
+	create_io_queues();
+
 end:
 	return ret;
+}
+
+static void create_io_queues(void)
+{
+	/* set CC.IOCQES to 16 commands (16 bytes) and CC.IOSQES to 64, and  and CC.EN (bit #0) to 1 */
+	register_map->cc = 0x460001;
+
+	/* create the first i/o completion queue */                             
+        uint32_t cdw0 = 0x5;     // CDW0 CID 0, PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command create io completion queue (0x5)
+        uint32_t cdw1 = 0;      // CDW1 Ignored                                 
+        uint32_t cdw10 = 0xf0001;       /* cdw10: queue size = 16 commands, qid = 1 */
+        uint32_t cdw11 = 0x1;           /* cdw11: physically contiguous (1<<0), interrupts disabled */
+
+	data_region_creation_address =                                          
+                   get_next_4096_alligned_address(data_region_creation_address);
+                                                                                
+        nvme_iocqb = controller_identify_prp_base = data_region_creation_address;
+	
+	/* send the command */
+	send_admin_command(cdw0, cdw1, (uint64_t) nvme_iocqb,
+			   cdw10, cdw11);
 }
 
 static void nvme_admin_wait(uint32_t *acqb_ptr)                                         

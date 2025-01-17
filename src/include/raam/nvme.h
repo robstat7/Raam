@@ -132,5 +132,6 @@ static void build_command_structure(
                         const uint32_t cdw0, const uint32_t cdw1,
                         const uint64_t cdw6_7, const uint32_t cdw10,
                         const uint32_t cdw11);
+static void create_io_queues(void);
 
 #endif	// NVME_H
