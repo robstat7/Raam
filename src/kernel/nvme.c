@@ -76,11 +76,11 @@ end:
 	return ret;
 }
 
-// TODO: add comments and refactor
 static void nvme_admin_wait(uint32_t *acqb_ptr)                                         
 {                                                                               
         uint32_t val;                                                           
-                                                                                
+      
+	/* wait until the controller sends the resposne in the completion ring */                                                                          
         do{                                                                     
                 val = *acqb_ptr;                                              
                                                                                 
@@ -92,13 +92,14 @@ static void nvme_admin_wait(uint32_t *acqb_ptr)
         *acqb_ptr = 0; /* overwrite the old entry */
 }
 
-// TODO: add comments and refactor
 static void nvme_admin_savetail(const uint32_t admin_tail_val,
 				char* admin_sq_tail_doorbell,
 			 	uint32_t old_admin_tail_val)
 {
+	/* store the new tail doorbell value */
 	*admin_sq_tail_doorbell = admin_tail_val;
 
+	/* ring the doorbell by writing the newly incremented value to it */
 	register_map->sq0tdbl = admin_tail_val;
 
 	/* check completion queue */
