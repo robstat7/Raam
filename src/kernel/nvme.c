@@ -92,11 +92,6 @@ int nvme_init(const uint8_t *system_variables)
 
 	nvme_data_buffer = data_region_creation_address;
 
-	// testing
-// 	nvme_read(997109760, 1);
-// 	char *data = nvme_data_buffer;
-// 	printk(data);
-
 end:
 	return ret;
 }
@@ -134,6 +129,50 @@ static void nvme_io_savetail(const uint32_t io_tail_val,
 	char *iocqb_ptr = nvme_iocqb + old_io_tail_val;
 
 	nvme_io_wait((uint32_t *) iocqb_ptr);
+}
+
+char *nvme_write(uint32_t starting_sector, uint32_t num_blocks)
+{
+	const uint32_t cdw0 = 0x1;     // CDW0 CID 0, PRP used (bits 15:14 clear), FUSE normal (bits 9:8 clear), command write (0x1)
+
+	/* CDW1 NSID. The vast majority of NVMe SSDs designed for consumer use (e.g., laptops, desktops) have one namespace.*/
+	const uint32_t cdw1 = 1;
+	const uint32_t cdw10_11 = starting_sector;            // CDW10_11
+	uint32_t cdw12 = num_blocks - 1;        /* number of logical blocks to be written. It is a 0 based value */
+
+	/* read the tail doorbell value */                                      
+        uint8_t io_sq_tail_dbl_val = *nvme_iotail; /* valid read from 0 to 63 */
+        uint8_t old_io_sq_tail_dbl_val = io_sq_tail_dbl_val;              
+        /* update the tail doorbell value */                                    
+        io_sq_tail_dbl_val++;                                                
+                                                                                
+        if(io_sq_tail_dbl_val == 64) {                                       
+                io_sq_tail_dbl_val = 0; /* wrap after 64 commands */         
+        }                                                                       
+                                                                                
+        /* calculate the offset into the submission ring */                     
+        int offset = old_io_sq_tail_dbl_val * 64;                            
+        /* find the address in the submission ring to build the command */      
+        const char *iosqb_ptr = nvme_iosqb + offset;                              
+                                                                                
+        /* build the command structure */                                       
+	*(uint32_t *) iosqb_ptr = cdw0;    // CDW0                         
+        *(uint32_t *) (iosqb_ptr + 4) = cdw1;      // CDW1                 
+        *(uint32_t *) (iosqb_ptr + 8) = 0; // CDW2                         
+        *(uint32_t *) (iosqb_ptr + 12) = 0;        // CDW3                 
+        *(uint64_t *) (iosqb_ptr + 16) = 0;        // CDW4-5               
+        *(uint64_t *) (iosqb_ptr + 24) = (uint64_t) nvme_data_buffer; // CDW6-7
+        *(uint64_t *) (iosqb_ptr + 32) = 0;        // CDW8-9               
+        *(uint64_t *) (iosqb_ptr + 40) = cdw10_11; // CDW10_11             
+        *(uint32_t *) (iosqb_ptr + 48) = cdw12;    // CDW12                
+        *(uint32_t *) (iosqb_ptr + 52) = 0;        // CDW13                
+        *(uint32_t *) (iosqb_ptr + 56) = 0;        // CDW14                
+        *(uint32_t *) (iosqb_ptr + 60) = 0;        // CDW15       
+
+ 
+	nvme_io_savetail(io_sq_tail_dbl_val, nvme_iotail, old_io_sq_tail_dbl_val);
+
+	return nvme_data_buffer;
 }
 
 // this function reads a number of logical blocks from the starting sector and

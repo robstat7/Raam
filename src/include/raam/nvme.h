@@ -134,6 +134,7 @@ static void build_command_structure(
                         const uint32_t cdw11);
 static void create_io_queues(void);
 char *nvme_read(uint32_t starting_sector, uint32_t num_blocks);
+char *nvme_write(uint32_t starting_sector, uint32_t num_blocks);
 static void nvme_io_savetail(const uint32_t io_tail_val,                        
                                 char* io_sq_tail_doorbell,                      
                                 uint32_t old_io_tail_val);
