@@ -2,7 +2,8 @@
  * NVMe over PCIe driver.
  *
  * specification used:
- *   NVM Express Revision 1.3
+ *   - NVM Express Revision 1.3
+ *   - https://wiki.osdev.org/NVMe
  */
 #include <raam/nvme.h>
 #include <raam/pcie.h>
@@ -19,6 +20,10 @@ char *controller_identify_prp_base; 	/* 4K controller identify PRP base
 char *admin_sq_tail_doorbell;
 char *nvme_iocqb;	/* I/O completion queue base addr 4K aligned */
 char *nvme_iosqb;	/* I/O submission queue base addr 4K aligned */
+/* address to store 1 byte current IO submission queue tail doorbell value */
+char *nvme_iotail;
+/* data buffer address to store ssd read value */
+char *nvme_data_buffer;
 
 int nvme_init(const uint8_t *system_variables)
 {
@@ -77,10 +82,109 @@ int nvme_init(const uint8_t *system_variables)
 	/* create the first IO completion and submission queues */
 	create_io_queues();
 
+	data_region_creation_address =                                          
+                   get_next_4096_alligned_address(data_region_creation_address);
+
+	nvme_iotail = data_region_creation_address;
+
+	data_region_creation_address =                                          
+                   get_next_4096_alligned_address(data_region_creation_address);
+
+	nvme_data_buffer = data_region_creation_address;
+
+	// testing
+// 	nvme_read(997109760, 1);
+// 	char *data = nvme_data_buffer;
+// 	printk(data);
+
 end:
 	return ret;
 }
 
+static void nvme_io_wait(uint32_t *iocqb_ptr)                                         
+{                                                                               
+        uint32_t val;                                                           
+      
+	/* wait until the controller sends the resposne in the completion ring */                                                                          
+        do{                                                                     
+                val = *iocqb_ptr;                                              
+                                                                                
+        }while(val == 0);                                                       
+                                                                                
+        printk("iocq: status field plus phase tag value: {p}  ",
+	       (void *) *(uint16_t *) ((char *) iocqb_ptr + 2));
+                                                                                
+        *iocqb_ptr = 0; /* overwrite the old entry */
+}
+
+static void nvme_io_savetail(const uint32_t io_tail_val,
+			 	char* io_sq_tail_doorbell,
+			 	uint32_t old_io_tail_val)
+{
+	/* store the new tail doorbell value */
+	*nvme_iotail = io_tail_val;
+
+	/* ring the doorbell by writing the newly incremented value to it */
+	register_map->sq1tdbl = io_tail_val;
+
+	/* check completion queue */
+	old_io_tail_val *= 16;	/* each entry is 16 bytes */
+	old_io_tail_val += 12;	/* add 12 for double word 3 */
+
+	char *iocqb_ptr = nvme_iocqb + old_io_tail_val;
+
+	nvme_io_wait((uint32_t *) iocqb_ptr);
+}
+
+// this function reads a number of logical blocks from the starting sector and
+// returns data in the nvme data buffer.
+// logical block size is 512 bytes.
+char *nvme_read(uint32_t starting_sector, uint32_t num_blocks)
+{
+	const uint32_t cdw0 = 0x2;     // CDW0 CID 0, PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command read (0x2)
+
+	/* CDW1 NSID. The vast majority of NVMe SSDs designed for consumer use (e.g., laptops, desktops) have one namespace.*/
+	const uint32_t cdw1 = 1;
+	const uint32_t cdw10_11 = starting_sector;            // CDW10_11
+	uint32_t cdw12 = num_blocks - 1;        /* number of logical blocks to be read. It is a 0 based value */
+
+	/* read the tail doorbell value */                                      
+        uint8_t io_sq_tail_dbl_val = *nvme_iotail; /* valid read from 0 to 63 */
+        uint8_t old_io_sq_tail_dbl_val = io_sq_tail_dbl_val;              
+        /* update the tail doorbell value */                                    
+        io_sq_tail_dbl_val++;                                                
+                                                                                
+        if(io_sq_tail_dbl_val == 64) {                                       
+                io_sq_tail_dbl_val = 0; /* wrap after 64 commands */         
+        }                                                                       
+                                                                                
+        /* calculate the offset into the submission ring */                     
+        int offset = old_io_sq_tail_dbl_val * 64;                            
+        /* find the address in the submission ring to build the command */      
+        const char *iosqb_ptr = nvme_iosqb + offset;                              
+                                                                                
+        /* build the command structure */                                       
+	*(uint32_t *) iosqb_ptr = cdw0;    // CDW0                         
+        *(uint32_t *) (iosqb_ptr + 4) = cdw1;      // CDW1                 
+        *(uint32_t *) (iosqb_ptr + 8) = 0; // CDW2                         
+        *(uint32_t *) (iosqb_ptr + 12) = 0;        // CDW3                 
+        *(uint64_t *) (iosqb_ptr + 16) = 0;        // CDW4-5               
+        *(uint64_t *) (iosqb_ptr + 24) = (uint64_t) nvme_data_buffer; // CDW6-7
+        *(uint64_t *) (iosqb_ptr + 32) = 0;        // CDW8-9               
+        *(uint64_t *) (iosqb_ptr + 40) = cdw10_11; // CDW10_11             
+        *(uint32_t *) (iosqb_ptr + 48) = cdw12;    // CDW12                
+        *(uint32_t *) (iosqb_ptr + 52) = 0;        // CDW13                
+        *(uint32_t *) (iosqb_ptr + 56) = 0;        // CDW14                
+        *(uint32_t *) (iosqb_ptr + 60) = 0;        // CDW15       
+
+ 
+	nvme_io_savetail(io_sq_tail_dbl_val, nvme_iotail, old_io_sq_tail_dbl_val);
+
+	return nvme_data_buffer;
+}
+
+/* function to create the first io completion queue and the first io
+submission queue */
 static void create_io_queues(void)
 {
 	/* set CC.IOCQES to 16 commands (16 bytes) and CC.IOSQES to 64, and  and CC.EN (bit #0) to 1 */
