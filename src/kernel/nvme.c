@@ -115,11 +115,11 @@ static void nvme_admin_savetail(const uint32_t admin_tail_val,
  * ------------------
  * this function builds the command at the expected location in the
  * submission ring and sends it to the controller for processing.
- * First it gets the current admin submission queue tail doorbell value. The vaild values are 0 to
- * 63. This value tells us about the command no. in the submission ring
- * that is being currently submitted. As each command is 64 bytes in
- * size, we multiply this tail doorbell value by 64 to get the offset in the 
- * submission ring before creating the new command.
+ * First it reads the current stored admin submission queue tail doorbell value from the memory. The vaild values are from 0 to 63. This value tells us about the command
+ * no. in the submission ring that is being currently submitted. It then updates the tail doorbell value by adding 1 to it. If it is equal to 64 (greater than 63), we wrap it to 0. As each
+ * command is 64 bytes in size, we multiply this unupdated tail doorbell value by
+ * 64 to calculate the offset in the submission ring before creating the new
+ * command.
  * Then it builds the command at the expected location and sends it to
  * the controller for processing.
  *
@@ -137,28 +137,28 @@ static void send_admin_command(const uint32_t cdw0, const uint32_t cdw1,
 			       const uint64_t cdw6_7, const uint32_t cdw10,
 			       const uint32_t cdw11)
 {
-	int admin_sq_tail_dbl_val = *admin_sq_tail_doorbell;
-	admin_sq_tail_dbl_val *= 64;
-	/* find the offset in the submission ring to build the command */
-	const char *asqb_ptr = nvme_asqb + admin_sq_tail_dbl_val;
-
-	/* build the command structure */
-	build_command_structure(
-		(struct submission_queue_commands_struct *) asqb_ptr, cdw0,
-		cdw1, cdw6_7, cdw10, cdw11);
-        
-	/* start the admin command by updating the tail doorbell */
-
-	/* get the current admin tail value */
-	admin_sq_tail_dbl_val = *admin_sq_tail_doorbell;
-	/* save the old admin tail value for reading from the completion ring */
-	uint32_t old_admin_sq_tail_dbl_val = admin_sq_tail_dbl_val;
+	/* read the tail doorbell value */
+	uint8_t admin_sq_tail_dbl_val = *admin_sq_tail_doorbell;
+	uint8_t old_admin_sq_tail_dbl_val = admin_sq_tail_dbl_val;
+	/* update the tail doorbell value */
 	admin_sq_tail_dbl_val++;
 
 	if(admin_sq_tail_dbl_val == 64) {
 		admin_sq_tail_dbl_val = 0; /* wrap after 64 commands */
 	}
 
+	/* calculate the offset into the submission ring */
+	int offset = old_admin_sq_tail_dbl_val * 64;
+	/* find the address in the submission ring to build the command */
+	const char *asqb_ptr = nvme_asqb + offset;
+
+	/* build the command structure */
+	build_command_structure(
+		(struct submission_queue_commands_struct *) asqb_ptr, cdw0,
+		cdw1, cdw6_7, cdw10, cdw11);
+        
+	/* send the admin command by updating the admin submission queue tail
+	   doorbell register */
 	nvme_admin_savetail(admin_sq_tail_dbl_val, admin_sq_tail_doorbell,
 			    old_admin_sq_tail_dbl_val);
 }
