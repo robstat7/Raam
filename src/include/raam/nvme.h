@@ -11,6 +11,13 @@
 /* header type */
 #define STANDARD_HEADER		0x0
 
+/* nvme commands */
+#define CMD_IDENTIFY		0x6
+#define CMD_IGNORED		0x0
+#define CNS_CONTROLLER		0x1
+
+#define PAGE_SIZE		4096
+
 struct common_config_space_header_struct {
 	uint16_t vendor_id;
 	uint16_t dev_id;
@@ -95,7 +102,7 @@ static bool wait_for_reset_complete(void);
 static void configure_admin_queues(void);
 char *align_to_4096(char *addr);
 static bool nvme_init_enable_wait(void);
-static void save_controller_struct(void);
+static void get_identify_controller_data_structure(void);
 static void nvme_admin(const uint32_t cdw0, const uint32_t cdw1,                
                        const uint32_t cdw10, const uint32_t cdw11,              
                        const char *cdw6_7);
@@ -103,5 +110,6 @@ static void nvme_admin_savetail(const uint32_t admin_tail_val,
 				char* nvme_admin_tail,
 				uint32_t old_admin_tail_val);
 static void nvme_admin_wait(uint32_t *acqb_ptr);
+static char *get_next_4096_alligned_address(char *addr);
 
 #endif	// NVME_H

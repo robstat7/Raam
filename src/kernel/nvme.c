@@ -1,5 +1,8 @@
 /*
  * NVMe over PCIe driver.
+ *
+ * specification used:
+ *   NVM Express Revision 1.3
  */
 #include <raam/nvme.h>
 #include <raam/pcie.h>
@@ -9,7 +12,8 @@ volatile struct register_map_struct *register_map;
 char *data_region_creation_addr;
 char *nvme_asqb;	/* admin submission queue base addr 4K aligned */
 char *nvme_acqb;	/* admin completion queue base addr 4K aligned */
-char *nvme_ctrl_id;     /* 4K controller identify data */
+char *controller_identify_prp_base; 	/* 4K controller identify PRP base
+					   address */
 char *nvme_admin_tail;
 
 int nvme_init(const uint8_t *system_variables)
@@ -58,13 +62,13 @@ int nvme_init(const uint8_t *system_variables)
         } 
 
 	/* assign address for the nvme admin tail value store */
+	data_region_creation_addr =
+		     get_next_4096_alligned_address(data_region_creation_addr);
+
 	nvme_admin_tail = data_region_creation_addr;
 
-	/* update address to point to next 4096 bytes alligned address */
-	data_region_creation_addr += 4096;
-
-	/* save the identify controller structure */                            
-        save_controller_struct();
+	/* get the identify controller data structure */
+        get_identify_controller_data_structure();
 
 end:
 	return ret;
@@ -154,28 +158,58 @@ static void nvme_admin(const uint32_t cdw0, const uint32_t cdw1,
 			    old_admin_tail_val);
 }
 
-// TODO: add comments and refactor
-static void save_controller_struct(void)
+/*
+ * get_identify_controller_data_structure
+ * --------------------------------------
+ * this function gets the identify controller data structure in a data
+ * buffer. The data structure is 4096 bytes in size.
+ *
+ * notes:
+ *   - command dword 0 (cdw0) consists of command identifier as 0,
+ *     physical region page (PRP) is used for this transfer (bits 15:14
+ *     clear), fused operation (FUSE) is a normal operation (bits 9:8
+ *     clear), and the opcode (bits 7:0) of the command is 0x6
+ *     (identify).
+ *     The physical memory location in memory to use for data transfer
+ *     is specified using PRP. 
+ *   - command dword 10 (cdw10) is specific to identify command.
+ *     Controller or Namespace Structure (CNS) (bits 7:0) should be 0x1
+ *     to identify the controller data structure for the controller.
+ *     Rest of the bits should be 0.
+ *   - command dword 1 and command dword 11 are ignored (set to 0). Rest
+ *     all the commands must be 0.
+ */
+static void get_identify_controller_data_structure(void)
 {
-	/* cdw0 cid 0, prp used (bits 15:14 clear), fuse normal
-	  (bits 9:8 clear), command Identify (0x06) */
-	const uint32_t cdw0 = 0x6;
-	const uint32_t cdw1 = 0;	/* cdw1 ignored */
-	/* cdw10 CNS. Identify controller data structure for the controller */
-	const uint32_t nvme_id_ctrl = 0x01;
-	const uint32_t cdw11 = 0;     /* cdw11 ignored */
+	const uint32_t cdw0 = CMD_IDENTIFY;	/* upper bits are 0 */
+	const uint32_t cdw1 = CMD_IGNORED;
+	const uint32_t cdw10 = CNS_CONTROLLER;
+	const uint32_t cdw11 = CMD_IGNORED;
 
-	nvme_ctrl_id = data_region_creation_addr;
+	data_region_creation_addr =
+		     get_next_4096_alligned_address(data_region_creation_addr);
 
-	data_region_creation_addr += 4096;
+	controller_identify_prp_base = data_region_creation_addr;
 
-	printk("@nvme_ctrl_id val before submitting identify cmd = {p}  ",
-	       (void *) (*(uint64_t *)nvme_ctrl_id));
+	printk("@controller_identify_prp_base region val before submitting "
+	       "identify cmd = {p}  ",
+	       (void *) (*(uint64_t *) controller_identify_prp_base));
 
-	nvme_admin(cdw0, cdw1, nvme_id_ctrl, cdw11, nvme_ctrl_id);
+	nvme_admin(cdw0, cdw1, cdw10, cdw11, controller_identify_prp_base);
 
-	printk("@nvme_ctrl_id val after submitting identify cmd = {p}  ",
-	       (void *) (*(uint64_t *)nvme_ctrl_id));
+	printk("@controller_identify_prp_base region val after submitting "
+	       "identify cmd = {p}  ",
+	       (void *) (*(uint64_t *) controller_identify_prp_base));
+}
+
+/* update address to point to the next 4096 bytes alligned address.
+This function assumes that the address in the parameter is already 4096
+bytes alligned. */
+static char *get_next_4096_alligned_address(char *addr)
+{
+	addr += PAGE_SIZE;
+
+	return addr;
 }
 
 static bool nvme_init_enable_wait(void)
