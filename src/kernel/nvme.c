@@ -9,7 +9,8 @@
 #include <raam/printk.h>
 
 volatile struct register_map_struct *register_map;
-char *data_region_creation_addr;
+/* zeroed 2 MiB memory region's base address to be used by nvme rings and PRPs*/
+char *data_region_creation_address;
 char *nvme_asqb;	/* admin submission queue base addr 4K aligned */
 char *nvme_acqb;	/* admin completion queue base addr 4K aligned */
 char *controller_identify_prp_base; 	/* 4K controller identify PRP base
@@ -47,7 +48,13 @@ int nvme_init(const uint8_t *system_variables)
 
 	printk("@system_variables = {p}  ", (void *) system_variables);
 
-	data_region_creation_addr = (char *) system_variables;
+	data_region_creation_address = (char *) system_variables;
+
+	/* assign address for the admin tail value store */
+	data_region_creation_address =
+		     get_next_4096_alligned_address(data_region_creation_address);
+
+	nvme_admin_tail = data_region_creation_address;
 
 	configure_admin_queues();
 
@@ -60,13 +67,7 @@ int nvme_init(const uint8_t *system_variables)
                 printk("fatal error: nvme: CSTS.CFS (bit #1) is not 0!\n");         
                 return -1;                                                       
         } 
-
-	/* assign address for the nvme admin tail value store */
-	data_region_creation_addr =
-		     get_next_4096_alligned_address(data_region_creation_addr);
-
-	nvme_admin_tail = data_region_creation_addr;
-
+	
 	/* get the identify controller data structure */
         get_identify_controller_data_structure();
 
@@ -108,19 +109,33 @@ static void nvme_admin_savetail(const uint32_t admin_tail_val,
 	nvme_admin_wait((uint32_t *) acqb_ptr);
 }
 
-// TODO: add comments and refactor
 /*
- * nvme_admin
- * ----------
- * This function performs an admin operation on the controller.
+ * send_admin_command
+ * ------------------
+ * this function builds the command at the expected location in the
+ * submission ring and sends it to the controller for processing.
+ * First it gets the current admin tail value. The vaild values are 0 to
+ * 63. This value tells us about the command no. in the submission ring
+ * that is being currently submitted. As each command is 64 bytes in
+ * size, we multiply this tail value by 64 to get the offset in the 
+ * submission ring to create the new command.
+ * Then it builds the command at the expected location and sends it to
+ * the controller for processing.
+ *
+ * parameters:
+ *   - cdw0 - command dword 0
+ *   - cdw1 - command dword 1
+ *   - cdw6_7 - command dword 6 and 7
+ *   - cdw10 - command dword 10
+ *   - cdw11 - command dword 11
+ *
+ * returns:
+ *   void
  */
-static void nvme_admin(const uint32_t cdw0, const uint32_t cdw1,
-		       const uint32_t cdw10, const uint32_t cdw11,
-		       const char *cdw6_7)
+static void send_admin_command(const uint32_t cdw0, const uint32_t cdw1,
+			       const char *cdw6_7, const uint32_t cdw10,
+			       const uint32_t cdw11)
 {
-	/* build the command at the expected location in the submission ring */
-
-	/* get the current admin tail value. Valid values are 0 to 63. */
 	int admin_tail_val = *nvme_admin_tail;
 	/* multiply by 64 as we are using 64 entries */
 	admin_tail_val *= 64;
@@ -186,16 +201,18 @@ static void get_identify_controller_data_structure(void)
 	const uint32_t cdw10 = CNS_CONTROLLER;
 	const uint32_t cdw11 = CMD_IGNORED;
 
-	data_region_creation_addr =
-		     get_next_4096_alligned_address(data_region_creation_addr);
+	data_region_creation_address =
+		     get_next_4096_alligned_address(data_region_creation_address);
 
-	controller_identify_prp_base = data_region_creation_addr;
+	controller_identify_prp_base = data_region_creation_address;
 
 	printk("@controller_identify_prp_base region val before submitting "
 	       "identify cmd = {p}  ",
 	       (void *) (*(uint64_t *) controller_identify_prp_base));
 
-	nvme_admin(cdw0, cdw1, cdw10, cdw11, controller_identify_prp_base);
+	/* send the command */
+	send_admin_command(cdw0, cdw1, controller_identify_prp_base, cdw10,
+			   cdw11);
 
 	printk("@controller_identify_prp_base region val after submitting "
 	       "identify cmd = {p}  ",
@@ -272,11 +289,11 @@ static void configure_admin_queues(void)
 	       (void *) register_map->aqa);
 
 	// set up asq and acq memory regions, ensuring 4KB alignment
-	nvme_asqb = align_to_4096(data_region_creation_addr);
-	data_region_creation_addr = nvme_asqb + 4096;
+	nvme_asqb = align_to_4096(data_region_creation_address);
+	data_region_creation_address = nvme_asqb + 4096;
 	
-	nvme_acqb = align_to_4096(data_region_creation_addr);
-	data_region_creation_addr = nvme_acqb + 4096;
+	nvme_acqb = align_to_4096(data_region_creation_address);
+	data_region_creation_address = nvme_acqb + 4096;
 	
 	printk("@new asqb={p}", (void *) nvme_asqb);
 	printk("@new acqb={p}", (void *) nvme_acqb);

@@ -103,9 +103,9 @@ static void configure_admin_queues(void);
 char *align_to_4096(char *addr);
 static bool nvme_init_enable_wait(void);
 static void get_identify_controller_data_structure(void);
-static void nvme_admin(const uint32_t cdw0, const uint32_t cdw1,                
-                       const uint32_t cdw10, const uint32_t cdw11,              
-                       const char *cdw6_7);
+static void send_admin_command(const uint32_t cdw0, const uint32_t cdw1,
+                               const char *cdw6_7, const uint32_t cdw10,
+                               const uint32_t cdw11);
 static void nvme_admin_savetail(const uint32_t admin_tail_val,
 				char* nvme_admin_tail,
 				uint32_t old_admin_tail_val);
