@@ -143,7 +143,9 @@ static void send_admin_command(const uint32_t cdw0, const uint32_t cdw1,
 	const char *asqb_ptr = nvme_asqb + admin_sq_tail_dbl_val;
 
 	/* build the command structure */
-	build_command_structure(asqb_ptr, cdw0, cdw1, cdw6_7, cdw10, cdw11);
+	build_command_structure(
+		(struct submission_queue_commands_struct *) asqb_ptr, cdw0,
+		cdw1, cdw6_7, cdw10, cdw11);
         
 	/* start the admin command by updating the tail doorbell */
 
@@ -161,13 +163,20 @@ static void send_admin_command(const uint32_t cdw0, const uint32_t cdw1,
 			    old_admin_sq_tail_dbl_val);
 }
 
-static void build_command_structure(const char *sqb, const uint32_t cdw0,
-			     	    const uint32_t cdw1, const uint64_t cdw6_7,
-			     	    const uint32_t cdw10, const uint32_t cdw11)
+/*
+ * build_command_structure
+ * -----------------------
+ * this function builds the command at the expected location in the
+ * submission ring. It only accepts the command dword values for cdw0,
+ * cdw1, cdw6-7, cdw10, and cdw11. Rest all the command dwords must be
+ * 0.
+*/
+static void build_command_structure(
+			struct submission_queue_commands_struct *sq_cmds,
+			const uint32_t cdw0, const uint32_t cdw1,
+			const uint64_t cdw6_7, const uint32_t cdw10,
+			const uint32_t cdw11)
 {
-	struct submission_queue_commands_struct *sq_cmds =
-		(struct submission_queue_commands_struct *) sqb;
-
 	sq_cmds->cdw0 = cdw0;
 	sq_cmds->cdw1 = cdw1;
 	sq_cmds->cdw2 = 0;

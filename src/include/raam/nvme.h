@@ -127,8 +127,10 @@ static void nvme_admin_savetail(const uint32_t admin_tail_val,
 				uint32_t old_admin_tail_val);
 static void nvme_admin_wait(uint32_t *acqb_ptr);
 static char *get_next_4096_alligned_address(char *addr);
-static void build_command_structure(const char *sqb, const uint32_t cdw0,
-                                    const uint32_t cdw1, const uint64_t cdw6_7,
-                                    const uint32_t cdw10, const uint32_t cdw11);
+static void build_command_structure(
+                        struct submission_queue_commands_struct *sq_cmds,
+                        const uint32_t cdw0, const uint32_t cdw1,
+                        const uint64_t cdw6_7, const uint32_t cdw10,
+                        const uint32_t cdw11);
 
 #endif	// NVME_H
