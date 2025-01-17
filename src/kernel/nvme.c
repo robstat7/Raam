@@ -15,7 +15,8 @@ char *nvme_asqb;	/* admin submission queue base addr 4K aligned */
 char *nvme_acqb;	/* admin completion queue base addr 4K aligned */
 char *controller_identify_prp_base; 	/* 4K controller identify PRP base
 					   address */
-char *nvme_admin_tail;
+/* address to store 1 byte current admin submission queue tail doorbell value */
+char *admin_sq_tail_doorbell;
 
 int nvme_init(const uint8_t *system_variables)
 {
@@ -54,7 +55,7 @@ int nvme_init(const uint8_t *system_variables)
 	data_region_creation_address =
 		     get_next_4096_alligned_address(data_region_creation_address);
 
-	nvme_admin_tail = data_region_creation_address;
+	admin_sq_tail_doorbell = data_region_creation_address;
 
 	configure_admin_queues();
 
@@ -93,10 +94,10 @@ static void nvme_admin_wait(uint32_t *acqb_ptr)
 
 // TODO: add comments and refactor
 static void nvme_admin_savetail(const uint32_t admin_tail_val,
-				char* nvme_admin_tail,
+				char* admin_sq_tail_doorbell,
 			 	uint32_t old_admin_tail_val)
 {
-	*nvme_admin_tail = admin_tail_val;
+	*admin_sq_tail_doorbell = admin_tail_val;
 
 	register_map->sq0tdbl = admin_tail_val;
 
@@ -114,11 +115,11 @@ static void nvme_admin_savetail(const uint32_t admin_tail_val,
  * ------------------
  * this function builds the command at the expected location in the
  * submission ring and sends it to the controller for processing.
- * First it gets the current admin tail value. The vaild values are 0 to
+ * First it gets the current admin submission queue tail doorbell value. The vaild values are 0 to
  * 63. This value tells us about the command no. in the submission ring
  * that is being currently submitted. As each command is 64 bytes in
- * size, we multiply this tail value by 64 to get the offset in the 
- * submission ring to create the new command.
+ * size, we multiply this tail doorbell value by 64 to get the offset in the 
+ * submission ring before creating the new command.
  * Then it builds the command at the expected location and sends it to
  * the controller for processing.
  *
@@ -133,44 +134,53 @@ static void nvme_admin_savetail(const uint32_t admin_tail_val,
  *   void
  */
 static void send_admin_command(const uint32_t cdw0, const uint32_t cdw1,
-			       const char *cdw6_7, const uint32_t cdw10,
+			       const uint64_t cdw6_7, const uint32_t cdw10,
 			       const uint32_t cdw11)
 {
-	int admin_tail_val = *nvme_admin_tail;
-	/* multiply by 64 as we are using 64 entries */
-	admin_tail_val *= 64;
-	/* find the pointer in the submission ring */
-	char *asqb_ptr = nvme_asqb + admin_tail_val;
+	int admin_sq_tail_dbl_val = *admin_sq_tail_doorbell;
+	admin_sq_tail_dbl_val *= 64;
+	/* find the offset in the submission ring to build the command */
+	const char *asqb_ptr = nvme_asqb + admin_sq_tail_dbl_val;
 
-	/* build the structure */
-        *(uint32_t *) asqb_ptr = cdw0;	/* cdw0 */
-        *(uint32_t *) (asqb_ptr + 4) = cdw1;	/* cdw1 */
-        *(uint32_t *) (asqb_ptr + 8) = 0;	/* cdw2 */
-        *(uint32_t *) (asqb_ptr + 12) = 0;	/* cdw3 */
-        *(uint64_t *) (asqb_ptr + 16) = 0;	/* cdw4-5 */
-        *(uint64_t *) (asqb_ptr + 24) = (uint64_t) cdw6_7;	/* cdw6-7 */
-        *(uint64_t *) (asqb_ptr + 32) = 0;	/* cdw8-9 */
-        *(uint32_t *) (asqb_ptr + 40) = cdw10;	/* cdw10 */
-        *(uint32_t *) (asqb_ptr + 44) = cdw11;	/* cdw11 */
-        *(uint32_t *) (asqb_ptr + 48) = 0;	/* cdw12 */
-        *(uint32_t *) (asqb_ptr + 52) = 0;	/* cdw13 */
-        *(uint32_t *) (asqb_ptr + 56) = 0;	/* cdw14 */
-        *(uint32_t *) (asqb_ptr + 60) = 0;	/* cdw15 */
-
+	/* build the command structure */
+	build_command_structure(asqb_ptr, cdw0, cdw1, cdw6_7, cdw10, cdw11);
+        
 	/* start the admin command by updating the tail doorbell */
 
 	/* get the current admin tail value */
-	admin_tail_val = *nvme_admin_tail;
+	admin_sq_tail_dbl_val = *admin_sq_tail_doorbell;
 	/* save the old admin tail value for reading from the completion ring */
-	uint32_t old_admin_tail_val = admin_tail_val;
-	admin_tail_val++;
+	uint32_t old_admin_sq_tail_dbl_val = admin_sq_tail_dbl_val;
+	admin_sq_tail_dbl_val++;
 
-	if(admin_tail_val == 64) {
-		admin_tail_val = 0; /* wrap after 64 commands */
+	if(admin_sq_tail_dbl_val == 64) {
+		admin_sq_tail_dbl_val = 0; /* wrap after 64 commands */
 	}
 
-	nvme_admin_savetail(admin_tail_val, nvme_admin_tail,
-			    old_admin_tail_val);
+	nvme_admin_savetail(admin_sq_tail_dbl_val, admin_sq_tail_doorbell,
+			    old_admin_sq_tail_dbl_val);
+}
+
+static void build_command_structure(const char *sqb, const uint32_t cdw0,
+			     	    const uint32_t cdw1, const uint64_t cdw6_7,
+			     	    const uint32_t cdw10, const uint32_t cdw11)
+{
+	struct submission_queue_commands_struct *sq_cmds =
+		(struct submission_queue_commands_struct *) sqb;
+
+	sq_cmds->cdw0 = cdw0;
+	sq_cmds->cdw1 = cdw1;
+	sq_cmds->cdw2 = 0;
+	sq_cmds->cdw3 = 0;
+	sq_cmds->cdw4_5 = 0;
+	sq_cmds->cdw6_7 = cdw6_7;
+	sq_cmds->cdw8_9 = 0;
+	sq_cmds->cdw10 = cdw10;
+	sq_cmds->cdw11 = cdw11;
+	sq_cmds->cdw12 = 0;
+	sq_cmds->cdw13 = 0;
+	sq_cmds->cdw14 = 0;
+	sq_cmds->cdw15 = 0;
 }
 
 /*
@@ -211,8 +221,8 @@ static void get_identify_controller_data_structure(void)
 	       (void *) (*(uint64_t *) controller_identify_prp_base));
 
 	/* send the command */
-	send_admin_command(cdw0, cdw1, controller_identify_prp_base, cdw10,
-			   cdw11);
+	send_admin_command(cdw0, cdw1, (uint64_t) controller_identify_prp_base,
+			   cdw10, cdw11);
 
 	printk("@controller_identify_prp_base region val after submitting "
 	       "identify cmd = {p}  ",

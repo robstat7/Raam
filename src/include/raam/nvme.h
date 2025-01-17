@@ -89,6 +89,22 @@ struct register_map_struct {
 	uint32_t cq0hdbl;
 	uint32_t sq1tdbl;
 }__attribute__((packed));
+
+struct submission_queue_commands_struct {
+	uint32_t cdw0;
+	uint32_t cdw1;
+	uint32_t cdw2;
+	uint32_t cdw3;
+	uint64_t cdw4_5;
+	uint64_t cdw6_7;
+	uint64_t cdw8_9;
+	uint32_t cdw10;
+	uint32_t cdw11;
+	uint32_t cdw12;
+	uint32_t cdw13;
+	uint32_t cdw14;
+	uint32_t cdw15;
+}__attribute__((packed));
 	
 int nvme_init(const uint8_t *system_variables);
 static void find_controller(struct nvme_pcie_dev_info_struct *controller);
@@ -104,12 +120,15 @@ char *align_to_4096(char *addr);
 static bool nvme_init_enable_wait(void);
 static void get_identify_controller_data_structure(void);
 static void send_admin_command(const uint32_t cdw0, const uint32_t cdw1,
-                               const char *cdw6_7, const uint32_t cdw10,
+                               const uint64_t cdw6_7, const uint32_t cdw10,
                                const uint32_t cdw11);
 static void nvme_admin_savetail(const uint32_t admin_tail_val,
 				char* nvme_admin_tail,
 				uint32_t old_admin_tail_val);
 static void nvme_admin_wait(uint32_t *acqb_ptr);
 static char *get_next_4096_alligned_address(char *addr);
+static void build_command_structure(const char *sqb, const uint32_t cdw0,
+                                    const uint32_t cdw1, const uint64_t cdw6_7,
+                                    const uint32_t cdw10, const uint32_t cdw11);
 
 #endif	// NVME_H
