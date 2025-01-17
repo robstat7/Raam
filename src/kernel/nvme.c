@@ -17,7 +17,8 @@ char *controller_identify_prp_base; 	/* 4K controller identify PRP base
 					   address */
 /* address to store 1 byte current admin submission queue tail doorbell value */
 char *admin_sq_tail_doorbell;
-char *nvme_iocqb;
+char *nvme_iocqb;	/* I/O completion queue base addr 4K aligned */
+char *nvme_iosqb;	/* I/O submission queue base addr 4K aligned */
 
 int nvme_init(const uint8_t *system_variables)
 {
@@ -86,7 +87,7 @@ static void create_io_queues(void)
 	register_map->cc = 0x460001;
 
 	/* create the first i/o completion queue */                             
-        uint32_t cdw0 = 0x5;     // CDW0 CID 0, PRP used (15:14 clear), FUSE normal (bits 9:8 clear), command create io completion queue (0x5)
+        uint32_t cdw0 = 0x5;     // CDW0 CID 0, PRP used (bits 15:14 clear), FUSE normal (bits 9:8 clear), command create io completion queue (0x5)
         uint32_t cdw1 = 0;      // CDW1 Ignored                                 
         uint32_t cdw10 = 0xf0001;       /* cdw10: queue size = 16 commands, qid = 1 */
         uint32_t cdw11 = 0x1;           /* cdw11: physically contiguous (1<<0), interrupts disabled */
@@ -94,11 +95,27 @@ static void create_io_queues(void)
 	data_region_creation_address =                                          
                    get_next_4096_alligned_address(data_region_creation_address);
                                                                                 
-        nvme_iocqb = controller_identify_prp_base = data_region_creation_address;
+        nvme_iocqb = data_region_creation_address;
 	
 	/* send the command */
 	send_admin_command(cdw0, cdw1, (uint64_t) nvme_iocqb,
 			   cdw10, cdw11);
+
+
+	/* create the first i/o submission queue */                             
+        cdw0 = 0x1;      // CDW0 CID 0, PRP used (bits 15:14 clear), FUSE normal (bits 9:8 clear), command create io submission queue (0x01)
+        cdw1 = 0;       // CDW1 Ignored                                         
+        cdw10 = 0x3f0001;       /* cdw10: queue size = 64 commands, qid = 1 */  
+        cdw11 = 0x10001;        /* cdw11: cqid = 1, physically contiguous (1<<0) */
+
+	data_region_creation_address =                                          
+                   get_next_4096_alligned_address(data_region_creation_address);
+
+	nvme_iosqb = data_region_creation_address;
+
+	/* send the command */                                                  
+        send_admin_command(cdw0, cdw1, (uint64_t) nvme_iosqb,                   
+                           cdw10, cdw11);
 }
 
 static void nvme_admin_wait(uint32_t *acqb_ptr)                                         
