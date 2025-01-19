@@ -10,6 +10,7 @@
  */
 #include <stdio.h>
 #include <raam/fs.h>
+#include <math.h>
 
 /* normal first block is 1. block 0 contains boot record. */
 #define NORMAL_FIRSTBLOCK			1
@@ -57,13 +58,8 @@ int main(void)
 	sb.s_inodes_count = total_fs_size / inode_ratio;
 
 
-	// uint32_t total_inodes = (total_blocks * EXT2_MIN_BLOCK_SIZE) / inode_ratio;
+	uint32_t total_block_groups = ceil(sb.s_blocks_count/sb.s_blocks_per_group);
 
-
-	// /* calculate reserved blocks count */
-
-	// const unsigned reserved_ratio = 5;	// 5% reserved blocks for super user
-	// uint32_t total_reserved_blocks = (total_blocks * reserved_ratio) / 100;
 
 	sb.s_r_blocks_count = 0;	/* for simplicity, we won't use it now */
 
@@ -111,6 +107,7 @@ int main(void)
 	/* print values */
 	printf("block size = %d bytes\n", block_size);
 	printf("total blocks in the partition = %d\n", total_blocks);
+	printf("total block groups = %d\n", total_block_groups);
 	printf("sb.s_blocks_per_group = %d\n", sb.s_blocks_per_group);
 	printf("sb.s_blocks_count = %d\n", sb.s_blocks_count);
 	printf("sb.s_inodes_count = %d\n", sb.s_inodes_count);
