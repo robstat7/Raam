@@ -9,7 +9,7 @@
 
 #define EXT2_REV_LEVEL			0	/* revision 0 */
 
-#define EXT2_SUPER_MAGIC		0xEF53
+#define EXT2_SUPER_MAGIC		0xef53
 
 struct superblock_struct {
 	uint32_t s_inodes_count;

@@ -16,6 +16,7 @@
 
 
 const int block_size = 1024;	// we will only support this for now
+const int inode_ratio = 4096;	/* 4096 bytes per inode */
 
 /*
  * main
@@ -49,9 +50,12 @@ int main(void)
 	int last_group_blocks = total_blocks % BLOCKS_PER_GROUP;
 	sb.s_blocks_count = (full_groups * BLOCKS_PER_GROUP) + last_group_blocks;
 
-	// /* calculate s_inodes_count. TODO: verify it using spec */
+	/* calculate s_inodes_count. */
 
-	// const int inode_ratio = 16384;	/* see the starting of file for notes */
+	uint32_t total_fs_size = total_blocks * block_size;	/* in bytes */
+
+	sb.s_inodes_count = total_fs_size / inode_ratio;
+
 
 	// uint32_t total_inodes = (total_blocks * EXT2_MIN_BLOCK_SIZE) / inode_ratio;
 
@@ -65,8 +69,6 @@ int main(void)
 
 
 	// /* calculate total inodes per group */
-
-	// const int frags_per_block = block_size / frag_size; /* fragments per block */
 
 	// /* divide the total usable blocks by blocks per group. Block 0 is not usable */
 	// const unsigned long group_desc_count = (((total_blocks - NORM_FIRSTBLOCK) * frags_per_block) / BLOCKS_PER_GROUP);	/* number of group descriptors */
@@ -111,7 +113,7 @@ int main(void)
 	printf("total blocks in the partition = %d\n", total_blocks);
 	printf("sb.s_blocks_per_group = %d\n", sb.s_blocks_per_group);
 	printf("sb.s_blocks_count = %d\n", sb.s_blocks_count);
-	// printf("sb.s_inodes_count = %d\n", sb.s_inodes_count);
+	printf("sb.s_inodes_count = %d\n", sb.s_inodes_count);
 	printf("sb.s_r_blocks_count = %d\n", sb.s_r_blocks_count);
 	printf("sb.s_first_data_block = %d\n", sb.s_first_data_block);
 	printf("sb.s_log_block_size = %d\n", sb.s_log_block_size);
