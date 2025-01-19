@@ -91,9 +91,7 @@ int main(void)
 	/* id of the block containing the superblock structure. */
 	sb.s_first_data_block = NORMAL_FIRSTBLOCK;
 
-	// sb.s_log_block_size = EXT4_LOG_BLOCK_SIZE;	/* 1024 = 1024 << 0 */
-
-	// sb.s_log_frag_size = EXT4_LOG_FRAG_SIZE;	/* 0 for 1024 */
+	sb.s_log_block_size = EXT4_LOG_BLOCK_SIZE;
 
 	// uint32_t frags_per_group = BLOCKS_PER_GROUP * (block_size / frag_size);
 
@@ -111,6 +109,7 @@ int main(void)
 	// printf("sb.s_inodes_count = %d\n", sb.s_inodes_count);
 	printf("sb.s_r_blocks_count = %d\n", sb.s_r_blocks_count);
 	printf("sb.s_first_data_block = %d\n", sb.s_first_data_block);
+	printf("sb.s_log_block_size = %d\n", sb.s_log_block_size);
 	// printf("sb.s_inodes_per_group = %d\n", sb.s_inodes_per_group);
 
 	return 0;
