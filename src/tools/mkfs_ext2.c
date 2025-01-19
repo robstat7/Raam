@@ -88,8 +88,8 @@ int main(void)
 	// sb.s_inodes_count = total_inodes;
 	// sb.s_inodes_per_group = inodes_per_group;	
 
-	// /* id of the block containing the superblock structure. */
-	// sb.s_first_data_block = NORM_FIRSTBLOCK;
+	/* id of the block containing the superblock structure. */
+	sb.s_first_data_block = NORMAL_FIRSTBLOCK;
 
 	// sb.s_log_block_size = EXT4_LOG_BLOCK_SIZE;	/* 1024 = 1024 << 0 */
 
@@ -110,8 +110,8 @@ int main(void)
 	printf("sb.s_blocks_count = %d\n", sb.s_blocks_count);
 	// printf("sb.s_inodes_count = %d\n", sb.s_inodes_count);
 	printf("sb.s_r_blocks_count = %d\n", sb.s_r_blocks_count);
+	printf("sb.s_first_data_block = %d\n", sb.s_first_data_block);
 	// printf("sb.s_inodes_per_group = %d\n", sb.s_inodes_per_group);
-	// printf("sb.s_wtime = %d\n", sb.s_wtime);
 
 	return 0;
 }	
