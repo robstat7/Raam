@@ -17,6 +17,7 @@
  */
 #include <stdio.h>
 #include <fs/fs.h>
+#include <time.h>
 
 #define EXT2_MIN_BLOCK_SIZE		1024
 
@@ -104,6 +105,21 @@ int main(void)
 	sb.s_inodes_count = total_inodes;
 	sb.s_inodes_per_group = inodes_per_group;	
 
+	/* id of the block containing the superblock structure. */
+	sb.s_first_data_block = NORM_FIRSTBLOCK;
+
+	sb.s_log_block_size = EXT4_LOG_BLOCK_SIZE;	/* 1024 = 1024 << 0 */
+
+	sb.s_log_frag_size = EXT4_LOG_FRAG_SIZE;	/* 0 for 1024 */
+
+	uint32_t frags_per_group = BLOCKS_PER_GROUP * (block_size / frag_size);
+
+	sb.s_frags_per_group = frags_per_group;
+
+	sb.s_mtime = 0;
+
+	sb.s_wtime = time(NULL);
+
 	/* print values */
 	printf("block size = %d bytes\n", block_size);
 	printf("total blocks in the partition = %d\n", total_blocks);
@@ -112,6 +128,7 @@ int main(void)
 	printf("sb.s_inodes_count = %d\n", sb.s_inodes_count);
 	printf("sb.s_r_blocks_count = %d\n", sb.s_r_blocks_count);
 	printf("sb.s_inodes_per_group = %d\n", sb.s_inodes_per_group);
+	printf("sb.s_wtime = %d\n", sb.s_wtime);
 
 	return 0;
 }	

@@ -6,6 +6,9 @@
 /* common, standard and practical for ext2 */
 #define BLOCKS_PER_GROUP		8192
 
+#define EXT4_LOG_BLOCK_SIZE		0
+#define EXT4_LOG_FRAG_SIZE		0
+
 struct superblock_struct {
 	uint32_t s_inodes_count;
 	uint32_t s_blocks_count;
