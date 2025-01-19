@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <raam/fs.h>
 #include <math.h>
+#include <fcntl.h>                                                              
+#include <unistd.h>
 
 /* normal first block is 1. block 0 contains boot record. */
 #define NORMAL_FIRSTBLOCK			1
@@ -33,11 +35,11 @@ const int inode_ratio = 4096;	/* 4096 bytes per inode */
 */
 int main(void)
 {
-	// int fd = open("/dev/nvme0n1p6", O_RDWR, 0600);
-	// printf("opened volume.\n");
+	int fd = open("/dev/nvme0n1p6", O_RDWR, 0600);
+	printf("opened volume.\n");
 
 	// offset to superblock
-	// lseek(fd, 1024, SEEK_SET);	
+	lseek(fd, 1024, SEEK_SET);	
 
 
 	const int total_blocks = 256;	// It is the total blocks in the volume 
@@ -100,6 +102,11 @@ int main(void)
 	printf("sb.s_free_blocks_count = %d\n", sb.s_free_blocks_count);
 	printf("sb.s_free_inodes_count = %d\n", sb.s_free_inodes_count);
 
+	/* write to volume */
+	write(fd, &sb, sizeof(sb));
+	printf("wrote superblock to volume!\n");
+
+	close(fd);
 
 	return 0;
 }	
