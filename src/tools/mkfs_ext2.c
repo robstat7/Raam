@@ -71,27 +71,7 @@ int main(void)
 
 	sb.s_r_blocks_count = 0;	/* for simplicity, we won't use it now */
 
-	// /* divide the total usable blocks by blocks per group. Block 0 is not usable */
-	// const unsigned long group_desc_count = (((total_blocks - NORM_FIRSTBLOCK) * frags_per_block) / BLOCKS_PER_GROUP);	/* number of group descriptors */
-
-	// int inodes_per_group = 0;
-	// /* round the inodes per group count to fully use each group descriptor */
-        // if (sb.s_inodes_count % group_desc_count)                                          
-        //         inodes_per_group = (sb.s_inodes_count / group_desc_count) + 1;               
-        //  else                                                                   
-        //         inodes_per_group = sb.s_inodes_count / group_desc_count;               
-
-	// /* Round the inodes pet group count to fully use each block in each descriptor */         
-        // if (inodes_per_group % EXT2_INODES_PER_BLOCK)                             
-        //         inodes_per_group = ((inodes_per_group / EXT2_INODES_PER_BLOCK) + 1) *
-        //                            EXT2_INODES_PER_BLOCK;                       
-        // total_inodes = inodes_per_group * group_desc_count;
-
-	// 
-	// sb.s_inodes_count = total_inodes;
-	// sb.s_inodes_per_group = inodes_per_group;	
-
-
+	
 	/* id of the block containing the superblock structure. */
 	sb.s_first_data_block = NORMAL_FIRSTBLOCK;
 
@@ -101,14 +81,9 @@ int main(void)
 
 	sb.s_magic = EXT2_SUPER_MAGIC;
 
-	// uint32_t frags_per_group = BLOCKS_PER_GROUP * (block_size / frag_size);
-
-	// sb.s_frags_per_group = frags_per_group;
-
-	// sb.s_mtime = 0;
-
-	// sb.s_wtime = time(NULL);
-
+	sb.s_free_blocks_count = sb.s_blocks_count;	/* good for now */
+	sb.s_free_inodes_count = sb.s_inodes_count;	/* good for now */
+	
 	/* print values */
 	printf("block size = %d bytes\n", block_size);
 	printf("total blocks in the partition = %d\n", total_blocks);
@@ -122,6 +97,9 @@ int main(void)
 	printf("sb.s_rev_level = %d\n", sb.s_rev_level);
 	printf("sb.s_magic = %p\n", (void *) sb.s_magic);
 	printf("sb.s_inodes_per_group = %d\n", sb.s_inodes_per_group);
+	printf("sb.s_free_blocks_count = %d\n", sb.s_free_blocks_count);
+	printf("sb.s_free_inodes_count = %d\n", sb.s_free_inodes_count);
+
 
 	return 0;
 }	
