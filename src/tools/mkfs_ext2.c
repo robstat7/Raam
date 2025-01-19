@@ -15,6 +15,8 @@
 /* normal first block is 1. block 0 contains boot record. */
 #define NORMAL_FIRSTBLOCK			1
 
+#define INODES_PER_BLOCK	(block_size / 128)	/* inode size is 128 bytes */
+
 
 const int block_size = 1024;	// we will only support this for now
 const int inode_ratio = 4096;	/* 4096 bytes per inode */
@@ -58,13 +60,16 @@ int main(void)
 	sb.s_inodes_count = total_fs_size / inode_ratio;
 
 
+	/* calculate total inodes per group */
+
 	uint32_t total_block_groups = ceil(sb.s_blocks_count/sb.s_blocks_per_group);
 
+	sb.s_inodes_per_group = sb.s_inodes_count / total_block_groups;
+
+	sb.s_inodes_per_group = ceil(sb.s_inodes_per_group / INODES_PER_BLOCK) * INODES_PER_BLOCK;	/* ensure that s_inodes_per_group is a multiple of INODES_PER_BLOCK*/
+	
 
 	sb.s_r_blocks_count = 0;	/* for simplicity, we won't use it now */
-
-
-	// /* calculate total inodes per group */
 
 	// /* divide the total usable blocks by blocks per group. Block 0 is not usable */
 	// const unsigned long group_desc_count = (((total_blocks - NORM_FIRSTBLOCK) * frags_per_block) / BLOCKS_PER_GROUP);	/* number of group descriptors */
@@ -116,7 +121,7 @@ int main(void)
 	printf("sb.s_log_block_size = %d\n", sb.s_log_block_size);
 	printf("sb.s_rev_level = %d\n", sb.s_rev_level);
 	printf("sb.s_magic = %p\n", (void *) sb.s_magic);
-	// printf("sb.s_inodes_per_group = %d\n", sb.s_inodes_per_group);
+	printf("sb.s_inodes_per_group = %d\n", sb.s_inodes_per_group);
 
 	return 0;
 }	
