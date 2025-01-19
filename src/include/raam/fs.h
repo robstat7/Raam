@@ -5,7 +5,9 @@
 
 #define BLOCKS_PER_GROUP		256	/* for simplicity */
 
-#define EXT4_LOG_BLOCK_SIZE		0	/* 1024 = 1024 << 0 */
+#define EXT2_LOG_BLOCK_SIZE		0	/* 1024 = 1024 << 0 */
+
+#define EXT2_REV_LEVEL			0	/* revision 0 */
 
 struct superblock_struct {
 	uint32_t s_inodes_count;
