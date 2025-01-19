@@ -28,7 +28,7 @@ build_kernel:
 	x86_64-elf-gcc -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -I include/ -c kernel/nvme.c -o build/kernel/nvme.o
 
 # do not link this file
-gcc tools/mkfs_ext2.c -o build/mkfs_ext2 -I include/
+	gcc tools/mkfs_ext2.c -o build/mkfs_ext2 -I include/
 	
 	x86_64-elf-ld build/boot/fb.o build/boot/boot.o build/boot/xsdp.o build/boot/mem.o build/boot/main.o build/init/main.o build/kernel/tty_io.o build/kernel/res/font_8x16.o build/lib/string.o build/lib/checksum.o build/kernel/printk.o build/kernel/acpi.o build/kernel/pcie.o build/kernel/nvme.o /home/dileep/gnu-efi/x86_64/gnuefi/crt0-efi-x86_64.o -shared -Bsymbolic -L /home/dileep/gnu-efi/x86_64/lib/ -L /home/dileep/gnu-efi/x86_64/gnuefi/ -T /home/dileep/gnu-efi/gnuefi/elf_x86_64_efi.lds -o build/system.so -lefi -lgnuefi
 	
