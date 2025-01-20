@@ -4,20 +4,17 @@
 #include <raam/printk.h>
 #include <lib/string.h>
 
-#define INODE_BITMAP_BLOCK_NR		2
-#define INODE_TABLE_BLOCK_NR		3
-
-/*
- * starting sector of the Raam filesystem formatted SSD partition.
- * Note: I'm hardcoding it now for simplicity. Be cautious with this
- * number as writing to the WRONG LOCATION CAN CORRUPT the data on disk.
- * TODO: Later, I will implement the logic in bootloader to find this
- * starting sector by checking the magic of the filesystem layout in
- * the superblock.
+/*                                                                              
+ * starting sector of the Raam filesystem formatted SSD partition.              
+ * Note: I'm hardcoding it now for simplicity. Be cautious with this            
+ * number as writing to the WRONG LOCATION CAN CORRUPT the data on disk.        
+ * TODO: Later, I will implement the logic in bootloader to find this           
+ * starting sector by checking the magic of the filesystem layout in            
+ * the superblock.                                                              
  */
-const uint32_t starting_sector = 997109760;	/* CHECK IT CAREFULLY!!! */
+uint32_t starting_sector = 997109760;	/* CHECK IT CAREFULLY!!! */
 
-void sys_open(const char *filename)
+int sys_open(const char *filename)
 {
 	/* read 4 blocks into the nvme buffer for metadata */
 	char *nvme_buffer = nvme_read(starting_sector, 4);
@@ -32,15 +29,20 @@ void sys_open(const char *filename)
 	/* read the inode table */
 	struct inode_struct *inode = (struct inode_struct *) (nvme_buffer + (INODE_TABLE_BLOCK_NR * BLOCK_SIZE));
 
+	int inode_nr = -1;
+
 	for(int i = 0; i < inode_bitmap_byte_0_val; i++) {
 		if(strncmp(inode[i].name, filename, strlen(filename)) == 0) {
 			/* found the file */	
 			printk("sys_open: found file ");
 			printk(inode[i].name);
 			printk(". Inode nr is {d}  ", i);
+			inode_nr = i;
 			break;
 		}
 	}
+
+	return inode_nr;
 }
 
 

@@ -27,9 +27,17 @@ void main(struct boot_params boot_params)
 	}
 
 	// test
-	// sys_creat("myfile");
-	sys_open("myfile");
-	//printk("init/main.c: fd = {d}  ", fd);
+	sys_creat("myfile");
+	int inode_nr = sys_open("myfile");
+	sys_write(inode_nr, "Raam Raam sa! Hello world!", 27); /* len including null char */
+	
+	char buf[30];
+	
+	sys_read(inode_nr, buf, 27);
+
+	printk(buf);
+
+	printk(" ");
 
 end:
 	return;
