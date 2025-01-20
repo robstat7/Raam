@@ -39,6 +39,10 @@ void main(struct boot_params boot_params)
 
 	printk(" ");
 
+	printk("@making second file now...  ");
+
+	sys_creat("atom");
+
 end:
 	return;
 }
