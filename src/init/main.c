@@ -27,38 +27,45 @@ void main(struct boot_params boot_params)
 	}
 
 	// test
+	char buf[50];
+	
 	sys_creat("myfile");
 	int inode_nr = sys_open("myfile");
 	sys_write(inode_nr, "Raam Raam sa! Hello world!", 27); /* len including null char */
-	
-	char buf[50];
-	
 	sys_read(inode_nr, buf, 27);
-
 	printk(buf);
-
 	printk(" ");
 
 	printk("@making second file now...  ");
-
 	sys_creat("atom");
 	inode_nr = sys_open("atom");
 	sys_write(inode_nr, "#include <iostream> using namespace std;", 41); /* len including null char */
 	sys_read(inode_nr, buf, 41);
-
 	printk(buf);
-
 	printk(" ");
 
 	printk("@creating third file now...  ");
-
 	sys_creat("gimp");
 	inode_nr = sys_open("gimp");
 	sys_write(inode_nr, "no worries! all will be fine.", 30); /* len including null char */
 	sys_read(inode_nr, buf, 30);
-
 	printk(buf);
+	printk(" ");
 
+	printk("@creating fourth file now...  ");
+	sys_creat("adele");
+	inode_nr = sys_open("adele");
+	sys_write(inode_nr, "no worries! all will be righ.", 30); /* len including null char */
+	sys_read(inode_nr, buf, 30);
+	printk(buf);
+	printk(" ");
+
+	printk("@creating fifth file now...  ");
+	sys_creat("dileep");
+	inode_nr = sys_open("dileep");
+	sys_write(inode_nr, "no worries! all will be good.", 30); /* len including null char */
+	sys_read(inode_nr, buf, 30);
+	printk(buf);
 	printk(" ");
 
 

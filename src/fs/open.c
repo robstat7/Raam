@@ -64,7 +64,6 @@ void sys_creat(const char *filename)
 
 	printk("sys_creat: total blocks = {d}  ", total_blocks);
 
-	printk("@sys_creat: test!!!  ");
 
 	nvme_buffer = nvme_read(starting_sector, 4);	/* read 4 blocks into the nvme buffer for metadata */
 
@@ -84,11 +83,17 @@ void sys_creat(const char *filename)
 		inode_bitmap_byte_0_val |= 0x1;
 		inode_nr = 0;
 	} else if(inode_bitmap_byte_0_val == 1) {
-		inode_bitmap_byte_0_val  |= 0x2;
+		inode_bitmap_byte_0_val  |= 2;
 		inode_nr = 1;
 	} else if(inode_bitmap_byte_0_val == 3) {	// two files
-		inode_bitmap_byte_0_val  |= 0x4;
+		inode_bitmap_byte_0_val  |= 4;
 		inode_nr = 2;
+	} else if(inode_bitmap_byte_0_val == 7) {	// three files
+		inode_bitmap_byte_0_val  |= 8;
+		inode_nr = 3;
+	} else if(inode_bitmap_byte_0_val == 15) {	// four files
+		inode_bitmap_byte_0_val  |= 16;
+		inode_nr = 4;
 	}
 		
 	

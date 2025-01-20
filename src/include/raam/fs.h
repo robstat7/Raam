@@ -24,6 +24,7 @@ struct superblock_struct {
 	uint16_t file_max_size;		/* in bytes */
 }__attribute__((packed));
 
+/* max. inodes in a block is 73 */
 struct inode_struct {
 	char name[11];	/* file name len = 10 */
 	uint16_t size;	/* in bytes */
