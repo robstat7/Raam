@@ -5,7 +5,7 @@
 
 int sys_write(const int inode_nr, char *buf, int count)
 {
-	char *nvme_buffer = nvme_read(starting_sector, 6);	
+	char *nvme_buffer = nvme_read(starting_sector, 7);	
 
 	/* block bitmap read */
 	uint8_t *block_bitmap = (uint8_t *) (nvme_buffer + (BLOCK_BITMAP_BLOCK_NR * BLOCK_SIZE));
@@ -37,13 +37,13 @@ int sys_write(const int inode_nr, char *buf, int count)
 
 	strncpy(data_block, buf, count);
 	
-	nvme_write(starting_sector, 6);
+	nvme_write(starting_sector, 7);
 
 }	
 
 int sys_read(const int inode_nr, char *buf, int count)
 {
-	char *nvme_buffer = nvme_read(starting_sector, 6);	
+	char *nvme_buffer = nvme_read(starting_sector, 7);	
 	
 	/* inode table read */
 	struct inode_struct *inode = (struct inode_struct *) (nvme_buffer + (INODE_TABLE_BLOCK_NR * BLOCK_SIZE));	

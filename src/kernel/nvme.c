@@ -102,7 +102,7 @@ static void nvme_io_wait(uint32_t *iocqb_ptr)
       
 	/* wait until the controller sends the resposne in the completion ring */                                                                          
 
-	printk("@nvme_io_wait: test!!!  ");
+	// printk("@nvme_io_wait: test!!!  ");
 
         do{                                                                     
                 val = *iocqb_ptr;                                              
@@ -125,8 +125,8 @@ static void nvme_io_savetail(const uint32_t io_tail_val,
 	/* ring the doorbell by writing the newly incremented value to it */
 	register_map->sq1tdbl = io_tail_val;
 
-	printk("@nvme_io_savetail: io_tail_val = {d}  ", io_tail_val);
-	printk("@nvme_io_savetail: old_io_tail_val = {d}  ", old_io_tail_val);
+	// printk("@nvme_io_savetail: io_tail_val = {d}  ", io_tail_val);
+	// printk("@nvme_io_savetail: old_io_tail_val = {d}  ", old_io_tail_val);
 
 	/* check completion queue */
 	old_io_tail_val *= 16;	/* each entry is 16 bytes */

@@ -53,6 +53,14 @@ void main(struct boot_params boot_params)
 	printk("@creating third file now...  ");
 
 	sys_creat("gimp");
+	inode_nr = sys_open("gimp");
+	sys_write(inode_nr, "no worries! all will be fine.", 30); /* len including null char */
+	sys_read(inode_nr, buf, 30);
+
+	printk(buf);
+
+	printk(" ");
+
 
 end:
 	return;
