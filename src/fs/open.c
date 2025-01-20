@@ -64,6 +64,8 @@ void sys_creat(const char *filename)
 
 	printk("sys_creat: total blocks = {d}  ", total_blocks);
 
+	printk("@sys_creat: test!!!  ");
+
 	nvme_buffer = nvme_read(starting_sector, 4);	/* read 4 blocks into the nvme buffer for metadata */
 
 	/* find the next free inode */	
@@ -75,7 +77,7 @@ void sys_creat(const char *filename)
 
 	printk("sys_creat: inode bitmap byte 0 val read = {p}  ", (void *) inode_bitmap_byte_0_val);
 
-	/* write inode bitmap */
+	/* inode bitmap write */
 	int inode_nr = -1;
 
 	if(inode_bitmap_byte_0_val == 0) {
@@ -84,13 +86,17 @@ void sys_creat(const char *filename)
 	} else if(inode_bitmap_byte_0_val == 1) {
 		inode_bitmap_byte_0_val  |= 0x2;
 		inode_nr = 1;
+	} else if(inode_bitmap_byte_0_val == 3) {	// two files
+		inode_bitmap_byte_0_val  |= 0x4;
+		inode_nr = 2;
 	}
+		
 	
 	printk("sys_creat: inode bitmap byte 0 val to write = {p}  ", (void *) inode_bitmap_byte_0_val);
 
 	*inode_bitmap = inode_bitmap_byte_0_val;
 
-	/* write the inode table */
+	/* inode table write */
 	struct inode_struct *inode = (struct inode_struct *) (nvme_buffer + (INODE_TABLE_BLOCK_NR * BLOCK_SIZE));
 
 	strncpy(inode[inode_nr].name, filename, strlen(filename) + 1); /* also storing null char */

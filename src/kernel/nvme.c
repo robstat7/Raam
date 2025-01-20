@@ -101,6 +101,9 @@ static void nvme_io_wait(uint32_t *iocqb_ptr)
         uint32_t val;                                                           
       
 	/* wait until the controller sends the resposne in the completion ring */                                                                          
+
+	printk("@nvme_io_wait: test!!!  ");
+
         do{                                                                     
                 val = *iocqb_ptr;                                              
                                                                                 
@@ -121,6 +124,9 @@ static void nvme_io_savetail(const uint32_t io_tail_val,
 
 	/* ring the doorbell by writing the newly incremented value to it */
 	register_map->sq1tdbl = io_tail_val;
+
+	printk("@nvme_io_savetail: io_tail_val = {d}  ", io_tail_val);
+	printk("@nvme_io_savetail: old_io_tail_val = {d}  ", old_io_tail_val);
 
 	/* check completion queue */
 	old_io_tail_val *= 16;	/* each entry is 16 bytes */
@@ -188,8 +194,8 @@ char *nvme_read(uint32_t starting_sector, uint32_t num_blocks)
 	uint32_t cdw12 = num_blocks - 1;        /* number of logical blocks to be read. It is a 0 based value */
 
 	/* read the tail doorbell value */                                      
-        uint8_t io_sq_tail_dbl_val = *nvme_iotail; /* valid read from 0 to 63 */
-        uint8_t old_io_sq_tail_dbl_val = io_sq_tail_dbl_val;              
+        int io_sq_tail_dbl_val = *nvme_iotail; /* valid read from 0 to 63 */
+        int old_io_sq_tail_dbl_val = io_sq_tail_dbl_val;              
         /* update the tail doorbell value */                                    
         io_sq_tail_dbl_val++;                                                
                                                                                 
@@ -226,13 +232,13 @@ char *nvme_read(uint32_t starting_sector, uint32_t num_blocks)
 submission queue */
 static void create_io_queues(void)
 {
-	/* set CC.IOCQES to 16 commands (16 bytes) and CC.IOSQES to 64, and  and CC.EN (bit #0) to 1 */
+	/* set CC.IOCQES to 16 bytes and CC.IOSQES to 64, and  and CC.EN (bit #0) to 1 */
 	register_map->cc = 0x460001;
 
 	/* create the first i/o completion queue */                             
         uint32_t cdw0 = 0x5;     // CDW0 CID 0, PRP used (bits 15:14 clear), FUSE normal (bits 9:8 clear), command create io completion queue (0x5)
         uint32_t cdw1 = 0;      // CDW1 Ignored                                 
-        uint32_t cdw10 = 0xf0001;       /* cdw10: queue size = 16 commands, qid = 1 */
+        uint32_t cdw10 = 0x3f0001;       /* cdw10: queue size = 64 commands, qid = 1 */
         uint32_t cdw11 = 0x1;           /* cdw11: physically contiguous (1<<0), interrupts disabled */
 
 	data_region_creation_address =                                          

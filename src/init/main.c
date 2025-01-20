@@ -50,6 +50,9 @@ void main(struct boot_params boot_params)
 
 	printk(" ");
 
+	printk("@creating third file now...  ");
+
+	sys_creat("gimp");
 
 end:
 	return;
