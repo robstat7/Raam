@@ -11,6 +11,8 @@
 #define BLOCK_BITMAP_BLOCK_NR           1                                       
 #define INODE_TABLE_BLOCK_NR            3
 
+#define FILE_MAX_SIZE			512	/* in bytes */
+
 struct superblock_struct {
 	uint32_t magic;
 	uint16_t block_size;
@@ -18,6 +20,8 @@ struct superblock_struct {
 	uint8_t total_data_blocks;
 	uint16_t total_inodes;
 	uint8_t first_data_block;
+	uint8_t next_free_block;	/* next free data block */
+	uint16_t file_max_size;		/* in bytes */
 }__attribute__((packed));
 
 struct inode_struct {
@@ -34,5 +38,6 @@ int sys_write(const int inode_nr, char *buf, int count);
 int sys_read(const int inode_nr, char *buf, int count);
 
 int pow(int base, int exponent);
+int count_on_bits(unsigned char byte);
 
 #endif	/* FS_H */

@@ -30,6 +30,10 @@ int main(void)
 	super.total_inodes = total_inodes;
 
 	super.first_data_block = 4; /* 0 to 3 block nr. contains metadata */
+	
+	super.next_free_block = super.first_data_block;
+
+	super.file_max_size = FILE_MAX_SIZE;	/* 512 bytes. 1 block only */
 
 	/* create zeroed block bitmap block */
 	uint8_t *block_bitmap_block = (char *) malloc(BLOCK_SIZE);

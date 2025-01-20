@@ -31,7 +31,7 @@ void main(struct boot_params boot_params)
 	int inode_nr = sys_open("myfile");
 	sys_write(inode_nr, "Raam Raam sa! Hello world!", 27); /* len including null char */
 	
-	char buf[30];
+	char buf[50];
 	
 	sys_read(inode_nr, buf, 27);
 
@@ -42,6 +42,14 @@ void main(struct boot_params boot_params)
 	printk("@making second file now...  ");
 
 	sys_creat("atom");
+	inode_nr = sys_open("atom");
+	sys_write(inode_nr, "#include <iostream> using namespace std;", 41); /* len including null char */
+	sys_read(inode_nr, buf, 41);
+
+	printk(buf);
+
+	printk(" ");
+
 
 end:
 	return;

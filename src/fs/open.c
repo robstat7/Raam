@@ -26,12 +26,17 @@ int sys_open(const char *filename)
 
 	printk("sys_open: inode bitmap byte 0 val read = {p}  ", (void *) inode_bitmap_byte_0_val);
 
+	int num_files = count_on_bits(inode_bitmap_byte_0_val);
+
+	printk("sys_open: num files = {d}  ", num_files);
+
+
 	/* read the inode table */
 	struct inode_struct *inode = (struct inode_struct *) (nvme_buffer + (INODE_TABLE_BLOCK_NR * BLOCK_SIZE));
 
 	int inode_nr = -1;
 
-	for(int i = 0; i < inode_bitmap_byte_0_val; i++) {
+	for(int i = 0; i < num_files; i++) {
 		if(strncmp(inode[i].name, filename, strlen(filename)) == 0) {
 			/* found the file */	
 			printk("sys_open: found file ");
@@ -96,4 +101,15 @@ void sys_creat(const char *filename)
 
 	/* write nvme buffer to the partition */
 	nvme_write(starting_sector, 4);
+}
+
+// count the no. of set bits in a byte
+int count_on_bits(unsigned char byte) {
+    int count = 0;
+    for (int i = 0; i < 8; i++) {
+        if (byte & (1 << i)) {  // Check if the i-th bit is set
+            count++;
+        }
+    }
+    return count;
 }
