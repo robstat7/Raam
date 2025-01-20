@@ -9,6 +9,7 @@
 #include <raam/pcie.h>
 #include <raam/nvme.h>
 #include <raam/fs.h>
+#include <raam/printk.h>
 
 void main(struct boot_params boot_params)
 {
@@ -26,7 +27,10 @@ void main(struct boot_params boot_params)
 	}
 
 	// test
-	sys_creat("myfile");
+	// sys_creat("myfile");
+	sys_open("myfile");
+	//printk("init/main.c: fd = {d}  ", fd);
+
 end:
 	return;
 }

@@ -17,7 +17,36 @@
  */
 const uint32_t starting_sector = 997109760;	/* CHECK IT CAREFULLY!!! */
 
-void sys_creat(const char *pathname)
+void sys_open(const char *filename)
+{
+	/* read 4 blocks into the nvme buffer for metadata */
+	char *nvme_buffer = nvme_read(starting_sector, 4);
+
+	/* inode bitmap read */
+	uint8_t *inode_bitmap = (uint8_t *) (nvme_buffer + (INODE_BITMAP_BLOCK_NR * BLOCK_SIZE));
+
+	uint8_t inode_bitmap_byte_0_val = *inode_bitmap;
+
+	printk("sys_open: inode bitmap byte 0 val read = {p}  ", (void *) inode_bitmap_byte_0_val);
+
+	/* read the inode table */
+	struct inode_struct *inode = (struct inode_struct *) (nvme_buffer + (INODE_TABLE_BLOCK_NR * BLOCK_SIZE));
+
+	for(int i = 0; i < inode_bitmap_byte_0_val; i++) {
+		if(strncmp(inode[i].name, filename, strlen(filename)) == 0) {
+			/* found the file */	
+			printk("sys_open: found file ");
+			printk(inode[i].name);
+			printk(". Inode nr is {d}  ", i);
+			break;
+		}
+	}
+}
+
+
+
+
+void sys_creat(const char *filename)
 {
 	/* read superblock block #0 (512 bytes) */
 	char *nvme_buffer = nvme_read(starting_sector, 1);
@@ -50,7 +79,7 @@ void sys_creat(const char *pathname)
 	/* write the inode table */
 	struct inode_struct *inode = (struct inode_struct *) (nvme_buffer + (INODE_TABLE_BLOCK_NR * BLOCK_SIZE));
 
-	strncpy(inode->name, pathname, strlen(pathname));
+	strncpy(inode->name, filename, strlen(filename) + 1); /* also storing null char */
 
 	inode->size = 0;	/* we are only creating a file with no contents */
 
