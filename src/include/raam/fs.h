@@ -22,4 +22,6 @@ struct inode_struct {
 	uint8_t data_block_num;
 }__attribute__((packed));
 
+void sys_creat(const char *pathname);
+
 #endif	/* FS_H */

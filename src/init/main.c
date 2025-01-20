@@ -8,6 +8,7 @@
 #include <raam/acpi.h>
 #include <raam/pcie.h>
 #include <raam/nvme.h>
+#include <raam/fs.h>
 
 void main(struct boot_params boot_params)
 {
@@ -23,6 +24,9 @@ void main(struct boot_params boot_params)
 	if(nvme_init(boot_params.system_variables) == -1) {
 		goto end;
 	}
+
+	// test
+	sys_creat("myfile");
 end:
 	return;
 }

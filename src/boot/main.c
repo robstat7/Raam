@@ -16,6 +16,8 @@
  * This function initializes the UEFI library, stores the framebuffer
  * information, exits the boot services, and calls the kernel's main
  * function passing the boot parameters.
+ *
+ * TODO: incomplete docstring.
  */
 EFI_STATUS
 EFIAPI

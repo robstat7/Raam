@@ -8,6 +8,7 @@
 #include <fcntl.h>                                       
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 const int total_data_blocks = 10;	/* fixed */
 const int total_inodes = 10;	/* fixed */
