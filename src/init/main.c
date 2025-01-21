@@ -14,7 +14,9 @@
 #include <raam/process.h>
 #include <raam/printk.h>
 
-struct process_control_block_struct current_process;
+struct process_control_block_struct process_1;
+struct process_control_block_struct process_2;
+struct process_control_block_struct *current_process;
 
 void main(struct boot_params boot_params)
 {
@@ -41,25 +43,35 @@ void main(struct boot_params boot_params)
 	sti();
 
 
-	/* initialize the first process */
-	current_process.pid = 1;
-	current_process.state = RUNNING;
+	/* initialize two processes */
+	process_1.pid = 1;
+	process_1.state = RUNNING;
+	
+	process_2.pid = 2;
+	process_2.state = READY;
 
-	printk("@process {d} is running  ", current_process.pid);
+	/* start with process 1 */
+	current_process = &process_1;
+	printk("@starting with process {d}  ", current_process->pid);
 
-	for(int i = 0; i < 5; i++) {
-		printk("@process {d} is at step {d}  ", current_process.pid,
-			i);
-	}
+	/* simulate switching to process 2 */
+	switch_process(&process_2);
 
-	terminate_process();
 	
 end:
 	return;
 }
 
+void switch_process(struct process_control_block_struct *next_process)
+{
+	current_process->state = READY;
+	next_process->state = RUNNING;
+	current_process = next_process;
+	printk("@switched to process {d}  ", current_process->pid);	
+}
+
 void terminate_process(void)
 {
-	current_process.state = TERMINATED;
-	printk("@process {d} has terminated  ", current_process.pid);
+	current_process->state = TERMINATED;
+	printk("@process {d} has terminated  ", current_process->pid);
 }
