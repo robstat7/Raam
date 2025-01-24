@@ -9,6 +9,8 @@
 #include <boot/mem.h>
 #include <boot/boot_params.h>
 #include <raam/main.h>
+#include <boot/gdt.h>
+#include <asm/system.h>
 
 /*
  * efi_main
@@ -45,6 +47,12 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 	if(EFI_ERROR(status)) {
 		goto hang; 
 	}
+
+	/* disable interrupts */
+	cli();
+
+	/* initialize the gdt */
+	init_gdt();
 
 	/* call the kernel's main function */
 	main(boot_params);
