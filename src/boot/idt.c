@@ -38,6 +38,7 @@ extern void isr28();
 extern void isr29();                                                            
 extern void isr30();                                                            
 extern void isr31();
+extern void isr32();
 
 void init_idt(void)
 {
@@ -81,6 +82,7 @@ void init_idt(void)
         idt_set_gate(29, (uint64_t)isr29, 0x08, 0x8E);                          
         idt_set_gate(30, (uint64_t)isr30, 0x08, 0x8E);                          
         idt_set_gate(31, (uint64_t)isr31, 0x08, 0x8E);
+        idt_set_gate(32, (uint64_t)isr32, 0x08, 0x8E);
 
 	/* load the idt register */
 	__asm__("lidt %0"                                              

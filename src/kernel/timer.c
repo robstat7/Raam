@@ -3,12 +3,16 @@
  */
 #include <raam/timer.h>
 #include <raam/port_io.h>
+#include <boot/isr.h>
 
 #define LATCH			(INPUT_CLOCK_FREQUENCY/HZ)
 
 void timer_init(void)
 {
 	set_frequency();
+
+	/* register interrupt handler for the timer interrupt */                
+        register_interrupt_handler(32, timer_handler);
 }
 
 /* irq0 will fire 100 times per second */

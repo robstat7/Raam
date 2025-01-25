@@ -1,8 +1,8 @@
 /*                                                                              
  * interrupt handlers                                                           
  */                                                                             
-#include "boot/isr.h"                                                                
-#include "raam/printk.h"                                                            
+#include <boot/isr.h>                                                               
+#include <raam/printk.h>                                                            
                                                                                 
 isr_t interrupt_handlers[256];                                                  
                                                                                 
@@ -20,3 +20,8 @@ void isr_handler(registers_t regs)
 void register_interrupt_handler(uint8_t n, isr_t handler) {                     
   interrupt_handlers[n] = handler;                                              
 }      
+
+void timer_handler(registers_t regs)                                            
+{                                                                               
+        printk("interrupt: timer: recieved interrupt: {d}  ", regs.int_no);
+}
