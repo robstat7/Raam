@@ -9,9 +9,12 @@
 #include <raam/pcie.h>
 #include <raam/nvme.h>
 #include <raam/timer.h>
+#include <asm/system.h>
 
 void main(struct boot_params boot_params)
 {
+	/* interrupts are still disabled. */ 
+
 	tty_init(boot_params.fb_info);
 
 	int ret = acpi_init(boot_params.xsdp);
@@ -26,6 +29,12 @@ void main(struct boot_params boot_params)
 	}
 
 	timer_init();
+
+	/* enable interrupts */
+	sti();
+
+	asm volatile ("int $0x4");
+
 end:
 	return;
 }
