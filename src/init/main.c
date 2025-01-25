@@ -9,6 +9,7 @@
 #include <raam/pcie.h>
 #include <raam/nvme.h>
 #include <raam/timer.h>
+#include <raam/pic.h>
 #include <asm/system.h>
 
 void main(struct boot_params boot_params)
@@ -30,10 +31,12 @@ void main(struct boot_params boot_params)
 
 	timer_init();
 
+	pic_init();
+
 	/* enable interrupts */
 	sti();
 
-	asm volatile ("int $0x4");
+	// asm volatile ("int $0x4");
 
 end:
 	return;
