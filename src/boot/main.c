@@ -8,9 +8,7 @@
 #include <boot/xsdp.h>
 #include <boot/mem.h>
 #include <boot/boot_params.h>
-#include <raam/main.h>
-#include <boot/gdt.h>
-#include <boot/idt.h>
+#include <boot/startup.h>
 #include <asm/system.h>
 
 /*
@@ -52,14 +50,8 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 	/* disable interrupts */
 	cli();
 
-	/* initialize the gdt */
-	init_gdt();
-	
-	/* initialize the idt */
-	init_idt();
-
-	/* call the kernel's main function */
-	main(boot_params);
+	/* call the kernel's startup function */
+	startup(boot_params);
 
 hang:
 	for(;;);
