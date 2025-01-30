@@ -26,6 +26,10 @@ EFI_STATUS get_memory_map(void)
 {
 	EFI_STATUS status;
 
+	memory_map_size = 0;
+	desc_size = 0;
+	map_key = 0;
+
 	status = get_memory_map_size();
 	if(status != EFI_BUFFER_TOO_SMALL) {
 		goto end;
@@ -44,6 +48,11 @@ EFI_STATUS get_memory_map(void)
 	if(EFI_ERROR(status)) {
 		Print(L"fatal error: error getting memory map!\n");
 	}
+
+	/* store memory map params to the boot params */
+	boot_params.memory_map.memory_map_size = memory_map_size;	
+	boot_params.memory_map.desc_size = desc_size;	
+	boot_params.memory_map.memory_map_base = memory_map;	
 end:
 	return status;
 }
@@ -67,6 +76,18 @@ EFI_STATUS allocate_pool_for_mem_map(void)
 
 	return status;
 }
+
+EFI_STATUS free_pool_for_mem_map(void)
+{
+	EFI_STATUS status = uefi_call_wrapper(BS->FreePool, 1,
+					      (void *)  memory_map);
+	if(EFI_ERROR(status)) {
+		Print(L"fatal error: error freeing memory map buffer!\n");
+	}
+
+	return status;
+}
+
 
 /*
  * get_memory_map_size
@@ -124,4 +145,55 @@ int allocate_sys_variables_mem(void)
 	boot_params.system_variables = *sys_var_ptr_ptr;	
 	
 	return 0;
+}
+
+/*
+ * note: potentially, the EFI_MEMORY_DESCRIPTOR structure is only 40
+ * bytes despite the EFI telling me that it should be 48 bytes
+ * (the desc_size).
+ * note 2: page size is 4 KiB or 4096 bytes.
+ */
+uint64_t find_num_usable_main_memory_4kib_pages(void)
+{
+	Print(L"@boot/mem.c: getting memory map for the first time!\n");
+
+	EFI_STATUS status = get_memory_map();
+	if(EFI_ERROR(status)) {
+		goto end;
+	}
+	
+	Print(L"@boot/mem.c: got memory map!\n");
+
+	Print(L"@boot/mem.c: memory_map_size = %d\n",
+	       memory_map_size);
+	Print(L"@boot/mem.c: desc_size = %d\n",
+	       desc_size);
+	Print(L"@boot/mem.c: memory map base = %p\n",
+	       (void *) memory_map);
+
+	const int num_desc = memory_map_size / desc_size;
+
+	Print(L"@boot/mem.c: num_desc = %d\n", num_desc);
+
+	char *offset = memory_map;
+
+	uint64_t num_usable_main_mem_pages = 0;
+
+	for(int i = 0; i < num_desc; i++) {
+		EFI_MEMORY_DESCRIPTOR *desc = (EFI_MEMORY_DESCRIPTOR *) offset;
+
+		if(desc->Type == EfiBootServicesCode || desc->Type == EfiBootServicesData || desc->Type == EfiConventionalMemory) {
+			num_usable_main_mem_pages += desc->NumberOfPages;
+		}
+
+		offset += desc_size;
+	}
+
+	Print(L"@boot/mem.c: num of usable main mem pages = %p\n",
+	       (void *) num_usable_main_mem_pages);
+
+	return num_usable_main_mem_pages;
+
+end:
+	return -1;
 }

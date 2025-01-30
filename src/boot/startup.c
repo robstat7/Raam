@@ -14,9 +14,9 @@ void startup(struct boot_params boot_params)
 	/* initialize the idt */
 	init_idt();
 
+	/* phyical memory manager initialization */	
+	// pmm_init(boot_params.memory_map);
+
 	/* call the kernel's main function */
 	main(boot_params);
 }
-
-
-

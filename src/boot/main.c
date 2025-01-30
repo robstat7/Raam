@@ -37,10 +37,28 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 		goto hang;
 	}
 
-	/* allocate and clear 2 MiB of memory for system variables */           
+	/* allocate and clear 2 MiB of memory for system variables */
         if(allocate_sys_variables_mem() == -1) {                     
-                goto hang;                                                       
+                goto hang;
         }    
+
+	Print(L"@boot/main.c: calling func to find total usable RAM pages\n");
+
+	/* find total usable main memory 4 KiB pages */
+	const uint64_t total_usable_pages =
+		find_num_usable_main_memory_4kib_pages();
+	if(total_usable_pages == -1) {	/* error getting memory map */
+		goto hang;
+	}
+
+	/* free the previous pool for mem map before getting the */
+	/* new memory map for exiting the boot services. */
+	status = free_pool_for_mem_map();                                   
+        if(EFI_ERROR(status)) {                                                 
+                goto hang;                                                       
+        }
+
+	Print(L"@boot/main.c: calling func to exit BS\n");
 
 	status = exit_boot_services(image_handle);
 	if(EFI_ERROR(status)) {
@@ -49,6 +67,8 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 
 	/* disable interrupts */
 	cli();
+
+	for(;;);
 
 	/* call the kernel's startup function */
 	startup(boot_params);
