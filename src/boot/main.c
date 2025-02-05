@@ -51,12 +51,25 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 		goto hang;
 	}
 
-	/* free the previous pool for mem map before getting the */
-	/* new memory map for exiting the boot services. */
-	status = free_pool_for_mem_map();                                   
-        if(EFI_ERROR(status)) {                                                 
+	/* allocate pool for stack (physical memory manager data structure) */
+	char *stack_pmm = NULL;
+	status = allocate_pool_for_stack_pmm(total_usable_pages, &stack_pmm);
+	if(EFI_ERROR(status)) {                                                 
                 goto hang;                                                       
         }
+
+	Print(L"@stack_pmm = %p\n", (void *) stack_pmm);
+
+	/* store stack data structure base and total pages in the boot params */
+	boot_params.stack_pmm.stack = stack_pmm;
+	boot_params.stack_pmm.total_pages = total_usable_pages;
+
+	// /* free the previous pool for mem map before getting the */
+	// /* new memory map for exiting the boot services. */
+	// status = free_pool_for_mem_map();                                   
+        // if(EFI_ERROR(status)) {                                                 
+        //         goto hang;                                                       
+        // }
 
 	Print(L"@boot/main.c: calling func to exit BS\n");
 
@@ -67,8 +80,6 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 
 	/* disable interrupts */
 	cli();
-
-	for(;;);
 
 	/* call the kernel's startup function */
 	startup(boot_params);

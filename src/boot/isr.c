@@ -14,6 +14,7 @@ void isr_handler(registers_t regs)
                 handler(regs);                                                  
         } else {                                                                
                 printk("interrupt: recieved interrupt: {d}  ", regs.int_no);   
+                printk("interrupt: rip = : {p}  ", (void *) regs.rip);   
                 asm volatile("hlt": :);                                         
         }                                                                       
 }                                                                               

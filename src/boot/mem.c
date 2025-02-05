@@ -29,6 +29,7 @@ EFI_STATUS get_memory_map(void)
 	memory_map_size = 0;
 	desc_size = 0;
 	map_key = 0;
+	memory_map = NULL;
 
 	status = get_memory_map_size();
 	if(status != EFI_BUFFER_TOO_SMALL) {
@@ -49,10 +50,10 @@ EFI_STATUS get_memory_map(void)
 		Print(L"fatal error: error getting memory map!\n");
 	}
 
-	/* store memory map params to the boot params */
-	boot_params.memory_map.memory_map_size = memory_map_size;	
-	boot_params.memory_map.desc_size = desc_size;	
-	boot_params.memory_map.memory_map_base = memory_map;	
+	// /* store memory map params to the boot params */
+	// boot_params.memory_map.memory_map_size = memory_map_size;	
+	// boot_params.memory_map.desc_size = desc_size;	
+	// boot_params.memory_map.memory_map_base = memory_map;	
 end:
 	return status;
 }
@@ -83,6 +84,23 @@ EFI_STATUS free_pool_for_mem_map(void)
 					      (void *)  memory_map);
 	if(EFI_ERROR(status)) {
 		Print(L"fatal error: error freeing memory map buffer!\n");
+	}
+
+	return status;
+}
+
+/* allocate pool for stack (physical memory manager data structure) */
+EFI_STATUS allocate_pool_for_stack_pmm(const uint64_t total_pages, char **stack)
+{
+	EFI_STATUS status;
+
+	/* each stack element is 8 bytes in size */
+	status = uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData,
+				   (total_pages * sizeof(uint64_t)),
+				   (void **) stack);
+	if(EFI_ERROR(status)) {
+		Print(L"fatal error: error allocating stack buffer!\n");
+		*stack = NULL;
 	}
 
 	return status;
@@ -161,6 +179,11 @@ uint64_t find_num_usable_main_memory_4kib_pages(void)
 	if(EFI_ERROR(status)) {
 		goto end;
 	}
+
+	/* store memory map params to the boot params */
+	boot_params.memory_map.memory_map_size = memory_map_size;	
+	boot_params.memory_map.desc_size = desc_size;	
+	boot_params.memory_map.memory_map_base = memory_map;	
 	
 	Print(L"@boot/mem.c: got memory map!\n");
 
