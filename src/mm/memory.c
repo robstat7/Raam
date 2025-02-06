@@ -7,11 +7,17 @@ int64_t stack_top = -1;
 uint64_t stack_size = 0;
 
 /*
+ * pmm_init
+ * --------
  * physical memory manager initialization.
+ *
+ * note:
+ *    the stack data structure contains the lowest usable page address at the bottom and
+ *    the highest usable page addresss at the top. The page size is 4096 bytes.
  */
-void pmm_init(struct memory_map_struct memory_map, struct stack_pmm_struct stack_pmm)
+void pmm_init(struct memory_map_struct memory_map, struct free_stack_struct free_stack)
 {
-	stack_init(&stack_pmm);
+	stack_init(&free_stack);
 
 	bool desc_pushed[500] = {false, };
 					/* tells us if a memory descriptor is */
@@ -64,12 +70,23 @@ void pmm_init(struct memory_map_struct memory_map, struct stack_pmm_struct stack
 
 	/* check */ 
 	if(stack_top == stack_size - 1) {
-		printk("stack is full!!!  ");
+		printk("@yay! stack is full!!!  ");
 		printk("stack top = {p}  ", (void *) stack_top);
 	} else {
-		printk("pmm: error: stack is not full!!!  ");
+		printk("@pmm: error: stack is not full!!!  ");
 		printk("stack top = {p}  ", (void *) stack_top);
 		printk("stack size= {p}  ", (void *) stack_size);
+	}
+
+	check_stack_contents();
+}
+
+void check_stack_contents(void)
+{
+	uint64_t i = 0;
+	printk("@stack contents:  ");
+	for ( ; i < 100; i++) {
+		printk("{p}  ", (void *) stack[i]);
 	}
 }
 
@@ -108,11 +125,11 @@ static void push_pages_to_stack(uint64_t physical_start_address, uint64_t total_
 }
 	
 
-static void stack_init(struct stack_pmm_struct *stack_pmm)
+static void stack_init(struct free_stack_struct *free_stack)
 {
-	stack = (uint64_t *) stack_pmm->stack;	
+	stack = (uint64_t *) free_stack->free_stack_base;	
 	stack_top = -1;
-	stack_size = stack_pmm->total_pages;
+	stack_size = free_stack->size;
 
 	printk("@pmm: stack base = {p}  ", (void *) stack);
 }

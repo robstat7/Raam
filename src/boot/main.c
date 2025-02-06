@@ -46,23 +46,25 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 
 	/* find total usable main memory 4 KiB pages */
 	const uint64_t total_usable_pages =
-		find_num_usable_main_memory_4kib_pages();
-	if(total_usable_pages == -1) {	/* error getting memory map */
+		find_total_usable_main_memory_4kib_pages();
+	if(total_usable_pages == 0) {	/* error */
 		goto hang;
 	}
 
-	/* allocate pool for stack (physical memory manager data structure) */
-	char *stack_pmm = NULL;
-	status = allocate_pool_for_stack_pmm(total_usable_pages, &stack_pmm);
+	/* allocate pool for "free stack" */
+	/* (physical memory manager data structure) */
+	char *free_stack_base = NULL;
+	status = allocate_pool_for_free_stack(total_usable_pages,
+					      &free_stack_base);
 	if(EFI_ERROR(status)) {                                                 
                 goto hang;                                                       
         }
 
-	Print(L"@stack_pmm = %p\n", (void *) stack_pmm);
+	Print(L"@free_stack_base = %p\n", (void *) free_stack_base);
 
-	/* store stack data structure base and total pages in the boot params */
-	boot_params.stack_pmm.stack = stack_pmm;
-	boot_params.stack_pmm.total_pages = total_usable_pages;
+	/* store free stack base and size in the boot params */
+	boot_params.free_stack.free_stack_base = free_stack_base;
+	boot_params.free_stack.size = total_usable_pages;
 
 	// /* free the previous pool for mem map before getting the */
 	// /* new memory map for exiting the boot services. */

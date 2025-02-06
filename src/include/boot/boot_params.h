@@ -10,9 +10,10 @@ struct memory_map_struct {
 	char *memory_map_base;
 };
 
-struct stack_pmm_struct {
-	const char *stack;
-	uint64_t total_pages;
+/* free stack (physical memory manager) data structure attributes */
+struct free_stack_struct {
+	char *free_stack_base;
+	uint64_t size;
 };
 
 struct boot_params {
@@ -20,7 +21,7 @@ struct boot_params {
 	const struct xsdp_struct *xsdp;	// pointer to xsdp structure
 	const uint8_t *system_variables;
 	struct memory_map_struct memory_map;
-	struct stack_pmm_struct stack_pmm;
+	struct free_stack_struct free_stack;
 };
 
 extern struct boot_params boot_params;

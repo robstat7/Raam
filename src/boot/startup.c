@@ -20,7 +20,7 @@ void startup(struct boot_params boot_params)
 	tty_init(boot_params.fb_info);
 
 	/* phyical memory manager initialization */	
-	pmm_init(boot_params.memory_map, boot_params.stack_pmm);
+	pmm_init(boot_params.memory_map, boot_params.free_stack);
 
 	for(;;);
 

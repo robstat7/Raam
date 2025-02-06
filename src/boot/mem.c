@@ -89,18 +89,19 @@ EFI_STATUS free_pool_for_mem_map(void)
 	return status;
 }
 
-/* allocate pool for stack (physical memory manager data structure) */
-EFI_STATUS allocate_pool_for_stack_pmm(const uint64_t total_pages, char **stack)
+/* allocate pool for "free stack" (physical memory manager data structure) */
+EFI_STATUS allocate_pool_for_free_stack(const uint64_t total_elements,
+					char **free_stack_base_ptr)
 {
 	EFI_STATUS status;
 
 	/* each stack element is 8 bytes in size */
 	status = uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData,
-				   (total_pages * sizeof(uint64_t)),
-				   (void **) stack);
+				   (total_elements * sizeof(uint64_t)),
+				   (void **) free_stack_base_ptr);
 	if(EFI_ERROR(status)) {
-		Print(L"fatal error: error allocating stack buffer!\n");
-		*stack = NULL;
+		Print(L"fatal error: error allocating free stack buffer!\n");
+		*free_stack_base_ptr = NULL;
 	}
 
 	return status;
@@ -166,12 +167,18 @@ int allocate_sys_variables_mem(void)
 }
 
 /*
- * note: potentially, the EFI_MEMORY_DESCRIPTOR structure is only 40
- * bytes despite the EFI telling me that it should be 48 bytes
- * (the desc_size).
- * note 2: page size is 4 KiB or 4096 bytes.
+ * find_total_usable_main_memory_4kib_pages
+ * ----------------------------------------
+ * this function finds the total usable main memory (RAM) pages that we
+ * can use for physical memory allocation. The page size is 4 KiB or
+ * 4096 bytes.
+ *
+ * NOTE:
+ * potentially, the EFI_MEMORY_DESCRIPTOR structure is only 40
+ * bytes despite the UEFI telling me that it should be 48 bytes
+ * (the global variable `desc_size`).
  */
-uint64_t find_num_usable_main_memory_4kib_pages(void)
+uint64_t find_total_usable_main_memory_4kib_pages(void)
 {
 	Print(L"@boot/mem.c: getting memory map for the first time!\n");
 
@@ -200,23 +207,25 @@ uint64_t find_num_usable_main_memory_4kib_pages(void)
 
 	char *offset = memory_map;
 
-	uint64_t num_usable_main_mem_pages = 0;
+	uint64_t total_pages = 0;
 
 	for(int i = 0; i < num_desc; i++) {
 		EFI_MEMORY_DESCRIPTOR *desc = (EFI_MEMORY_DESCRIPTOR *) offset;
 
-		if(desc->Type == EfiBootServicesCode || desc->Type == EfiBootServicesData || desc->Type == EfiConventionalMemory) {
-			num_usable_main_mem_pages += desc->NumberOfPages;
+		if(desc->Type == EfiBootServicesCode ||
+		   desc->Type == EfiBootServicesData ||
+		   desc->Type == EfiConventionalMemory) {
+			total_pages += (uint64_t) desc->NumberOfPages;
 		}
 
-		offset += desc_size;
+		offset += desc_size;	/* see above NOTE */
 	}
 
-	Print(L"@boot/mem.c: num of usable main mem pages = %p\n",
-	       (void *) num_usable_main_mem_pages);
+	Print(L"@boot/mem.c: total usable main mem pages = %p\n",
+	       (void *) total_pages);
 
-	return num_usable_main_mem_pages;
+	return total_pages;
 
 end:
-	return -1;
+	return 0;
 }
