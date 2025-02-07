@@ -68,17 +68,10 @@ void pmm_init(struct memory_map_struct memory_map, struct free_stack_struct free
 
 	// printk("@debug!!!  ");
 
-	/* check */ 
-	if(stack_top == stack_size - 1) {
-		printk("@yay! stack is full!!!  ");
-		printk("stack top = {p}  ", (void *) stack_top);
-	} else {
-		printk("@pmm: error: stack is not full!!!  ");
-		printk("stack top = {p}  ", (void *) stack_top);
-		printk("stack size= {p}  ", (void *) stack_size);
-	}
+	printk("@stack top = {p}  ", (void *) stack_top);
+	printk("@stack size= {p}  ", (void *) stack_size);
 
-	check_stack_contents();
+	// check_stack_contents();
 }
 
 void check_stack_contents(void)

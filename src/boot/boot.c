@@ -3,6 +3,7 @@
  */
 #include <boot/boot.h>
 #include <boot/mem.h>
+#include <boot/boot_params.h>
 
 /*
  * exit_boot_services
@@ -19,6 +20,12 @@ EFI_STATUS exit_boot_services(EFI_HANDLE image_handle)
 	if(EFI_ERROR(status)) {
 		goto end;
 	}
+
+	/* store memory map params to the boot params */
+	boot_params.memory_map.memory_map_size = memory_map_size;	
+	boot_params.memory_map.desc_size = desc_size;	
+	boot_params.memory_map.memory_map_base = memory_map;	
+
 
 	/* exit boot services */
 	for(int i = 0; i < max_attempts; i++) {

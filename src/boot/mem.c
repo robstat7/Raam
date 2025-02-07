@@ -26,11 +26,6 @@ EFI_STATUS get_memory_map(void)
 {
 	EFI_STATUS status;
 
-	memory_map_size = 0;
-	desc_size = 0;
-	map_key = 0;
-	memory_map = NULL;
-
 	status = get_memory_map_size();
 	if(status != EFI_BUFFER_TOO_SMALL) {
 		goto end;
@@ -50,10 +45,6 @@ EFI_STATUS get_memory_map(void)
 		Print(L"fatal error: error getting memory map!\n");
 	}
 
-	// /* store memory map params to the boot params */
-	// boot_params.memory_map.memory_map_size = memory_map_size;	
-	// boot_params.memory_map.desc_size = desc_size;	
-	// boot_params.memory_map.memory_map_base = memory_map;	
 end:
 	return status;
 }
@@ -85,6 +76,11 @@ EFI_STATUS free_pool_for_mem_map(void)
 	if(EFI_ERROR(status)) {
 		Print(L"fatal error: error freeing memory map buffer!\n");
 	}
+
+	memory_map = NULL;
+	memory_map_size = 0;
+	desc_size = 0;
+	map_key = 0;
 
 	return status;
 }
@@ -167,18 +163,18 @@ int allocate_sys_variables_mem(void)
 }
 
 /*
- * find_total_usable_main_memory_4kib_pages
- * ----------------------------------------
- * this function finds the total usable main memory (RAM) pages that we
- * can use for physical memory allocation. The page size is 4 KiB or
- * 4096 bytes.
+ * find_free_stack_size
+ * --------------------
+ * this function finds the free stack (physical memory manager data
+ * structure) size by finding the total usable main memory (RAM) pages.
+ * The page size is 4 KiB or 4096 bytes.
  *
  * NOTE:
  * potentially, the EFI_MEMORY_DESCRIPTOR structure is only 40
  * bytes despite the UEFI telling me that it should be 48 bytes
  * (the global variable `desc_size`).
  */
-uint64_t find_total_usable_main_memory_4kib_pages(void)
+uint64_t find_free_stack_size(void)
 {
 	Print(L"@boot/mem.c: getting memory map for the first time!\n");
 
@@ -187,11 +183,6 @@ uint64_t find_total_usable_main_memory_4kib_pages(void)
 		goto end;
 	}
 
-	/* store memory map params to the boot params */
-	boot_params.memory_map.memory_map_size = memory_map_size;	
-	boot_params.memory_map.desc_size = desc_size;	
-	boot_params.memory_map.memory_map_base = memory_map;	
-	
 	Print(L"@boot/mem.c: got memory map!\n");
 
 	Print(L"@boot/mem.c: memory_map_size = %d\n",
