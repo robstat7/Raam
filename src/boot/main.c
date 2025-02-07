@@ -44,17 +44,16 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 
 	Print(L"@boot/main.c: calling func to find total usable RAM pages\n");
 
-	/* find total usable main memory 4 KiB pages */
-	const uint64_t total_usable_pages =
+	/* find "free stack" (physical memory manager data structure) size */
+	const uint64_t free_stack_size =
 		find_total_usable_main_memory_4kib_pages();
-	if(total_usable_pages == 0) {	/* error */
+	if(free_stack_size == 0) {	/* error */
 		goto hang;
 	}
 
-	/* allocate pool for "free stack" */
-	/* (physical memory manager data structure) */
+	/* allocate pool for free stack */
 	char *free_stack_base = NULL;
-	status = allocate_pool_for_free_stack(total_usable_pages,
+	status = allocate_pool_for_free_stack(free_stack_size,
 					      &free_stack_base);
 	if(EFI_ERROR(status)) {                                                 
                 goto hang;                                                       
@@ -64,7 +63,7 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
 
 	/* store free stack base and size in the boot params */
 	boot_params.free_stack.free_stack_base = free_stack_base;
-	boot_params.free_stack.size = total_usable_pages;
+	boot_params.free_stack.size = free_stack_size;
 
 	// /* free the previous pool for mem map before getting the */
 	// /* new memory map for exiting the boot services. */
