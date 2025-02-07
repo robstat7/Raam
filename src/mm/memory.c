@@ -25,34 +25,56 @@ void pmm_init(struct memory_map_struct memory_map,
 	/* pushed or unpushed into the stack. */
 	bool desc_pushed[500] = {false, };
 
-	const int num_desc = memory_map.memory_map_size / memory_map.desc_size;
+	const int total_uefi_desc =
+			      memory_map.memory_map_size / memory_map.desc_size;
 
-	printk("@pmm: num_desc = {d}  ", num_desc);
+	// printk("@pmm: total_uefi_desc = {d}  ", total_uefi_desc);
 
 	char *offset = memory_map.memory_map_base;
 
-	/* get total usable UEFI memory descriptors */
+	/* get the total usable UEFI memory descriptors */
 	const int total_usable_uefi_desc =
-	    find_total_usable_uefi_desc(num_desc, offset, memory_map.desc_size);
-	printk("@pmm: total usable uefi desc = {d}  ", total_usable_uefi_desc);
+     find_total_usable_uefi_desc(total_uefi_desc, offset, memory_map.desc_size);
 
+	// printk("@pmm: total usable uefi desc = {d}  ",
+	//	  total_usable_uefi_desc);
+
+	/* push USABLE UEFI memory descriptors pages in ascending order to */
+	/* the free stack. */
 	for(int i = 0; i < total_usable_uefi_desc; i++) {
-		uint64_t lowest_physical_start_addr = 0xffffffffffffffff;	/* uint64_t max value */
+		uint64_t lowest_physical_start_addr = 0xffffffffffffffff;
+							/* uint64_t max value */
 		uint64_t total_pages = 0;
 		int index = 0;
 
 		offset = memory_map.memory_map_base;
 
-		/* find the lowest physical start address of a usable and upushed memory descriptor and also its number of pages */
-		for(int j = 0; j < num_desc; j++) {
-			EFI_MEMORY_DESCRIPTOR *desc = (EFI_MEMORY_DESCRIPTOR *) offset;
+		/* find the lowest physical start address from the list of */
+		/* USABLE and UNPUSHED memory descriptors and also the number */
+		/* of pages. */
+		for(int j = 0; j < total_uefi_desc; j++) {
+			EFI_MEMORY_DESCRIPTOR *desc =
+					       (EFI_MEMORY_DESCRIPTOR *) offset;
 
-			/* the memory descriptor is of type USABLE and its pages have not been pushed to the stack yet. */
-			if((desc->Type == EfiBootServicesCode || desc->Type == EfiBootServicesData || desc->Type == EfiConventionalMemory) && desc_pushed[j] == false) {
-				lowest_physical_start_addr  = ((uint64_t) desc->PhysicalStart < lowest_physical_start_addr) ?
-							(uint64_t) desc->PhysicalStart : lowest_physical_start_addr;
-				if(lowest_physical_start_addr == (uint64_t) desc->PhysicalStart) {
-					total_pages = (uint64_t) desc->NumberOfPages;
+			/* the memory descriptor is of type USABLE and */
+			/* its pages have not been pushed to the stack yet. */
+			if((desc->Type == EfiBootServicesCode ||
+			    desc->Type == EfiBootServicesData ||
+			    desc->Type == EfiConventionalMemory)
+			    && desc_pushed[j] == false) {
+				/* find the lowest phy start address */
+				lowest_physical_start_addr =
+		((uint64_t) desc->PhysicalStart < lowest_physical_start_addr) ?
+		    (uint64_t) desc->PhysicalStart : lowest_physical_start_addr;
+
+				/* get total pages and the index for the UEFI */
+				/* memory descriptor. Is the lowest phy start */
+				/* address found above the phy start address */
+				/* of the current mem descriptor? */
+				if(lowest_physical_start_addr ==
+					(uint64_t) desc->PhysicalStart) {
+					total_pages =
+						(uint64_t) desc->NumberOfPages;
 					index = j;
 				}
 			}
@@ -60,39 +82,33 @@ void pmm_init(struct memory_map_struct memory_map,
 			offset += memory_map.desc_size;
 		}
 
-		// printk("@debug before push!!!  ");
-
 		push_pages_to_stack(lowest_physical_start_addr, total_pages);
 		
-		// printk("@debug after push!!!  ");
-
 		desc_pushed[index] = true;
 	}
 
-	// printk("@debug!!!  ");
-
-	printk("@stack top = {p}  ", (void *) free_stack_pmm.top);
-	printk("@stack size= {p}  ", (void *) free_stack_pmm.size);
+	// printk("@free stack top = {p}  ", (void *) free_stack_pmm.top);
+	// printk("@free stack size= {p}  ", (void *) free_stack_pmm.size);
 
 	// check_stack_contents();
 }
 
 void check_stack_contents(void)
 {
-	uint64_t i = 0;
+	uint64_t i = free_stack_pmm.top - 100;
 	printk("@stack contents:  ");
-	for ( ; i < 100; i++) {
+	for ( ; i < free_stack_pmm.top; i++) {
 		printk("{p}  ", (void *) free_stack_pmm.base[i]);
 	}
 }
 
 /* find the total USABLE UEFI memory descriptors. */
-const int find_total_usable_uefi_desc(const int num_desc, char *offset,
+const int find_total_usable_uefi_desc(const int total_uefi_desc, char *offset,
 				      uint64_t desc_size)
 {
 	int total = 0;
 
-	for(int i = 0; i < num_desc; i++) {
+	for(int i = 0; i < total_uefi_desc; i++) {
 		EFI_MEMORY_DESCRIPTOR *desc = (EFI_MEMORY_DESCRIPTOR *) offset;
 
 		/* the UEFI memory descriptor is of type USABLE */
@@ -108,11 +124,13 @@ const int find_total_usable_uefi_desc(const int num_desc, char *offset,
 	return total;
 }
 
-static void push_pages_to_stack(uint64_t physical_start_address, uint64_t total_pages)
+static void push_pages_to_stack(uint64_t physical_start_address,
+				const uint64_t total_pages)
 {
 	for(uint64_t i = 0; i < total_pages; i++) {
 		stack_push(physical_start_address);
-		physical_start_address += 4096;	/* move to next page start address */
+		physical_start_address += 4096;
+				/* move to the next page start address */
 	}
 }
 	
@@ -123,7 +141,8 @@ static void free_stack_init(struct free_stack_struct *free_stack)
 	free_stack_pmm.top = -1;
 	free_stack_pmm.size = free_stack->size;
 
-	printk("@pmm: free stack base = {p}  ", (void *) free_stack_pmm.base);
+	// printk("@pmm: free stack base = {p}  ",
+	//	  (void *) free_stack_pmm.base);
 }
 
 static void stack_push(uint64_t page_physical_addr)
