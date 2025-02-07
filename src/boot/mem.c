@@ -85,25 +85,6 @@ EFI_STATUS free_pool_for_mem_map(void)
 	return status;
 }
 
-/* allocate pool for "free stack" (physical memory manager data structure) */
-EFI_STATUS allocate_pool_for_free_stack(const uint64_t total_elements,
-					char **free_stack_base_ptr)
-{
-	EFI_STATUS status;
-
-	/* each stack element is 8 bytes in size */
-	status = uefi_call_wrapper(BS->AllocatePool, 3, EfiLoaderData,
-				   (total_elements * sizeof(uint64_t)),
-				   (void **) free_stack_base_ptr);
-	if(EFI_ERROR(status)) {
-		Print(L"fatal error: error allocating free stack buffer!\n");
-		*free_stack_base_ptr = NULL;
-	}
-
-	return status;
-}
-
-
 /*
  * get_memory_map_size
  *
@@ -159,64 +140,5 @@ int allocate_sys_variables_mem(void)
 	/* store the sys var pointer in the boot params */
 	boot_params.system_variables = *sys_var_ptr_ptr;	
 	
-	return 0;
-}
-
-/*
- * find_free_stack_size
- * --------------------
- * this function finds the free stack (physical memory manager data
- * structure) size by finding the total usable main memory (RAM) pages.
- * The page size is 4 KiB or 4096 bytes.
- *
- * NOTE:
- * potentially, the EFI_MEMORY_DESCRIPTOR structure is only 40
- * bytes despite the UEFI telling me that it should be 48 bytes
- * (the global variable `desc_size`).
- */
-uint64_t find_free_stack_size(void)
-{
-	Print(L"@boot/mem.c: getting memory map for the first time!\n");
-
-	EFI_STATUS status = get_memory_map();
-	if(EFI_ERROR(status)) {
-		goto end;
-	}
-
-	Print(L"@boot/mem.c: got memory map!\n");
-
-	Print(L"@boot/mem.c: memory_map_size = %d\n",
-	       memory_map_size);
-	Print(L"@boot/mem.c: desc_size = %d\n",
-	       desc_size);
-	Print(L"@boot/mem.c: memory map base = %p\n",
-	       (void *) memory_map);
-
-	const int num_desc = memory_map_size / desc_size;
-
-	Print(L"@boot/mem.c: num_desc = %d\n", num_desc);
-
-	char *offset = memory_map;
-
-	uint64_t total_pages = 0;
-
-	for(int i = 0; i < num_desc; i++) {
-		EFI_MEMORY_DESCRIPTOR *desc = (EFI_MEMORY_DESCRIPTOR *) offset;
-
-		if(desc->Type == EfiBootServicesCode ||
-		   desc->Type == EfiBootServicesData ||
-		   desc->Type == EfiConventionalMemory) {
-			total_pages += (uint64_t) desc->NumberOfPages;
-		}
-
-		offset += desc_size;	/* see above NOTE */
-	}
-
-	Print(L"@boot/mem.c: total usable main mem pages = %p\n",
-	       (void *) total_pages);
-
-	return total_pages;
-
-end:
 	return 0;
 }
