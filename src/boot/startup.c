@@ -16,7 +16,6 @@ void startup(struct boot_params boot_params)
 	/* initialize the idt */
 	init_idt();
 
-	/* temperorily using it here */	
 	tty_init(boot_params.fb_info);
 
 	/* phyical memory manager initialization */	

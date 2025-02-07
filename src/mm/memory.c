@@ -2,26 +2,28 @@
 #include <stdbool.h>
 #include <raam/printk.h>
 
-uint64_t *stack = NULL;
-int64_t stack_top = -1;
-uint64_t stack_size = 0;
+struct free_stack_pmm_struct free_stack_pmm;
 
 /*
  * pmm_init
  * --------
- * physical memory manager initialization.
+ * physical memory manager initialization. This function initializes the
+ * free stack, gets the total usable UEFI memory descriptors, and then
+ * pushes the pages of each usable descriptor to the free stack. The
+ * free stack must contain the lowest page start address at the bottom
+ * and the highest page start address at the top.
  *
  * note:
- *    the stack data structure contains the lowest usable page address at the bottom and
- *    the highest usable page addresss at the top. The page size is 4096 bytes.
+ *    the page size is 4096 bytes.
  */
-void pmm_init(struct memory_map_struct memory_map, struct free_stack_struct free_stack)
+void pmm_init(struct memory_map_struct memory_map,
+	      struct free_stack_struct free_stack)
 {
-	stack_init(&free_stack);
+	free_stack_init(&free_stack);
 
+	/* tells us if a UEFI memory descriptor is */
+	/* pushed or unpushed into the stack. */
 	bool desc_pushed[500] = {false, };
-					/* tells us if a memory descriptor is */
-					/* pushed or unpushed into the stack. */
 
 	const int num_desc = memory_map.memory_map_size / memory_map.desc_size;
 
@@ -29,11 +31,12 @@ void pmm_init(struct memory_map_struct memory_map, struct free_stack_struct free
 
 	char *offset = memory_map.memory_map_base;
 
-	/* get total usable memory descriptors */
-	const int total_usable_desc = find_total_usable_desc(num_desc, offset, memory_map.desc_size);
-	printk("@pmm: total usable desc = {d}  ", total_usable_desc);
+	/* get total usable UEFI memory descriptors */
+	const int total_usable_uefi_desc =
+	    find_total_usable_uefi_desc(num_desc, offset, memory_map.desc_size);
+	printk("@pmm: total usable uefi desc = {d}  ", total_usable_uefi_desc);
 
-	for(int i = 0; i < total_usable_desc; i++) {
+	for(int i = 0; i < total_usable_uefi_desc; i++) {
 		uint64_t lowest_physical_start_addr = 0xffffffffffffffff;	/* uint64_t max value */
 		uint64_t total_pages = 0;
 		int index = 0;
@@ -68,8 +71,8 @@ void pmm_init(struct memory_map_struct memory_map, struct free_stack_struct free
 
 	// printk("@debug!!!  ");
 
-	printk("@stack top = {p}  ", (void *) stack_top);
-	printk("@stack size= {p}  ", (void *) stack_size);
+	printk("@stack top = {p}  ", (void *) free_stack_pmm.top);
+	printk("@stack size= {p}  ", (void *) free_stack_pmm.size);
 
 	// check_stack_contents();
 }
@@ -79,19 +82,23 @@ void check_stack_contents(void)
 	uint64_t i = 0;
 	printk("@stack contents:  ");
 	for ( ; i < 100; i++) {
-		printk("{p}  ", (void *) stack[i]);
+		printk("{p}  ", (void *) free_stack_pmm.base[i]);
 	}
 }
 
-const int find_total_usable_desc(const int num_desc, char *offset, uint64_t desc_size)
+/* find the total USABLE UEFI memory descriptors. */
+const int find_total_usable_uefi_desc(const int num_desc, char *offset,
+				      uint64_t desc_size)
 {
 	int total = 0;
 
 	for(int i = 0; i < num_desc; i++) {
 		EFI_MEMORY_DESCRIPTOR *desc = (EFI_MEMORY_DESCRIPTOR *) offset;
 
-		/* the memory descriptor is of type USABLE */
-		if(desc->Type == EfiBootServicesCode || desc->Type == EfiBootServicesData || desc->Type == EfiConventionalMemory) {
+		/* the UEFI memory descriptor is of type USABLE */
+		if(desc->Type == EfiBootServicesCode ||
+		   desc->Type == EfiBootServicesData ||
+		   desc->Type == EfiConventionalMemory) {
 			total++;			
 		}
 	
@@ -100,14 +107,6 @@ const int find_total_usable_desc(const int num_desc, char *offset, uint64_t desc
 
 	return total;
 }
-
-
-
-// static void find_lowest_physical_start_addr(uint64_t *lowest_physical_start_addr, uint64_t physical_start_addr)
-// {
-// 	*lowest_physical_start_addr = (physical_start_addr < *lowest_physical_start_addr) ?
-// 					physical_start_addr : *lowest_physical_start_addr;
-// }
 
 static void push_pages_to_stack(uint64_t physical_start_address, uint64_t total_pages)
 {
@@ -118,18 +117,18 @@ static void push_pages_to_stack(uint64_t physical_start_address, uint64_t total_
 }
 	
 
-static void stack_init(struct free_stack_struct *free_stack)
+static void free_stack_init(struct free_stack_struct *free_stack)
 {
-	stack = (uint64_t *) free_stack->free_stack_base;	
-	stack_top = -1;
-	stack_size = free_stack->size;
+	free_stack_pmm.base = (uint64_t *) free_stack->free_stack_base;	
+	free_stack_pmm.top = -1;
+	free_stack_pmm.size = free_stack->size;
 
-	printk("@pmm: stack base = {p}  ", (void *) stack);
+	printk("@pmm: free stack base = {p}  ", (void *) free_stack_pmm.base);
 }
 
 static void stack_push(uint64_t page_physical_addr)
 {
-	stack_top += 1;
+	free_stack_pmm.top += 1;
 
-	stack[stack_top] = page_physical_addr;
+	free_stack_pmm.base[free_stack_pmm.top] = page_physical_addr;
 }	

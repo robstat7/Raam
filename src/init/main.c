@@ -16,8 +16,6 @@ void main(struct boot_params boot_params)
 {
 	/* interrupts are still disabled. */ 
 
-	// tty_init(boot_params.fb_info);
-
 	int ret = acpi_init(boot_params.xsdp);
 	if(ret == -1) {		// error
 		goto end;
