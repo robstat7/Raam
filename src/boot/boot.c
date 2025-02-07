@@ -16,6 +16,13 @@ EFI_STATUS exit_boot_services(EFI_HANDLE image_handle)
 	EFI_STATUS status;
 	const int max_attempts = 3;
 
+	/* free the previous pool for mem map before getting the */
+	/* new memory map for exiting boot services. */
+	status = free_pool_for_mem_map();                                   
+        if(EFI_ERROR(status)) {                                                 
+                goto end;                                                       
+        }
+
 	status = get_memory_map();
 	if(EFI_ERROR(status)) {
 		goto end;

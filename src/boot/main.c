@@ -43,20 +43,11 @@ efi_main(EFI_HANDLE image_handle, EFI_SYSTEM_TABLE *system_table)
                 goto hang;
         }    
 
-	Print(L"@boot/main.c: calling func to find total usable RAM pages\n");
-
 	/* initialize the free stack (physical memory manager data structure) */
-	free_stack_init();
-
-	/* free the previous pool for mem map before getting the */
-	/* new memory map for exiting boot services. */
-	status = free_pool_for_mem_map();                                   
-        if(EFI_ERROR(status)) {                                                 
-                goto hang;                                                       
-        }
+	if(free_stack_init() == false) {
+		goto hang;
+	}
 	
-	Print(L"@boot/main.c: calling func to exit BS\n");
-
 	status = exit_boot_services(image_handle);
 	if(EFI_ERROR(status)) {
 		goto hang; 

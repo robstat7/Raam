@@ -17,12 +17,13 @@ bool free_stack_init(void)
                 goto error;                                                      
         }                                                                       
                                                                                 
-        Print(L"@free stack base = %p\n", (void *) base);            
+        // Print(L"@free stack base = %p\n", (void *) base);            
                                                                                 
         /* store free stack base and size in the boot params */                 
         boot_params.free_stack.free_stack_base = base;               
         boot_params.free_stack.size = size;
 
+	return true;
 error:
 	return false;
 }
@@ -41,25 +42,25 @@ error:
  */
 uint64_t find_free_stack_size(void)
 {
-	Print(L"@boot/free_stack.c: getting memory map for the first time!\n");
+	// Print(L"@boot/free_stack.c: getting memory map for the first time!\n");
 
 	EFI_STATUS status = get_memory_map();
 	if(EFI_ERROR(status)) {
 		goto end;
 	}
 
-	Print(L"@boot/free_stack.c: got memory map!\n");
+	// Print(L"@boot/free_stack.c: got memory map!\n");
 
-	Print(L"@boot/free_stack.c: memory_map_size = %d\n",
-	       memory_map_size);
-	Print(L"@boot/free_stack.c: desc_size = %d\n",
-	       desc_size);
-	Print(L"@boot/free_stack.c: memory map base = %p\n",
-	       (void *) memory_map);
+	// Print(L"@boot/free_stack.c: memory_map_size = %d\n",
+	//       memory_map_size);
+	// Print(L"@boot/free_stack.c: desc_size = %d\n",
+	//       desc_size);
+	// Print(L"@boot/free_stack.c: memory map base = %p\n",
+	//       (void *) memory_map);
 
 	const int num_desc = memory_map_size / desc_size;
 
-	Print(L"@boot/free_stack.c: num_desc = %d\n", num_desc);
+	// Print(L"@boot/free_stack.c: num_desc = %d\n", num_desc);
 
 	char *offset = memory_map;
 
@@ -77,8 +78,8 @@ uint64_t find_free_stack_size(void)
 		offset += desc_size;	/* see above NOTE */
 	}
 
-	Print(L"@boot/free_stack.c: total usable main mem pages = %p\n",
-	       (void *) total_pages);
+	// Print(L"@boot/free_stack.c: total usable main mem pages = %p\n",
+	//        (void *) total_pages);
 
 	return total_pages;
 
