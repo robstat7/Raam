@@ -151,3 +151,38 @@ static void stack_push(uint64_t page_physical_addr)
 
 	free_stack_pmm.base[free_stack_pmm.top] = page_physical_addr;
 }	
+
+/*
+ * free_stack_pop
+ * --------------
+ * This function pops an element from the free stack.
+ */
+static uint64_t *free_stack_pop(void)
+{
+	/* first check for free stack underflow condition. */
+	if(free_stack_pmm.top == -1) {
+		return 0;
+	} else {
+		return (uint64_t *) free_stack_pmm.base[free_stack_pmm.top--];
+	}
+}
+
+/*
+ * pmm_alloc_page
+ * --------------
+ * this function allocate one 4096-byte page of physical memory.
+ * It returns a pointer that the kernel can use.
+ * It returns 0 if the memory cannot be allocated.
+ */
+uint64_t *pmm_alloc_page(void)
+{
+	return free_stack_pop();
+}
+
+void test_pmm(void)
+{
+	for(int i = 0; i < 5; i++) {
+		uint64_t *page = pmm_alloc_page();
+		printk("@test_pmm: allocated page addr = {p}  ", (void *) page);
+	}
+}

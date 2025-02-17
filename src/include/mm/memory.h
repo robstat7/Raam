@@ -18,5 +18,8 @@ static void push_pages_to_stack(uint64_t physical_start_address,
 const int find_total_usable_uefi_desc(const int num_desc, char *offset,
 				      uint64_t desc_size);
 void check_stack_contents(void);
+static uint64_t *free_stack_pop(void);
+uint64_t *pmm_alloc_page(void);
+void test_pmm(void);
 
 #endif	/* MEMORY_H */
