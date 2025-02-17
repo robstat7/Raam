@@ -210,9 +210,25 @@ void pmm_free_page(uint64_t *page_addr)
 
 void test_pmm(void)
 {
-	uint64_t *page = pmm_alloc_page();
-	printk("@test_pmm: allocated page addr = {p}  ", (void *) page);
+	uint64_t *page1 = pmm_alloc_page();
+	printk("@test_pmm: allocated page addr = {p}  ", (void *) page1);
+	uint64_t *page2 = pmm_alloc_page();
+	printk("@test_pmm: allocated page addr = {p}  ", (void *) page2);
 
-	pmm_free_page(page);
-	printk("@test_pmm: freed page addr = {p}  ", (void *) page);
+	pmm_free_page(page1);
+	printk("@test_pmm: freed page addr = {p}  ", (void *) page1);
+	
+	page1 = pmm_alloc_page();
+	printk("@test_pmm: allocated page addr = {p}  ", (void *) page1);
+	
+	uint64_t *page3 = pmm_alloc_page();
+	printk("@test_pmm: allocated page addr = {p}  ", (void *) page3);
+
+	
+	pmm_free_page(page1);
+	printk("@test_pmm: freed page addr = {p}  ", (void *) page1);
+	pmm_free_page(page2);
+	printk("@test_pmm: freed page addr = {p}  ", (void *) page2);
+	pmm_free_page(page3);
+	printk("@test_pmm: freed page addr = {p}  ", (void *) page3);
 }

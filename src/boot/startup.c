@@ -21,9 +21,7 @@ void startup(struct boot_params boot_params)
 	/* phyical memory manager initialization */	
 	pmm_init(boot_params.memory_map, boot_params.free_stack);
 
-	test_pmm();
-
-	for(;;);
+	// test_pmm();
 
 	/* call the kernel's main function */
 	main(boot_params);

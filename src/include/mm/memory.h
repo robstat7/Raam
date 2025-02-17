@@ -23,6 +23,7 @@ const int find_total_usable_uefi_desc(const int num_desc, char *offset,
 void check_stack_contents(void);
 static uint64_t *free_stack_pop(void);
 uint64_t *pmm_alloc_page(void);
+void pmm_free_page(uint64_t *page_addr);
 void test_pmm(void);
 
 #endif	/* MEMORY_H */
