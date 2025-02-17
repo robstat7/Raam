@@ -87,7 +87,12 @@ void pmm_init(struct memory_map_struct memory_map,
 		desc_pushed[index] = true;
 	}
 
-	// printk("@free stack top = {p}  ", (void *) free_stack_pmm.top);
+	/* store free stack top position to check for */
+	/* stack overflow conditions. */
+	free_stack_pmm.top_pos = free_stack_pmm.top;
+
+	printk("@free stack top = {p}  ", (void *) free_stack_pmm.top);
+	printk("@free stack top pos = {p}  ", (void *) free_stack_pmm.top_pos);
 	// printk("@free stack size= {p}  ", (void *) free_stack_pmm.size);
 
 	// check_stack_contents();
@@ -140,6 +145,10 @@ static void free_stack_init(struct free_stack_struct *free_stack)
 	free_stack_pmm.base = (uint64_t *) free_stack->free_stack_base;	
 	free_stack_pmm.top = -1;
 	free_stack_pmm.size = free_stack->size;
+	/* temperorily set the free stack top position to the stack size. */
+	/* Note: this will be helpful when we push USABLE pages to stack */
+	/* in pmm_init(). */
+	free_stack_pmm.top_pos = free_stack_pmm.size;
 
 	// printk("@pmm: free stack base = {p}  ",
 	//	  (void *) free_stack_pmm.base);
@@ -147,10 +156,13 @@ static void free_stack_init(struct free_stack_struct *free_stack)
 
 static void stack_push(uint64_t page_physical_addr)
 {
-	free_stack_pmm.top += 1;
-
-	free_stack_pmm.base[free_stack_pmm.top] = page_physical_addr;
-}	
+	if(free_stack_pmm.top == free_stack_pmm.top_pos)	{ /* stack overflow */
+		printk("error: free stack is full. Can't push {p}!\n",
+			(void *) page_physical_addr);
+	} else {
+		free_stack_pmm.base[++free_stack_pmm.top] = page_physical_addr;
+	}
+}
 
 /*
  * free_stack_pop
@@ -179,10 +191,28 @@ uint64_t *pmm_alloc_page(void)
 	return free_stack_pop();
 }
 
+/*
+ * pmm_free_page
+ * -------------
+ * this function frees the page of physical memory pointed at by page_addr,
+ * which normally should have been returned by a
+ * call to pmm_alloc_page().
+ */
+void pmm_free_page(uint64_t *page_addr)
+{
+	if((uint64_t) page_addr % PAGESIZE) {
+		printk("panic: pmm_free_page\n");
+		for(;;);
+	}
+
+	stack_push((uint64_t) page_addr);
+}
+
 void test_pmm(void)
 {
-	for(int i = 0; i < 5; i++) {
-		uint64_t *page = pmm_alloc_page();
-		printk("@test_pmm: allocated page addr = {p}  ", (void *) page);
-	}
+	uint64_t *page = pmm_alloc_page();
+	printk("@test_pmm: allocated page addr = {p}  ", (void *) page);
+
+	pmm_free_page(page);
+	printk("@test_pmm: freed page addr = {p}  ", (void *) page);
 }

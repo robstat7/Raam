@@ -3,10 +3,13 @@
 
 #include <boot/boot_params.h>
 
+#define PAGESIZE		4096	/* in bytes */
+
 struct free_stack_pmm_struct {
 	uint64_t *base;
 	int64_t top;
-	uint64_t size;
+	int64_t top_pos;
+	uint64_t size;	/* note that size is not equal to top_pos */
 };
 
 void pmm_init(struct memory_map_struct memory_map,
