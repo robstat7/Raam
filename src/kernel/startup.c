@@ -6,7 +6,7 @@
 #include <raam/gdt.h>
 #include <raam/idt.h>
 #include <raam/tty.h>
-#include <mm/memory.h>
+#include <raam/mm/memory.h>
 
 void startup(struct boot_params boot_params)
 {
