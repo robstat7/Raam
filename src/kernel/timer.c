@@ -3,7 +3,7 @@
  */
 #include <raam/timer.h>
 #include <raam/port_io.h>
-#include <boot/isr.h>
+#include <raam/isr.h>
 
 #define LATCH			(INPUT_CLOCK_FREQUENCY/HZ)
 
