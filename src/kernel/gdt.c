@@ -3,7 +3,7 @@
  * -----
  * intialize the global descriptor table (GDT).
  */
-#include <boot/gdt.h>
+#include <raam/gdt.h>
 
 extern void load_gdt(struct gdt_desc_struct *gdt_desc);
 

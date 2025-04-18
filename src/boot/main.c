@@ -8,7 +8,7 @@
 #include <boot/xsdp.h>
 #include <boot/mem.h>
 #include <boot/boot_params.h>
-#include <boot/startup.h>
+#include <raam/startup.h>
 #include <boot/free_stack.h>
 #include <asm/system.h>
 

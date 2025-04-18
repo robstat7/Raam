@@ -1,7 +1,7 @@
 /*
  * initialize interrupt descriptor table (IDT).
  */
-#include <boot/idt.h>
+#include <raam/idt.h>
 
 struct idt_gate_desc_struct idt_entries[MAX_IDT_GATES];
 struct idt_desc_struct idt_desc;
