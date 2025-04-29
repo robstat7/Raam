@@ -91,8 +91,8 @@ void pmm_init(struct memory_map_struct memory_map,
 	/* stack overflow conditions. */
 	free_stack_pmm.top_pos = free_stack_pmm.top;
 
-	printk("@free stack top = {p}  ", (void *) free_stack_pmm.top);
-	printk("@free stack top pos = {p}  ", (void *) free_stack_pmm.top_pos);
+	// printk("@free stack top = {p}  ", (void *) free_stack_pmm.top);
+	// printk("@free stack top pos = {p}  ", (void *) free_stack_pmm.top_pos);
 	// printk("@free stack size= {p}  ", (void *) free_stack_pmm.size);
 
 	// check_stack_contents();
@@ -101,9 +101,9 @@ void pmm_init(struct memory_map_struct memory_map,
 void check_stack_contents(void)
 {
 	uint64_t i = free_stack_pmm.top - 100;
-	printk("@stack contents:  ");
+	// printk("@stack contents:  ");
 	for ( ; i < free_stack_pmm.top; i++) {
-		printk("{p}  ", (void *) free_stack_pmm.base[i]);
+		// printk("{p}  ", (void *) free_stack_pmm.base[i]);
 	}
 }
 

@@ -11,6 +11,7 @@
 #include <raam/timer.h>
 #include <raam/pic.h>
 #include <asm/system.h>
+#include <raam/fs/mkdir.h>
 
 void main(struct boot_params boot_params)
 {
@@ -26,15 +27,17 @@ void main(struct boot_params boot_params)
 	if(nvme_init(boot_params.system_variables) == -1) {
 		goto end;
 	}
+	
+	sys_mkdir("/src", 0);
 
-	timer_init();
+	// timer_init();
 
-	pic_init();
+	// pic_init();
 
-	/* enable interrupts */
-	sti();
+	// /* enable interrupts */
+	// sti();
 
-	// asm volatile ("int $0x4");
+	// // asm volatile ("int $0x4");
 
 end:
 	return;
