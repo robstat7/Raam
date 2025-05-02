@@ -52,9 +52,9 @@ int nvme_init(const uint8_t *system_variables)
 		goto end;
 	}
 
-	printk("nvme: reset completed!  ");
+	// printk("nvme: reset completed!  ");
 
-	printk("@system_variables = {p}  ", (void *) system_variables);
+	// printk("@system_variables = {p}  ", (void *) system_variables);
 
 	data_region_creation_address = (char *) system_variables;
 
@@ -69,7 +69,7 @@ int nvme_init(const uint8_t *system_variables)
 	/* enable the controller - set CC.EN (bit #0) to 1 */
         register_map->cc |= 0x1;
         
-	printk("@new CC value={d} ", register_map->cc);            
+	// printk("@new CC value={d} ", register_map->cc);            
 
 	if(nvme_init_enable_wait() == false) {                                      
                 printk("fatal error: nvme: CSTS.CFS (bit #1) is not 0!\n");         
@@ -106,8 +106,8 @@ static void nvme_io_wait(uint32_t *iocqb_ptr)
                                                                                 
         }while(val == 0);                                                       
                                                                                 
-        printk("iocq: status field plus phase tag value: {p}  ",
-	       (void *) *(uint16_t *) ((char *) iocqb_ptr + 2));
+        // printk("iocq: status field plus phase tag value: {p}  ",
+	//        (void *) *(uint16_t *) ((char *) iocqb_ptr + 2));
                                                                                 
         *iocqb_ptr = 0; /* overwrite the old entry */
 }
@@ -271,8 +271,8 @@ static void nvme_admin_wait(uint32_t *acqb_ptr)
                                                                                 
         }while(val == 0);                                                       
                                                                                 
-        printk("acq: status field plus phase tag value: {p}  ",
-	       (void *) *(uint16_t *) ((char *) acqb_ptr + 2));
+        // printk("acq: status field plus phase tag value: {p}  ",
+	//        (void *) *(uint16_t *) ((char *) acqb_ptr + 2));
                                                                                 
         *acqb_ptr = 0; /* overwrite the old entry */
 }
@@ -411,17 +411,17 @@ static void get_identify_controller_data_structure(void)
 
 	controller_identify_prp_base = data_region_creation_address;
 
-	printk("@controller_identify_prp_base region val before submitting "
-	       "identify cmd = {p}  ",
-	       (void *) (*(uint64_t *) controller_identify_prp_base));
+	// printk("@controller_identify_prp_base region val before submitting "
+	//       "identify cmd = {p}  ",
+	//       (void *) (*(uint64_t *) controller_identify_prp_base));
 
 	/* send the command */
 	send_admin_command(cdw0, cdw1, (uint64_t) controller_identify_prp_base,
 			   cdw10, cdw11);
 
-	printk("@controller_identify_prp_base region val after submitting "
-	       "identify cmd = {p}  ",
-	       (void *) (*(uint64_t *) controller_identify_prp_base));
+	// printk("@controller_identify_prp_base region val after submitting "
+	//        "identify cmd = {p}  ",
+	//        (void *) (*(uint64_t *) controller_identify_prp_base));
 }
 
 /* update address to point to the next 4096 bytes alligned address.
@@ -490,8 +490,8 @@ static void configure_admin_queues(void)
 	/* set the admin queue attributes register (AQA). */
 	register_map->aqa = aqa_value;
 	
-	printk("admin queue attributes (aqa) register value: {p}  ",
-	       (void *) register_map->aqa);
+	// printk("admin queue attributes (aqa) register value: {p}  ",
+	//        (void *) register_map->aqa);
 
 	// set up asq and acq memory regions, ensuring 4KB alignment
 	nvme_asqb = align_to_4096(data_region_creation_address);
@@ -500,15 +500,15 @@ static void configure_admin_queues(void)
 	nvme_acqb = align_to_4096(data_region_creation_address);
 	data_region_creation_address = nvme_acqb + 4096;
 	
-	printk("@new asqb={p}", (void *) nvme_asqb);
-	printk("@new acqb={p}", (void *) nvme_acqb);
+	// printk("@new asqb={p}", (void *) nvme_asqb);
+	// printk("@new acqb={p}", (void *) nvme_acqb);
 	
 	// Set asq and acq registers in the controller (must be 4KB aligned)
 	register_map->asq = (uint64_t) nvme_asqb;
 	register_map->acq = (uint64_t) nvme_acqb;
 	
-	printk("@read asq register={p}", (void *) register_map->asq);
-	printk("@read acq register={p}", (void *) register_map->acq);
+	// printk("@read asq register={p}", (void *) register_map->asq);
+	// printk("@read acq register={p}", (void *) register_map->acq);
 }
 
 /*                                                                              
@@ -533,12 +533,12 @@ static bool wait_for_reset_complete(void)
 
 static bool reset_controller(void)                                                     
 {                                                                               
-	printk("@old cc value = {d}  ", register_map->cc);                            
+	// printk("@old cc value = {d}  ", register_map->cc);                            
 	                                                                            
 	/* clear CC.EN (bit #0) if it is set */
 	register_map->cc &= ~0x1;                                                   
 	                                                                            
-	printk("@new cc value = {d}  ", register_map->cc);                            
+	// printk("@new cc value = {d}  ", register_map->cc);                            
 	                                                                            
 	return wait_for_reset_complete();                                           
 }

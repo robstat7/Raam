@@ -120,3 +120,14 @@ void integer_to_hex_string(uint64_t num, char *str)
 	// reverse the string
 	reverse(str, i);
 }
+
+int strlen(const char *s)
+{
+	int len = 0;
+
+	for(int i = 0; s[i] != '\0'; i++) {
+		len++;
+	}
+
+	return len;
+}

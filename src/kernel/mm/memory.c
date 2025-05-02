@@ -91,8 +91,8 @@ void pmm_init(struct memory_map_struct memory_map,
 	/* stack overflow conditions. */
 	free_stack_pmm.top_pos = free_stack_pmm.top;
 
-	printk("@free stack top = {p}  ", (void *) free_stack_pmm.top);
-	printk("@free stack top pos = {p}  ", (void *) free_stack_pmm.top_pos);
+	// printk("@free stack top = {p}  ", (void *) free_stack_pmm.top);
+	// printk("@free stack top pos = {p}  ", (void *) free_stack_pmm.top_pos);
 	// printk("@free stack size= {p}  ", (void *) free_stack_pmm.size);
 
 	// check_stack_contents();
@@ -101,9 +101,9 @@ void pmm_init(struct memory_map_struct memory_map,
 void check_stack_contents(void)
 {
 	uint64_t i = free_stack_pmm.top - 100;
-	printk("@stack contents:  ");
+	// printk("@stack contents:  ");
 	for ( ; i < free_stack_pmm.top; i++) {
-		printk("{p}  ", (void *) free_stack_pmm.base[i]);
+		// printk("{p}  ", (void *) free_stack_pmm.base[i]);
 	}
 }
 
@@ -211,24 +211,24 @@ void pmm_free_page(uint64_t *page_addr)
 void test_pmm(void)
 {
 	uint64_t *page1 = pmm_alloc_page();
-	printk("@test_pmm: allocated page addr = {p}  ", (void *) page1);
+	// printk("@test_pmm: allocated page addr = {p}  ", (void *) page1);
 	uint64_t *page2 = pmm_alloc_page();
-	printk("@test_pmm: allocated page addr = {p}  ", (void *) page2);
+	// printk("@test_pmm: allocated page addr = {p}  ", (void *) page2);
 
 	pmm_free_page(page1);
-	printk("@test_pmm: freed page addr = {p}  ", (void *) page1);
+	// printk("@test_pmm: freed page addr = {p}  ", (void *) page1);
 	
 	page1 = pmm_alloc_page();
-	printk("@test_pmm: allocated page addr = {p}  ", (void *) page1);
+	// printk("@test_pmm: allocated page addr = {p}  ", (void *) page1);
 	
 	uint64_t *page3 = pmm_alloc_page();
-	printk("@test_pmm: allocated page addr = {p}  ", (void *) page3);
+	// printk("@test_pmm: allocated page addr = {p}  ", (void *) page3);
 
 	
 	pmm_free_page(page1);
-	printk("@test_pmm: freed page addr = {p}  ", (void *) page1);
+	// printk("@test_pmm: freed page addr = {p}  ", (void *) page1);
 	pmm_free_page(page2);
-	printk("@test_pmm: freed page addr = {p}  ", (void *) page2);
+	// printk("@test_pmm: freed page addr = {p}  ", (void *) page2);
 	pmm_free_page(page3);
-	printk("@test_pmm: freed page addr = {p}  ", (void *) page3);
+	// printk("@test_pmm: freed page addr = {p}  ", (void *) page3);
 }

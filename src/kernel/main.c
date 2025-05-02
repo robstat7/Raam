@@ -11,6 +11,7 @@
 #include <raam/timer.h>
 #include <raam/pic.h>
 #include <asm/system.h>
+#include <raam/fs/open.h>
 
 void main(struct boot_params boot_params)
 {
@@ -27,12 +28,14 @@ void main(struct boot_params boot_params)
 		goto end;
 	}
 
-	timer_init();
+	sys_open("/prg.c", 0, 0);
 
-	pic_init();
+	// timer_init();
 
-	/* enable interrupts */
-	sti();
+	// pic_init();
+
+	// /* enable interrupts */
+	// sti();
 
 	// asm volatile ("int $0x4");
 
