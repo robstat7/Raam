@@ -28,7 +28,8 @@ void main(struct boot_params boot_params)
 		goto end;
 	}
 
-	sys_open("/prg.c", 0, 0);
+	// sys_open("/prg.c", 0, 0);
+	sys_open("/src/prg.c", 0, 0);
 
 	// timer_init();
 

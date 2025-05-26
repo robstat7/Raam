@@ -91,7 +91,6 @@ struct ext2_dir_entry_2 {
 };
 
 int sys_open(const char *filename, int flag, int mode);
-static void get_only_file_name(const char *filename, const char *only_file_name);
-static uint32_t get_inode_table_start_block(void);
+static void get_only_file_name(const char *filename, const int total_dirs, const char *only_file_name);
 
 #endif	/* OPEN_H */
