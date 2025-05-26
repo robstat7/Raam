@@ -4,7 +4,7 @@
 
 # Raam kernel
 
-Raam is a 64-bit Unix-like kernel for x86-64 based machines.
+Raam is a 64-bit Unix-like kernel for x86-64 PCs.
 
 Updates on my work can be read at [Discussions](https://github.com/robstat7/Raam/discussions).
 
@@ -41,7 +41,7 @@ Sumiran-bhajan (chanting) method can be learned from the following video:
 
 &nbsp;&nbsp;&nbsp;&nbsp;[Raamdwara Pune || Sumiran-bhajan (chanting) method || Shanu Pandit Ji](https://www.youtube.com/watch?v=EYQ73QSJQZY)
 
-Hackers, hobbyists, enthusiasts, and users knowing the Hindi language can
+Hackers, hobbyists, and enthusiasts knowing the Hindi language can
 visit the following YouTube channels for satsanga (spiritual discourse):
 
 &nbsp;&nbsp;&nbsp;&nbsp;[Dr. Pavan Chandak Ji](https://www.youtube.com/@dr.pavanchandak8939)
