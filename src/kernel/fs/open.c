@@ -2,12 +2,9 @@
 #include <raam/printk.h>
 #include <raam/fs/open.h>
 #include <raam/nvme.h>
-#include <stdint.h>
 // #include <string.h>
 
 const uint32_t raam_root_starting_sector = 997109760;
-
-#define INODE_SIZE	256	/* in bytes */
 
 int get_file_inode(const char *filename);
 uint32_t get_inode_table_start_block_nr_for_group_0(void);
@@ -19,6 +16,7 @@ void find_dir_name(const char *filename, const int dir_num, char *dir_name);
 uint32_t get_directory_inode_nr(const char *dir_name, const int parent_dir_inode_nr, const uint32_t inode_table_start_block_nr);
 uint32_t get_directory_inode_nr_from_parent_block(const uint32_t parent_dir_direct_block_pointer_0, const char *dir_name);
 uint32_t get_parent_directory_data_block_nr(const int parent_dir_inode_nr, const uint32_t inode_table_start_block_nr);
+uint32_t get_file_inode_nr_from_directory(const char *only_file_name, const uint32_t dir_inode);
 
 int sys_open(const char *filename, int flag, int mode)
 {
@@ -30,7 +28,7 @@ int sys_open(const char *filename, int flag, int mode)
 
 	// char *buf = nvme_read(inode_table_sector, 1);
 
-	// struct ext2_inode *root_inode = (struct ext2_inode *) (buf + INODE_SIZE);
+	// struct ext2_inode *root_inode = (struct ext2_inode *) (buf + EXT2_GOOD_OLD_INODE_SIZE);
 
 	// uint32_t direct_block_pointer_0 = root_inode->i_block[0];
 
@@ -182,8 +180,35 @@ void read_directories(const char *filename, const char *only_file_name, const in
 		dir_num++;
 	}
 
-	get_file_inode_nr(only_file_name, inode, inode_table_start_block_nr);
+	get_file_inode_nr_from_directory(only_file_name, inode);
 }
+
+/* 
+ * find and get the file inode number from the directory in which the file should exist.
+ * returns a natural number if the file is found else 0.
+ */
+uint32_t get_file_inode_nr_from_directory(const char *only_file_name, const uint32_t dir_inode)
+{
+	uint32_t superblock_sector;
+	char *buf;
+	struct ext2_sb_info *sb;
+	uint8_t block_group_nr;
+
+	superblock_sector = raam_root_starting_sector + (1024/512);
+	buf = nvme_read(superblock_sector, 2);
+
+	sb = (struct ext2_sb_info *) buf;	
+
+	printk("@@s_inodes_per_group = {d}  ", sb->s_inodes_per_group);
+
+	block_group_nr = (dir_inode - 1) / sb->s_inodes_per_group;
+	
+	printk("@@block_group_nr = {d}  ", block_group_nr);
+
+
+
+	return 0;
+}	
 
 /* get the inode number for the directory given by `dir_name` in its parent directory */
 uint32_t get_directory_inode_nr(const char *dir_name, const int parent_dir_inode_nr, const uint32_t inode_table_start_block_nr)
@@ -228,9 +253,9 @@ uint32_t get_directory_inode_nr_from_parent_block(const uint32_t parent_dir_dire
 
 		name[entry->name_len] = '\0';
 
-		printk(name);
+		// printk(name);
 
-		printk("  ");
+		// printk("  ");
 
 		if (strncmp(name, dir_name, entry->name_len) == 0) {
 			return entry->inode;
@@ -253,7 +278,7 @@ uint32_t get_parent_directory_data_block_nr(const int parent_dir_inode_nr, const
 	
 	buf = nvme_read(inode_table_sector, 8);
 
-	inode = (struct ext2_inode *) (buf + ((parent_dir_inode_nr - 1) * INODE_SIZE));
+	inode = (struct ext2_inode *) (buf + ((parent_dir_inode_nr - 1) * EXT2_GOOD_OLD_INODE_SIZE));
 
 	direct_block_pointer_0 = inode->i_block[0];
 

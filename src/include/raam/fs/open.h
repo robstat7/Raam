@@ -1,8 +1,43 @@
 #ifndef OPEN_H
 #define OPEN_H
 
+#include <stdint.h>
+
 #define EXT2_BLOCK_SIZE		4096	/* in bytes */
 #define EXT2_N_BLOCKS		15
+
+#define EXT2_GOOD_OLD_INODE_SIZE        128     /* in bytes */
+
+/*
+ * Structure of a superblock
+ */
+struct ext2_sb_info
+{
+	uint32_t 	s_inodes_count;
+	uint32_t 	s_blocks_count;
+	uint32_t 	s_r_blocks_count;
+	uint32_t 	s_free_blocks_count;
+	uint32_t 	s_free_inodes_count;
+	uint32_t 	s_first_data_block;
+	uint32_t 	s_log_block_size;
+	uint32_t 	s_log_frag_size;
+	uint32_t 	s_blocks_per_group;
+	uint32_t 	s_frags_per_group;
+	uint32_t 	s_inodes_per_group;
+	uint32_t 	s_mtime;
+	uint32_t 	s_wtime;
+	uint16_t	s_mnt_count;
+	uint16_t	s_magic;
+	uint16_t	s_state;
+	uint16_t	s_errors;
+	uint16_t	s_minor_rev_level;
+	uint32_t	s_lastcheck;
+	uint32_t	s_checkinterval;
+	uint32_t	s_creator_os;
+	uint32_t	s_rev_level;
+	uint16_t	s_def_resuid;
+	uint16_t	s_def_resgid;
+};
 
 /*
  * Structure of a blocks group descriptor
@@ -44,7 +79,7 @@ struct ext2_inode {
 		struct {
 			uint32_t  m_i_reserved1;
 		} masix1;
-	} osd1;				/* OS dependent 1 */
+	} i_osd1;				/* OS dependent 1 */
 	uint32_t	i_block[EXT2_N_BLOCKS];/* Pointers to blocks */
 	uint32_t	i_generation;	/* File version (for NFS) */
 	uint32_t	i_file_acl;	/* File ACL */
@@ -73,7 +108,7 @@ struct ext2_inode {
 			uint16_t	m_pad1;
 			uint32_t	m_i_reserved2[2];
 		} masix2;
-	} osd2;				/* OS dependent 2 */
+	} i_osd2;				/* OS dependent 2 */
 };
 
 /*
@@ -85,8 +120,7 @@ struct ext2_inode {
 struct ext2_dir_entry_2 {
 	uint32_t inode;			/* Inode number */
 	uint16_t rec_len;		/* Directory entry length */
-	uint8_t name_len;		/* Name length */
-	uint8_t file_type;
+	uint16_t name_len;		/* Name length */
 	char	name[];			/* File name, up to EXT2_NAME_LEN */
 };
 
