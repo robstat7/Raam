@@ -9,6 +9,8 @@ entry start
 ; include the uefi library
 include 'uefi.inc'
 
+include 'kernel.asm'
+
 struc FRAMEBUFFER {
 	.framebuffer_base	void
 	.framebuffer_size	void
@@ -32,6 +34,8 @@ start:
 	jc .hang
 
   call exit_boot_services
+
+  call kernel_init
 
 .hang:
   jmp $
