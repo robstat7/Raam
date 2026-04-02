@@ -1,7 +1,8 @@
 ;
 ; Raam Raam Ji _/\_ _/\_ _/\_
 ;
-
+; uefi bootloader using fasm.
+;
 format pe64 efi
 
 entry start
@@ -10,6 +11,7 @@ entry start
 include 'uefi.inc'
 
 include 'kernel.asm'
+
 
 struc FRAMEBUFFER {
 	.framebuffer_base	void
@@ -24,17 +26,24 @@ struct FRAMEBUFFER
 section '.text' code executable readable
 
 start:
-  ; initialize the uefi library
+  ; first initialize the uefi library
 	InitializeLib
 
-  ; note: the carry flag is set on an error during library initialization
+  ; note: the carry flag is set on an error during the library initialization
 	jc .error_exit
 
+  ; now set the video mode for 1280 x 1024 resolution
+  call set_video_mode_1280x1024
+	jc .hang
+
+  ; and store the framebuffer information for this newly set video mode.
   call store_framebuffer_info	
 	jc .hang
 
+  ; now exit the boot services
   call exit_boot_services
 
+  ; go to kernel initialization code
   call kernel_init
 
 .hang:
@@ -49,13 +58,9 @@ start:
 ;
 ; store_framebuffer_info
 ;
-; this function sets the video mode for 1280 x 1024 resolution and store the
-; framebuffer information for this newly set video mode.
+; this function stores the framebuffer information.
+;
 store_framebuffer_info:
-	call set_1280_by_1024_video_mode
-	; note that the carry flag is set on an error
-	jc .exit
-
 	; allocate a new pool of memory to store the framebuffer information
 
 	uefi_call_wrapper BootServices, AllocatePool, 2, \
@@ -95,14 +100,15 @@ store_framebuffer_info:
 	jmp $	; hang here on error
 
 ;
-; set_1280_by_1024_video_mode
+; set_video_mode_1280x1024
 ;
 ; this function gets the first graphics output protocol (GOP) instance, stores
 ; the total number of video modes information, queries available video modes and
 ; gets the video mode code for 1280 x 1024 resolution. On success, it sets this
 ; new video mode.
 ; Note that we need to set this new video mode for better console readability.
-set_1280_by_1024_video_mode:
+;
+set_video_mode_1280x1024:
 	; get the first protocol instance that matches the GOP
 
 	; invoke EFI_BOOT_SERVICES.LocateProtocol() function
@@ -190,6 +196,7 @@ set_1280_by_1024_video_mode:
 ; exit_boot_services
 ;
 ; this function exits the boot services.
+;
 exit_boot_services:
 	; get memory map size
 

@@ -1,1 +1,1 @@
-$ fasm boot.asm BOOTx64.EFI
+$ fasm boot.asm build/BOOTx64.EFI
