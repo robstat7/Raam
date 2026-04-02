@@ -30,6 +30,13 @@ COORDINATE_ORIGIN = 0
 FONT_HEIGHT = 16
 FONT_WIDTH = 8
 
+; size of spacing (in pixels) between two lines on the terminal screen
+LINE_SPACING_SIZE = 0x2
+
+
+; character
+NEWLINE_CHARACTER = 0xa
+
 
 section '.text' code executable readable
 
@@ -61,24 +68,18 @@ kernel_init:
 ;   nothing
 ;
 tty_put_char:
-  ; reset row and col
-  mov dword [row], 0
-  mov dword [col], 0
-
-  cmp al, 10    ; new line character
+  ; first handle special character
+  cmp al, NEWLINE_CHARACTER
   jne .continue
 
-  lea r8, [default_tty]
-  mov dword [r8 + TTY.cursor_x], COORDINATE_ORIGIN
-
-  mov ebx, dword [r8 + TTY.cursor_y]
-  add ebx, FONT_HEIGHT
-  add ebx, 2    ; line spacing
-
-  mov dword [r8 + TTY.cursor_y], ebx
+  call update_tty_cursors_for_newline
   jmp .exit
 
 .continue:
+; reset row and col
+  mov dword [row], 0
+  mov dword [col], 0
+
   xor ebx, ebx
   mov bl, al
   imul ebx, FONT_HEIGHT
@@ -132,6 +133,29 @@ tty_put_char:
   call update_tty_cursors
   
 .exit:
+  ret
+
+;
+; update_tty_cursors_for_newline
+;
+; this function updates the terminal screen cursors when a newline
+; character is passed to the tty_put_char function.
+;
+; args:
+;   nothing
+;
+; retuns:
+;   nothing
+;
+update_tty_cursors_for_newline:
+  lea r8, [default_tty]
+  mov dword [r8 + TTY.cursor_x], COORDINATE_ORIGIN
+
+  mov ebx, dword [r8 + TTY.cursor_y]
+  add ebx, FONT_HEIGHT                    ; move down by font height
+  add ebx, LINE_SPACING_SIZE              ; and add line spacing size
+
+  mov dword [r8 + TTY.cursor_y], ebx
   ret
 
 ;
