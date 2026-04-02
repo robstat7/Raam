@@ -1,3 +1,6 @@
+;
+; Raam Raam Ji _/\_ _/\_ _/\_
+;
 include 'font.asm'
 
 struc TTY {
@@ -13,10 +16,21 @@ struc TTY {
 struct TTY
 
 
+; constants
+
+; tty colors
+COLOR_WHITE = 0xffffff
+COLOR_BLACK = 0x000000
+
+; origin coordinate
+COORDINATE_ORIGIN = 0
+
+
 section '.text' code executable readable
 
+; initialize our kernel here.
 kernel_init:
-  call tty_init
+  call default_tty_init
 
   xor eax, eax
   mov al, 'R'
@@ -161,11 +175,17 @@ tty_put_pixel:
   ret
 
 ; 
-; tty_init
+; default_tty_init
 ;
-; this function initializes the tty structure.
+; this function initializes the default terminal (default_tty) attributes.
 ;
-tty_init:
+; args:
+;   none
+;
+; returns:
+;   none
+;
+default_tty_init:
   mov rax, qword [framebuffer_info] 
   mov rbx, default_tty
 
@@ -181,19 +201,20 @@ tty_init:
   mov ecx, dword [rax + FRAMEBUFFER.pixels_per_scanline]
   mov dword [rbx + TTY.pixels_per_scanline], ecx
 
-  mov dword [rbx + TTY.cursor_x], 0
-  mov dword [rbx + TTY.cursor_y], 0
+  mov dword [rbx + TTY.cursor_x], COORDINATE_ORIGIN
+  mov dword [rbx + TTY.cursor_y], COORDINATE_ORIGIN
 
-  mov dword [rbx + TTY.fg_color], 0xffffff      ; white
-  mov dword [rbx + TTY.bg_color], 0x000000      ; black
+  mov dword [rbx + TTY.fg_color], COLOR_WHITE
+  mov dword [rbx + TTY.bg_color], COLOR_BLACK
 
   ret
 
 
 section '.data' data readable writeable
 
+; reserve 36 bytes to hold the default terminal attributes (see struc TTY above)
 align 8
-default_tty     rb 36   ; reserve 36 bytes to hold default terminal info
+default_tty     rb 36
 
 offset          dd 0
 row             dd 0

@@ -14,11 +14,11 @@ include 'kernel.asm'
 
 
 struc FRAMEBUFFER {
-	.framebuffer_base	void
-	.framebuffer_size	void
-	.horizontal_res		UINT32
-	.vertical_res		UINT32
-	.pixels_per_scanline	UINT32
+	.framebuffer_base	        void
+	.framebuffer_size	        void
+	.horizontal_res		        UINT32
+	.vertical_res		          UINT32
+	.pixels_per_scanline	    UINT32
 }
 struct FRAMEBUFFER
 
