@@ -26,17 +26,20 @@ COLOR_BLACK = 0x000000
 COORDINATE_ORIGIN = 0
 
 
+; font height and width
+FONT_HEIGHT = 16
+FONT_WIDTH = 8
+
+
 section '.text' code executable readable
 
 ; initialize our kernel here.
 kernel_init:
   call default_tty_init
 
-  xor eax, eax
   mov al, 'R'
   call tty_put_char
 
-  xor eax, eax
   mov al, 'a'
   call tty_put_char
 
@@ -55,15 +58,16 @@ kernel_init:
 ;   @al register = the ascii code of the character to print
 ;
 ; returns:
-;   none
+;   nothing
 ;
 tty_put_char:
-  mov dword [row], 0      ; reset row
-  mov dword [col], 0      ; reset col
+  ; reset row and col
+  mov dword [row], 0
+  mov dword [col], 0
 
   xor ebx, ebx
   mov bl, al
-  imul ebx, 16       ; 16 is the font height 
+  imul ebx, FONT_HEIGHT
   mov dword [offset], ebx
 
 .row_loop:  
@@ -123,16 +127,16 @@ tty_put_char:
 ; the next character at the right place.
 ;
 ; args:
-;   none
+;   nothing
 ;
 ; retuns:
-;   none
+;   nothing
 ;
 update_tty_cursors:
   mov r8, default_tty
 
   mov eax, dword [r8 + TTY.cursor_x]
-  add eax, 8  ; 8 is the font width
+  add eax, FONT_WIDTH
   mov dword [r8 + TTY.cursor_x], eax
 
   mov ebx, dword [r8 + TTY.horizontal_res]
@@ -143,7 +147,7 @@ update_tty_cursors:
 
   ; move down by the font height
   mov eax, dword [r8 + TTY.cursor_y]
-  add eax, 16
+  add eax, FONT_HEIGHT
   mov dword [r8 + TTY.cursor_y], eax
 
 .exit:
@@ -180,10 +184,10 @@ tty_put_pixel:
 ; this function initializes the default terminal (default_tty) attributes.
 ;
 ; args:
-;   none
+;   nothing
 ;
 ; returns:
-;   none
+;   nothing
 ;
 default_tty_init:
   mov rax, qword [framebuffer_info] 
