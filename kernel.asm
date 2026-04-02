@@ -37,11 +37,8 @@ section '.text' code executable readable
 kernel_init:
   call default_tty_init
 
-  mov al, 'R'
-  call tty_put_char
-
-  mov al, 'a'
-  call tty_put_char
+  lea rax, [msg]
+  call printk
 
   jmp $
 
@@ -213,6 +210,30 @@ default_tty_init:
 
   ret
 
+printk:
+  mov dword [i], 0
+  push rax
+
+.loop_start:
+  pop rax
+  xor ebx, ebx
+  mov ebx, dword [i]
+  add rbx, rax
+
+  cmp byte [rbx], 0x00
+  je .exit
+
+  push rax
+
+  mov al, byte [rbx]
+  call tty_put_char
+
+  inc dword [i]
+  jmp .loop_start
+
+.exit:
+  ret
+
 
 section '.data' data readable writeable
 
@@ -237,3 +258,7 @@ mask:
   db 4
   db 2
   db 1
+
+
+i               dq 0
+msg   db "Raam Raam sa", 0
