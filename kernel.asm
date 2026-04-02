@@ -37,7 +37,10 @@ section '.text' code executable readable
 kernel_init:
   call default_tty_init
 
-  lea rax, [msg]
+  lea rax, [msg1]
+  call printk
+
+  lea rax, [msg2]
   call printk
 
   jmp $
@@ -62,6 +65,20 @@ tty_put_char:
   mov dword [row], 0
   mov dword [col], 0
 
+  cmp al, 10    ; new line character
+  jne .continue
+
+  lea r8, [default_tty]
+  mov dword [r8 + TTY.cursor_x], COORDINATE_ORIGIN
+
+  mov ebx, dword [r8 + TTY.cursor_y]
+  add ebx, FONT_HEIGHT
+  add ebx, 2    ; line spacing
+
+  mov dword [r8 + TTY.cursor_y], ebx
+  jmp .exit
+
+.continue:
   xor ebx, ebx
   mov bl, al
   imul ebx, FONT_HEIGHT
@@ -261,4 +278,5 @@ mask:
 
 
 i               dq 0
-msg   db "Raam Raam sa", 0
+msg1   db "Raam Raam sa", 10, 0
+msg2   db "Dileep Sankhla", 0
