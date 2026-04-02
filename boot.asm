@@ -40,10 +40,10 @@ start:
   call store_framebuffer_info	
 	jc .hang
 
-  ; now exit the boot services
+  ; now exit the boot services.
   call exit_boot_services
 
-  ; go to kernel initialization code
+  ; go to kernel initialization code.
   call kernel_init
 
 .hang:

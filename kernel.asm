@@ -1,14 +1,14 @@
 include 'font.asm'
 
 struc TTY {
-	.framebuffer_base	void
-	.horizontal_res		UINT32
-	.vertical_res		UINT32
-	.pixels_per_scanline	UINT32
-  .cursor_x             UINT32
-  .cursor_y             UINT32
-  .fg_color             UINT32
-  .bg_color             UINT32
+	.framebuffer_base	        void
+	.horizontal_res		        UINT32
+	.vertical_res		          UINT32
+	.pixels_per_scanline	    UINT32
+  .cursor_x                 UINT32
+  .cursor_y                 UINT32
+  .fg_color                 UINT32
+  .bg_color                 UINT32
 }
 struct TTY
 
@@ -26,47 +26,22 @@ kernel_init:
   mov al, 'a'
   call tty_put_char
 
-  xor eax, eax
-  mov al, 'a'
-  call tty_put_char
-
-  xor eax, eax
-  mov al, 'm'
-  call tty_put_char
-
-  xor eax, eax
-  mov al, ' '
-  call tty_put_char
-
-  xor eax, eax
-  mov al, 'R'
-  call tty_put_char
-
-  xor eax, eax
-  mov al, 'a'
-  call tty_put_char
-
-  xor eax, eax
-  mov al, 'a'
-  call tty_put_char
-
-  xor eax, eax
-  mov al, 'm'
-  call tty_put_char
-
-
-
   jmp $
-
 
 ;
 ; tty_put_char
 ;
-; this function puts a single character onto the terminal. It uses
-; the 8x16 font array to get the font's data and writes it to the
+; this function puts a single character onto the terminal screen. It
+; uses the 8x16 font array to get the font's data and writes it to the
 ; framebuffer pixel by pixel. It only writes the "on" pixels with the
-; foreground color. It then updates the cursors' positions to put the
-; next character at the right place.
+; foreground color. It then updates the terminal cursors' positions to
+; put the next character at the right place.
+;
+; args:
+;   @al register = the ascii code of the character to print
+;
+; returns:
+;   none
 ;
 tty_put_char:
   mov dword [row], 0      ; reset row
@@ -122,6 +97,24 @@ tty_put_char:
 
 .after:
   ; update tty cursors' positions
+  call update_tty_cursors
+  
+.exit:
+  ret
+
+;
+; update_tty_cursors
+;
+; this function updates the terminal screen's cursors' positions to put
+; the next character at the right place.
+;
+; args:
+;   none
+;
+; retuns:
+;   none
+;
+update_tty_cursors:
   mov r8, default_tty
 
   mov eax, dword [r8 + TTY.cursor_x]
