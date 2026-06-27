@@ -5,11 +5,16 @@ include 'tty_io.asm'
 
 include 'printk.asm'
 
+include 'gdt.asm'
+
 
 section '.text' code executable readable
 
 ; initialize our kernel here.
 kernel_init:
+  ; first disable interrupts
+  cli
+  call gdt_init
   call default_tty_init
 
   lea rax, [msg1]
