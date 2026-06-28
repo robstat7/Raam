@@ -3,6 +3,8 @@
 ;
 NUM_GDT_ENTRIES = 3
 
+DESCRIPTOR_SIZE = 8       ; in bytes
+
 
 section '.text' code executable readable
 
@@ -26,7 +28,7 @@ gdt_init:
   call create_descriptors
 
   lea rax, [GDTR.limit]
-  mov word [rax], NUM_GDT_ENTRIES * 8 - 1
+  mov word [rax], DESCRIPTOR_SIZE * NUM_GDT_ENTRIES - 1
 
   lea rax, [GDTR.address]
   lea rbx, [gdt_entries]
@@ -45,7 +47,7 @@ reload_segments:
   push 0x08     ; kernel code segment descriptor offset
 
   ; 2. push the address of the label directly below onto the stack.
-  mov rax, $$ + .reload_cs
+  lea rax, [.reload_cs]
   push rax
 
   ; 3. execute a 64-bit far return. 
@@ -138,7 +140,6 @@ create_descriptors:
   mov rbx, qword [rax]
 
   mov qword [rcx], rbx
-
   ret
 
 
