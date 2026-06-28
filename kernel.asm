@@ -7,6 +7,8 @@ include 'printk.asm'
 
 include 'gdt.asm'
 
+include 'idt.asm'
+
 
 section '.text' code executable readable
 
@@ -14,14 +16,21 @@ section '.text' code executable readable
 kernel_init:
   ; first disable interrupts
   cli
+
   call gdt_init
+  call idt_init
   call default_tty_init
+
+  ; enable interrupts now
+  sti
 
   lea rax, [msg1]
   call printk
 
   lea rax, [msg2]
   call printk
+
+  int 0x03
 
   jmp $
 
