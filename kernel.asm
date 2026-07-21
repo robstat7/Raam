@@ -9,6 +9,8 @@ include 'gdt.asm'
 
 include 'idt.asm'
 
+include 'pic.asm'
+
 
 section '.text' code executable readable
 
@@ -19,6 +21,7 @@ kernel_init:
 
   call gdt_init
   call idt_init
+  call pic_init
   call default_tty_init
 
   ; enable interrupts now
