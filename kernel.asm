@@ -11,6 +11,8 @@ include 'idt.asm'
 
 include 'pic.asm'
 
+include 'kbd.asm'
+
 
 section '.text' code executable readable
 
@@ -21,24 +23,21 @@ kernel_init:
 
   call gdt_init
   call idt_init
+
   call pic_init
+  call kbd_init
+
   call default_tty_init
 
   ; enable interrupts now
   sti
 
-  lea rax, [msg1]
+  lea rax, [msg_debug]
   call printk
-
-  lea rax, [msg2]
-  call printk
-
-  int 0x03
 
   jmp $
 
 
 section '.data' data readable writeable
 
-msg1   db "Raam Raam sa", 10, 0
-msg2   db "Dileep Sankhla", 0
+msg_debug db "Test message", 10, 0
