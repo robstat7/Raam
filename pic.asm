@@ -5,6 +5,11 @@ PIC1_DATA = PIC1 + 1
 PIC2_COMMAND = PIC2
 PIC2_DATA = PIC2 + 1
 
+PIC_MASTER_CMD = 0x20
+PIC_SLAVE_CMD = 0xa0
+
+PIC_CMD_EOI = 0x20
+
 ICW1_ICW4 = 0x01    ; indicates that ICW4 will be present
 ICW1_INIT = 0x10    ; initialization - required!
 ICW2_MASTER = 0x20  ; master PIC vector offset
@@ -73,4 +78,32 @@ pic_init:
   mov dx, PIC2_DATA
   out dx, al
 
+  ret
+
+;
+; pic_send_eoi
+;
+; this function sends the end of interrupt command to the PIC.
+;
+; args:
+;   @dil = IRQ number
+;
+; returns:
+;   nothing
+;
+pic_send_eoi:
+  cmp dil, 8
+  jae .else
+
+  mov dx, PIC_MASTER_CMD
+  mov al, PIC_CMD_EOI
+  out dx, al
+  jmp .end
+
+.else:
+  mov dx, PIC_SLAVE_CMD
+  mov al, PIC_CMD_EOI
+  out dx, al
+
+.end:
   ret

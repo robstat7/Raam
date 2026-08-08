@@ -9,6 +9,9 @@ NUM_IDT_ENTRIES = 256
 DESCRIPTOR_SIZE = 16       ; in bytes
 
 
+TOTAL_VECTORS = 34         ; isr_stub_0 to isr_stub_33
+
+
 GDT_OFFSET_KERNEL_CODE = 0x08
 
 
@@ -27,6 +30,11 @@ struct IDT_ENTRY
 section '.text' code executable readable
 
 idt_init:
+  push rbp
+  mov rbp, rsp
+
+  sub rsp, 1  ; vector variable
+
   lea rax, [IDTR.limit]
   mov word [rax], NUM_IDT_ENTRIES * DESCRIPTOR_SIZE - 1
 
@@ -34,17 +42,17 @@ idt_init:
   lea rbx, [idt]
   mov qword [rax], rbx
 
-  mov byte [vector], 0
+  mov byte [rbp - 1], 0
 
 .loop_start:
-  cmp byte [vector], 32
+  cmp byte [rbp - 1], TOTAL_VECTORS
   jae .loop_end
   xor eax, eax
-  mov al, byte [vector]
+  mov al, byte [rbp - 1]
 
   lea rbx, [isr_stub_table]
   xor edx, edx
-  mov dl, byte [vector]
+  mov dl, byte [rbp - 1]
   imul edx, 8       ; each address is stub table is 8 bytes long
   add rbx, rdx
   mov rbx, [rbx]    ; rbx = isr_stub_table[vector]   (the actual ISR address)
@@ -53,11 +61,14 @@ idt_init:
 
   call idt_set_descriptor
 
-  inc byte [vector]
+  inc byte [rbp - 1]
   jmp .loop_start
 
 .loop_end:
   lidt [IDTR]
+
+  mov rsp, rbp
+  pop rbp
   ret
 
 ;
@@ -113,5 +124,3 @@ idt               rb DESCRIPTOR_SIZE * NUM_IDT_ENTRIES
 IDTR:
   .limit          dw 0
   .base           dq 0
-
-vector            db ?

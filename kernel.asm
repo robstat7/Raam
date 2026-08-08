@@ -9,6 +9,8 @@ include 'gdt.asm'
 
 include 'idt.asm'
 
+include 'int_handler.asm'
+
 include 'pic.asm'
 
 include 'kbd.asm'
@@ -21,18 +23,29 @@ kernel_init:
   ; first disable interrupts
   cli
 
+  call default_tty_init
+
   call gdt_init
   call idt_init
 
-  call pic_init
-  call kbd_init
+  call array_interrupt_handlers_init
 
-  call default_tty_init
+  call pic_init
+
+  ; register keyboard interrupt handler
+  mov dil, IRQ1_INT_NUM
+  lea rsi, [keyboard_interrupt_handler]
+  call register_interrupt_handler
+
+  ; register timer interrupt handler
+  mov dil, IRQ0_INT_NUM
+  lea rsi, [timer_interrupt_handler]
+  call register_interrupt_handler
 
   ; enable interrupts now
   sti
 
-  lea rax, [msg_debug]
+  lea rdi, [msg_debug]
   call printk
 
   jmp $

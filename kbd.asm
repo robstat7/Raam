@@ -1,30 +1,31 @@
-PS2_CMD_PORT = 0x64
 PS2_DATA_PORT = 0x60
-
-
-; PS/2 controller configuration byte commands
-CMD_READ_CONFIG_BYTE = 0x20
-CMD_WRITE_CONFIG_BYTE = 0x60
 
 
 section '.text' code executable readable
 
-kbd_init:
-  ; read PS/2 controller configuration byte
-  mov al, CMD_READ_CONFIG_BYTE
-  out PS2_CMD_PORT, al
+; keyboard interrupt handler
+; args:
+;   @rdi = interrupt stack frame pointer
+;
+; returns:
+;   nothing
+keyboard_interrupt_handler:
+  push rdi
 
+  ; read the scan code byte from data port
   in al, PS2_DATA_PORT
 
-  ; enable IRQ1 keyboard interrupt
-  or al, 0x1
-  mov bl, al
+  lea rdi, [msg_scan_code]
+  xor esi, esi
+  mov sil, al
+  call printk
 
-  ; write PS/2 controller configuration byte
-  mov al, CMD_WRITE_CONFIG_BYTE
-  out PS2_CMD_PORT, al
-
-  mov al, bl
-  out PS2_DATA_PORT, al
-
+  mov edi, 1    ; set IRQ no. 1 for keyboard interrupt in dil register
+  call pic_send_eoi
+  pop rdi
   ret
+
+
+section '.data' data readable writeable
+
+msg_scan_code db "{p}", 0
