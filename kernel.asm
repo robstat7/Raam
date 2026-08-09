@@ -49,15 +49,15 @@ kernel_init:
   lea rdi, [cmd_input]
   call printk
 
-  mov byte [input_mode], 1    ; ON
+  mov byte [input_mode], INPUT_MODE_ON
 
 .loop_write_command:
-  cmp byte [input_mode], 0    ; OFF  
+  cmp byte [input_mode], INPUT_MODE_OFF
   je .end
   jmp .loop_write_command
 
 .end:
-  mov al, 10
+  mov al, NEWLINE_CHARACTER
   call tty_put_char
 
   lea rdi, [input_buffer]
@@ -69,5 +69,3 @@ kernel_init:
 section '.data' data readable writeable
 
 cmd_input db "$ ", 0
-
-input_mode  db ?

@@ -1,5 +1,9 @@
 PS2_DATA_PORT = 0x60
 
+; keyboard input modes
+INPUT_MODE_ON = 1
+INPUT_MODE_OFF = 0
+
 
 section '.text' code executable readable
 
@@ -20,10 +24,10 @@ keyboard_interrupt_handler:
   cmp al, 0x0 ; key release event
   je .end
 
-  ; if enter key is pressed, append the carriage return character to the
-  ; buffer followed by a null character. Set buffer index to 0 and
-  ; end interrupt.
-  cmp al, 10
+  ; if enter key is pressed, append the newline character to the
+  ; buffer followed by a null character. Set buffer index to 0,
+  ; turn off input mode and end interrupt.
+  cmp al, NEWLINE_CHARACTER
   jne .continue
   lea rbx, [input_buffer]
   xor ecx, ecx
@@ -34,7 +38,7 @@ keyboard_interrupt_handler:
   mov byte [rcx + 1], NULL_CHARACTER
   mov byte [input_buffer_index], 0
 
-  mov byte [input_mode], 0    ; OFF
+  mov byte [input_mode], INPUT_MODE_OFF
   jmp .end
 
 
@@ -225,7 +229,7 @@ convert_scan_code_byte:
 .enter:
   cmp al, 0x1c
   jne .default
-  mov al, 10
+  mov al, NEWLINE_CHARACTER
   jmp .end
 
 
@@ -240,3 +244,5 @@ section '.data' data readable writeable
 
 input_buffer  rb  256
 input_buffer_index db 0
+
+input_mode  db ?
