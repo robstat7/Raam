@@ -45,12 +45,29 @@ kernel_init:
   ; enable interrupts now
   sti
 
-  lea rdi, [msg_debug]
+.cmd_line:
+  lea rdi, [cmd_input]
   call printk
 
-  jmp $
+  mov byte [input_mode], 1    ; ON
+
+.loop_write_command:
+  cmp byte [input_mode], 0    ; OFF  
+  je .end
+  jmp .loop_write_command
+
+.end:
+  mov al, 10
+  call tty_put_char
+
+  lea rdi, [input_buffer]
+  call printk
+
+  jmp .cmd_line
 
 
 section '.data' data readable writeable
 
-msg_debug db "Test message", 10, 0
+cmd_input db "$ ", 0
+
+input_mode  db ?
