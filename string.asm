@@ -163,3 +163,83 @@ reverse_string:
   mov rsp, rbp
   pop rbp
   ret
+
+; strlen - find the length of a string
+; args:
+;   @rdi = str string
+;
+; returns:
+;   @eax = string length
+strlen:
+  push rbp
+  mov rbp, rsp
+
+  sub rsp, 4    ; i variable
+  sub rsp, 4    ; len variable
+
+  mov dword [rbp - 4], 0
+  mov dword [rbp - 8], 0
+
+.loop_start:
+  mov ebx, dword [rbp - 4]
+  add rbx, rdi
+  mov cl, byte[rbx]
+  cmp cl, NULL_CHARACTER
+  je .end
+
+  inc dword [rbp - 8]
+  inc dword [rbp - 4]
+  jmp .loop_start
+
+.end:
+  mov eax, dword [rbp - 8]
+
+  mov rsp, rbp
+  pop rbp
+  ret
+
+; strncmp - string compare by length
+; args:
+;   @rdi = str1
+;   @rsi = str2
+;   @edx = length n
+;
+; returns:
+;   @eax = an integer (positive, negative, or 0)
+strncmp:
+
+.loop_start:
+  cmp edx, 0
+  je .next
+
+  mov al, byte [rdi]
+  cmp al, NULL_CHARACTER
+  je .next
+
+  mov bl, byte [rsi]
+  cmp al, bl
+  jne .next
+
+  inc rdi
+  inc rsi
+  dec edx
+
+  jmp .loop_start
+
+.next:
+  cmp edx, 0
+  jne .else
+
+  xor eax, eax
+  jmp .end
+
+.else:
+  xor eax, eax
+  xor ebx, ebx
+  mov al, byte [rdi]
+  mov bl, byte [rsi]
+
+  sub eax, ebx
+
+.end:
+  ret

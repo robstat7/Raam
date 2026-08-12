@@ -239,6 +239,36 @@ default_tty_init:
 
   ret
 
+; fill screen with tty background color and reset cursors to 0,0
+clear_screen:
+  lea rdx, [default_tty]
+	mov eax, dword [rdx + TTY.horizontal_res]
+	mov ebx, dword [rdx + TTY.vertical_res]
+	imul eax, ebx              ; use imul instead (doesn't touch rdx)
+	mov dword [pixels], eax
+
+	mov rax, qword [rdx + TTY.framebuffer_base]
+	mov qword [addr], rax
+
+.loop_start:
+	cmp dword [pixels], 0	
+	je .loop_end
+
+	dec dword [pixels]
+
+	mov rbx, qword [addr]
+	mov dword [rbx], COLOR_BLACK
+	add rbx, 4
+	mov qword [addr], rbx
+	jmp .loop_start
+
+.loop_end:
+
+  ; reset cursors to 0,0
+  mov dword [rdx + TTY.cursor_x], COORDINATE_ORIGIN
+  mov dword [rdx + TTY.cursor_y], COORDINATE_ORIGIN
+	ret
+
 
 section '.data' data readable writeable
 
@@ -252,6 +282,9 @@ col             dd 0
 row_data        db 0
 
 pixel_addr      dq 0
+
+pixels          dd ?
+addr            dq ?
 
 ; mask for each pixel in a row
 mask:
