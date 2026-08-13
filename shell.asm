@@ -17,6 +17,11 @@ run_shell:
   lea rdi, [newline_string]
   call printk
 
+  lea rdi, [input_buffer]
+  call strlen
+  cmp eax, 1  ; user just pressed enter in command line
+  je .end
+
 .cmd_1:
   lea rdi, [input_buffer]
   lea rsi, [cmd_1]
