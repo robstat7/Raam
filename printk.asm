@@ -118,14 +118,24 @@ print_arg:
   sub rsp, 100  ; str array - randomly choosing a larger array
 
 
-  cmp dil, 'p'
-  jne .exit
+  cmp dil, 'p'  ; hex number
+  jne .next
 
   mov rdi, rsi
   lea rsi, [rbp - 100]
   call integer_to_hex_string
 
   lea rdi, [rbp - 100]
+  call printk
+  jmp .exit
+
+.next:
+  cmp dil , 'c' ; a single character
+  jne .exit
+
+  lea rdi, [rbp - 100]
+  mov byte [rdi], sil
+  mov byte [rdi + 1], NULL_CHARACTER
   call printk
 
 .exit:

@@ -52,8 +52,10 @@ keyboard_interrupt_handler:
   mov byte [rcx], al
   inc byte [input_buffer_index]
 
-  ; TODO: use printk instead. Avoid using private function.
-  call tty_put_char
+  lea rdi, [char_string]
+  xor esi, esi
+  mov sil, al
+  call printk
 
 .end:
   mov edi, 1    ; set IRQ no. 1 for keyboard interrupt in dil register
@@ -253,3 +255,5 @@ input_buffer  rb  256
 input_buffer_index db 0
 
 input_mode  db ?
+
+char_string db "{c}", 0
