@@ -240,7 +240,7 @@ default_tty_init:
 
   ret
 
-; fill screen with tty background color and reset cursors to 0,0
+; fills screen with tty background color and resets cursor to (0,0)
 clear_screen:
   push rbp
   mov rbp, rsp
@@ -274,7 +274,7 @@ clear_screen:
 
 .loop_end:
 
-  ; reset cursors to 0,0
+  ; reset cursor to (0,0)
   mov dword [rdx + TTY.cursor_x], COORDINATE_ORIGIN
   mov dword [rdx + TTY.cursor_y], COORDINATE_ORIGIN
 
