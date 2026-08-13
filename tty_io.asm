@@ -241,25 +241,34 @@ default_tty_init:
 
 ; fill screen with tty background color and reset cursors to 0,0
 clear_screen:
+  push rbp
+  mov rbp, rsp
+
+  sub rsp, 12
+
+  ; define local variables
+  pixels equ dword [rbp - 4]
+  addr equ qword [rbp - 12]
+
   lea rdx, [default_tty]
 	mov eax, dword [rdx + TTY.horizontal_res]
 	mov ebx, dword [rdx + TTY.vertical_res]
-	imul eax, ebx              ; use imul instead (doesn't touch rdx)
-	mov dword [pixels], eax
+	imul eax, ebx
+	mov pixels, eax
 
 	mov rax, qword [rdx + TTY.framebuffer_base]
-	mov qword [addr], rax
+	mov addr, rax
 
 .loop_start:
-	cmp dword [pixels], 0	
+	cmp pixels, 0
 	je .loop_end
 
-	dec dword [pixels]
+	dec pixels
 
-	mov rbx, qword [addr]
+	mov rbx, addr
 	mov dword [rbx], COLOR_BLACK
 	add rbx, 4
-	mov qword [addr], rbx
+	mov addr, rbx
 	jmp .loop_start
 
 .loop_end:
@@ -267,6 +276,13 @@ clear_screen:
   ; reset cursors to 0,0
   mov dword [rdx + TTY.cursor_x], COORDINATE_ORIGIN
   mov dword [rdx + TTY.cursor_y], COORDINATE_ORIGIN
+
+  ; undefine local variables
+  restore pixels
+  restore addr
+
+  mov rsp, rbp
+  pop rbp
 	ret
 
 
@@ -282,9 +298,6 @@ col             dd 0
 row_data        db 0
 
 pixel_addr      dq 0
-
-pixels          dd ?
-addr            dq ?
 
 ; mask for each pixel in a row
 mask:
