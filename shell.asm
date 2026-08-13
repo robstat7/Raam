@@ -65,6 +65,20 @@ run_shell:
   jmp .end
 
 .cmd_4:
+  lea rdi, [input_buffer]
+  lea rsi, [cmd_4]
+  mov edx, 7
+  call strncmp
+  cmp eax, 0
+  jne .default
+
+  ; using intel's motherboard chipset register for reboot
+  ; specification link:
+  ; Intel 400 Series Chipset Register Database (https://tinyurl.com/mrxudsnd)
+  mov dx, 0xcf9       ; reset control register
+  mov al, 0x06        ; bit 1 = system reset, bit 2 = reset cpu
+  out dx, al
+  jmp .end
 
 .default:
   lea rdi, [cmd_not_found_msg]
