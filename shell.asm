@@ -1,6 +1,8 @@
 section '.text' code executable readable
 
 run_shell:
+  lea rdi, [first_msg]
+  call printk
 
 .loop_start:
   lea rdi, [cmd_input]
@@ -95,6 +97,7 @@ run_shell:
 
 section '.data' data readable writeable
 
+first_msg db 'Type "help" for the list of available commands', 10, 10, 0
 cmd_input db "$ ", 0
 newline_string db 10, 0
 

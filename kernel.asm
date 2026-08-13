@@ -47,6 +47,17 @@ kernel_init:
   ; enable interrupts now
   sti
 
+  ; print welcome message :)
+  lea rdi, [welcome_msg]
+  call printk
+
+  ; and finally run the shell
   call run_shell
 
   jmp $
+
+
+section '.data' data readable writeable
+
+welcome_msg db "_/\_ Raam Raam Ji _/\_", 10, 10, \
+"Welcome to Raam x86-64 version 0.01!", 10, 10, 0
