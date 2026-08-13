@@ -41,6 +41,19 @@ run_shell:
   jmp .end
 
 .cmd_3:
+  lea rdi, [input_buffer]
+  lea rsi, [cmd_3]
+  mov edx, 5
+  call strncmp
+  cmp eax, 0
+  jne .cmd_4
+
+
+.cmd_4:
+
+.default:
+  lea rdi, [cmd_not_found_msg]
+  call printk
 
 .end:
   jmp .loop_start
@@ -57,4 +70,7 @@ cmd_2 db "clear", 10, 0
 cmd_3 db "echo", 10, 0
 cmd_4 db "reboot", 10, 0
 
-cmd_1_response db "Available commands:", 10, "help", 10, "clear", 10, "echo", 10, "reboot", 10, 0
+cmd_1_response db "Available commands:", 10, "help", 10, "clear", 10, "echo", \
+10, "reboot", 10, 0
+
+cmd_not_found_msg db "Command not found", 10, 0
