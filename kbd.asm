@@ -52,6 +52,7 @@ keyboard_interrupt_handler:
   mov byte [rcx], al
   inc byte [input_buffer_index]
 
+  ; TODO: use printk instead. Avoid using private function.
   call tty_put_char
 
 .end:
@@ -228,8 +229,14 @@ convert_scan_code_byte:
 
 .enter:
   cmp al, 0x1c
-  jne .default
+  jne .space
   mov al, NEWLINE_CHARACTER
+  jmp .end
+
+.space:
+  cmp al, 0x39
+  jne .default
+  mov al, SPACE_CHARACTER
   jmp .end
 
 

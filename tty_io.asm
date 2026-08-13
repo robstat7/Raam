@@ -34,8 +34,9 @@ FONT_WIDTH = 8
 LINE_SPACING_SIZE = 0x2
 
 
-; character
+; characters with ascii code
 NEWLINE_CHARACTER = 0xa
+SPACE_CHARACTER = 0x20
 
 
 section '.text' code executable readable

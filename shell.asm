@@ -43,11 +43,26 @@ run_shell:
 .cmd_3:
   lea rdi, [input_buffer]
   lea rsi, [cmd_3]
-  mov edx, 5
+  mov edx, 4
   call strncmp
   cmp eax, 0
   jne .cmd_4
 
+  lea rdi, [input_buffer]
+  call strlen
+  cmp eax, 5  ; cmd 3 length itself
+  jne .next
+
+  lea rdi, [newline_string]
+  call printk
+  jmp .end
+
+
+.next:
+  lea rdi, [input_buffer]
+  add rdi, 5  ; length of "echo "
+  call printk
+  jmp .end
 
 .cmd_4:
 
