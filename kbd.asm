@@ -24,26 +24,7 @@ keyboard_interrupt_handler:
   cmp al, 0x0 ; key release event
   je .end
 
-  ; if enter key is pressed, append the newline character to the
-  ; buffer followed by a null character. Set buffer index to 0,
-  ; turn off input mode and end interrupt.
-  cmp al, NEWLINE_CHARACTER
-  jne .continue
-  lea rbx, [input_buffer]
-  xor ecx, ecx
-  mov cl, byte [input_buffer_index]
-  add rcx, rbx
-
-  mov byte [rcx], al
-  mov byte [rcx + 1], NULL_CHARACTER
-  mov byte [input_buffer_index], 0
-
-  mov byte [input_mode], INPUT_MODE_OFF
-  jmp .end
-
-
-.continue:
-  ; fill input buffer and print character on terminal screen
+  ; fill the input buffer and print the character onto the terminal screen
   lea rbx, [input_buffer]
   xor ecx, ecx
   mov cl, byte [input_buffer_index]
@@ -52,10 +33,27 @@ keyboard_interrupt_handler:
   mov byte [rcx], al
   inc byte [input_buffer_index]
 
+  push rax
   lea rdi, [char_string]
   xor esi, esi
   mov sil, al
   call printk
+
+  ; if enter key was pressed, append the null character to the
+  ; buffer, set buffer index to 0, and turn off the input mode.
+  pop rax
+  cmp al, NEWLINE_CHARACTER
+  jne .end
+
+  lea rbx, [input_buffer]
+  xor ecx, ecx
+  mov cl, byte [input_buffer_index]
+  add rcx, rbx
+
+  mov byte [rcx], NULL_CHARACTER
+  mov byte [input_buffer_index], 0
+
+  mov byte [input_mode], INPUT_MODE_OFF
 
 .end:
   mov edi, 1    ; set IRQ no. 1 for keyboard interrupt in dil register

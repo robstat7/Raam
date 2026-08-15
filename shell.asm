@@ -16,9 +16,6 @@ run_shell:
   jmp .loop_write_command
 
 .process_cmd:
-  lea rdi, [newline_string]
-  call printk
-
   lea rdi, [input_buffer]
   call strlen
   cmp eax, 1  ; user just pressed enter in command line
@@ -60,7 +57,8 @@ run_shell:
   cmp eax, 5  ; cmd 3 length itself
   jne .next
 
-  lea rdi, [newline_string]
+  lea rdi, [char_string]
+  mov sil, NEWLINE_CHARACTER
   call printk
   jmp .end
 
@@ -99,7 +97,6 @@ section '.data' data readable writeable
 
 first_msg db 'Type "help" for the list of available commands', 10, 10, 0
 cmd_input db "$ ", 0
-newline_string db 10, 0
 
 SHELL_COMMANDS:
 cmd_1 db "help", 10, 0
