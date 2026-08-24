@@ -18,6 +18,7 @@ struc void {
 macro struct name {
 	virtual at 0	  ; starts a virtual block at memory address 0
 		name name ; creates an instance of struc name with label name
+		sizeof.#name = $ - 0
 	end virtual	  ; ends the virtual block
 }
 
@@ -145,6 +146,20 @@ struc EFI_GRAPHICS_OUTPUT_MODE_INFORMATION {
 	.PixelsPerScanLine			UINT32
 }
 struct EFI_GRAPHICS_OUTPUT_MODE_INFORMATION
+
+struc EFI_GUID {
+	align 8
+	.Data1 dd ?
+	.Data2 dw ?
+	.Data3 dw ?
+	.Data4 db 8 dup (?)
+}
+
+struc EFI_CONFIGURATION_TABLE {
+	.VendorGuid              		EFI_GUID
+	.VendorTable             		void
+}
+struct EFI_CONFIGURATION_TABLE
 
 
 ; EFI status constants
@@ -308,3 +323,8 @@ EFI_BLOCK_IO_PROTOCOL_GUID:
 		dw 0x6459
 		dw 0x11d2
 		db 0x8e,0x39,0x00,0xa0,0xc9,0x69,0x72,0x3b
+EFI_ACPI_20_TABLE_GUID:
+		dd 0x8868e871
+		dw 0xe4f1
+		dw 0x11d3
+		db 0xbc, 0x22, 0x00, 0x80, 0xc7, 0x3c, 0x88, 0x81

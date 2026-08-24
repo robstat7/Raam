@@ -12,6 +12,8 @@ include 'uefi.inc'
 
 include 'kernel.asm'
 
+include 'xsdp.asm'
+
 
 struc FRAMEBUFFER {
 	.framebuffer_base	        void
@@ -40,10 +42,17 @@ start:
   call store_framebuffer_info	
 	jc .hang
 
-  ; now exit the boot services.
+  ; now get the xsdp pointer.
+  lea rax, [system_table]
+  mov rdi, qword [rax]
+  call get_xsdp_pointer
+  jc .hang
+
+  ; exit the boot services.
   call exit_boot_services
 
   ; go to kernel initialization code.
+  mov rdi, qword [xsdp_pointer]   ; boot param
   call kernel_init
 
 .hang:
