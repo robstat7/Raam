@@ -18,12 +18,29 @@ include 'kbd.asm'
 include 'shell.asm'
 
 
+struc XSDP_STRUCT {
+  .signature          db 8 dup (?)
+  .checksum           db ?
+  .oem_id             db 6 dup (?)
+  .revision           db ?
+  .rsdt_address       dd ?        ;  deprecated since version 2.0
+
+  .length             dd ?
+  .xsdt_address       dq ?
+  .extended_checksum  db ?
+  .reserved           db 3 dup (?)
+}
+struct XSDP_STRUCT
+
+
 section '.text' code executable readable
 
 ; initialize our kernel here.
 kernel_init:
   ; first disable interrupts
   cli
+
+  push rdi
 
   call default_tty_init
 
@@ -44,6 +61,11 @@ kernel_init:
   lea rsi, [timer_interrupt_handler]
   call register_interrupt_handler
 
+  ; get xsdt pointer
+  pop rdi
+  mov rax, qword [rdi + XSDP_STRUCT.xsdt_address]
+  mov qword [xsdt_pointer], rax
+
   ; enable interrupts now
   sti
 
@@ -61,3 +83,5 @@ section '.data' data readable writeable
 
 welcome_msg db "_/\_ Raam Raam Ji _/\_", 10, 10, \
 "Welcome to Raam x86-64 version 0.01!", 10, 10, 0
+
+xsdt_pointer  dq 0
