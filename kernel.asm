@@ -61,7 +61,17 @@ struct XSDT_STRUCT
 
 section '.text' code executable readable
 
-; initialize our kernel here.
+;
+; kernel_init
+;
+; this function initializes our kernel.
+;
+; args (boot params):
+;   @rdi = xsdp table pointer
+;
+; returns:
+;   nothing
+;
 kernel_init:
   ; first disable interrupts
   cli
