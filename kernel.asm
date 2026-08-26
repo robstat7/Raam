@@ -52,7 +52,7 @@ struc XSDT_STRUCT {
   .h                  ACPI_SDT_HEADER
 
   ; an array of 64-bit physical addresses that point to other
-  ; DESCRIPTION_HEADERs
+  ; system description tables
   align 4
   .pointer_to_other_sdts  dq ?
 }
@@ -87,11 +87,12 @@ kernel_init:
   lea rsi, [timer_interrupt_handler]
   call register_interrupt_handler
 
-  ; get xsdt pointer
+  ; get xsdt table pointer
   pop rdi
   mov rax, qword [rdi + XSDP_STRUCT.xsdt_address]
   mov qword [xsdt_pointer], rax
 
+  ; get mcfg table pointer
   mov rdi, qword [xsdt_pointer]
   call get_mcfg_pointer
   cmp eax, 0
@@ -113,6 +114,15 @@ kernel_init:
 ;
 ; get_mcfg_pointer
 ;
+; this function finds the MCFG table pointer using the XSDT table.
+; The variable `total_entries` contains the total number of pointers to
+; other System Description Tables (SDTs) within the XSDT table.
+;
+; note: the XSDT is the main SDT. However,
+; there are many kinds of SDT. All the SDTs may be split into two parts.
+; One (the header) which is common to all the SDTs and another (data)
+; which is different for each table.
+;
 ; args:
 ;   @rdi = xsdt table pointer
 ;
@@ -133,7 +143,7 @@ get_mcfg_pointer:
   mov eax, dword [rdi + XSDT_STRUCT.h.length]
   sub eax, sizeof.ACPI_SDT_HEADER
   xor edx, edx
-  mov ecx, 8    ; pointer size
+  mov ecx, 8    ; 8-byte pointer size
   div rcx
   mov total_entries, eax
 
@@ -147,10 +157,10 @@ get_mcfg_pointer:
   mov rbx, rdi
   add rbx, XSDT_STRUCT.pointer_to_other_sdts
   mov ecx, i
-  imul ecx, 8 ; pointer size
+  imul ecx, 8 ; 8-byte pointer size
   add rbx, rcx
   mov rdx, qword [rbx]
-  mov desc_header, rdx
+  mov desc_header, rdx    ; save xsdt->pointer_to_other_sdts[i]
 
   ; check MCFG table signature
 
@@ -177,19 +187,16 @@ get_mcfg_pointer:
   jmp .loop_start
 
 .loop_end:
-
   mov rax, qword [mcfg_pointer]
   cmp rax, 0
-  jne .confirm
+  jne .success
 
-  lea rdi, [error_mcfg]
+  lea rdi, [error_msg_mcfg]
   call printk
   mov eax, -1
   jmp .end
 
-.confirm:
-  lea rdi, [msg_mcfg]
-  call printk
+.success:
   mov eax, 0
 
 .end:
@@ -202,6 +209,7 @@ get_mcfg_pointer:
   pop rbp
   ret
 
+
 section '.data' data readable writeable
 
 welcome_msg db "_/\_ Raam Raam Ji _/\_", 10, 10, \
@@ -210,5 +218,4 @@ welcome_msg db "_/\_ Raam Raam Ji _/\_", 10, 10, \
 xsdt_pointer  dq 0
 mcfg_pointer  dq 0
 
-error_mcfg db "error: could not find MCFG table!", 10, 0
-msg_mcfg db "found MCFG table!", 10, 0
+error_msg_mcfg db "error: could not find MCFG table!", 10, 0
