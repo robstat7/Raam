@@ -32,6 +32,32 @@ struc XSDP_STRUCT {
 }
 struct XSDP_STRUCT
 
+struc ACPI_SDT_HEADER {
+  .signature          db 4 dup (?)
+  .length             dd ?
+  .revision           db ?
+  .checksum           db ?
+  .oem_id             db 6 dup (?)
+  .oem_table_id       db 8 dup (?)
+  .oem_revision       dd ?
+  .creator_id         dd ?
+  .creator_revision   dd ?
+}
+struct ACPI_SDT_HEADER
+
+; note that the 'pointer_to_other_sdts' field as defined below should
+; be aligned to a 4-byte boundary and not the default 8-byte alignment
+; for a uint64_t. Source: XSDT - osdev wiki.
+struc XSDT_STRUCT {
+  .h                  ACPI_SDT_HEADER
+
+  ; an array of 64-bit physical addresses that point to other
+  ; DESCRIPTION_HEADERs
+  align 4
+  .pointer_to_other_sdts  dq ?
+}
+struct XSDT_STRUCT
+
 
 section '.text' code executable readable
 
@@ -66,6 +92,11 @@ kernel_init:
   mov rax, qword [rdi + XSDP_STRUCT.xsdt_address]
   mov qword [xsdt_pointer], rax
 
+  mov rdi, qword [xsdt_pointer]
+  call get_mcfg_pointer
+  cmp eax, 0
+  jne .end
+
   ; enable interrupts now
   sti
 
@@ -76,8 +107,100 @@ kernel_init:
   ; and finally run the shell
   call run_shell
 
+.end:
   jmp $
 
+;
+; get_mcfg_pointer
+;
+; args:
+;   @rdi = xsdt table pointer
+;
+; returns:
+;   @eax = 0 on success, -1 on failure
+;
+get_mcfg_pointer:
+  push rbp
+  mov rbp, rsp
+
+  sub rsp, 20
+
+  total_entries equ dword [rbp - 4]
+  i equ dword [rbp - 8]
+  desc_header equ qword [rbp - 16]
+  str_mcfg equ dword [rbp - 20]
+
+  mov eax, dword [rdi + XSDT_STRUCT.h.length]
+  sub eax, sizeof.ACPI_SDT_HEADER
+  xor edx, edx
+  mov ecx, 8    ; pointer size
+  div rcx
+  mov total_entries, eax
+
+  mov i, 0
+
+.loop_start:
+  mov eax, total_entries
+  cmp i, eax
+  jae .loop_end
+
+  mov rbx, rdi
+  add rbx, XSDT_STRUCT.pointer_to_other_sdts
+  mov ecx, i
+  imul ecx, 8 ; pointer size
+  add rbx, rcx
+  mov rdx, qword [rbx]
+  mov desc_header, rdx
+
+  ; check MCFG table signature
+
+  ; copy "MCFG" string to the variable in its little-endian hex value
+  mov str_mcfg, 0x4746434d
+  push rdi
+  mov rbx, desc_header
+  add rbx, ACPI_SDT_HEADER.signature
+  mov rdi, rbx
+  mov rsi, rbp
+  sub rsi, 20   ; variable `str_mcfg` address
+  mov edx, 4
+  call strncmp
+  pop rdi
+  cmp eax, 0
+  jne .loop_next
+
+  mov rax, desc_header
+  mov qword [mcfg_pointer], rax
+  jmp .loop_end
+
+.loop_next:
+  inc i
+  jmp .loop_start
+
+.loop_end:
+
+  mov rax, qword [mcfg_pointer]
+  cmp rax, 0
+  jne .confirm
+
+  lea rdi, [error_mcfg]
+  call printk
+  mov eax, -1
+  jmp .end
+
+.confirm:
+  lea rdi, [msg_mcfg]
+  call printk
+  mov eax, 0
+
+.end:
+  restore total_entries
+  restore i
+  restore desc_header
+  restore str_mcfg
+
+  mov rsp, rbp
+  pop rbp
+  ret
 
 section '.data' data readable writeable
 
@@ -85,3 +208,7 @@ welcome_msg db "_/\_ Raam Raam Ji _/\_", 10, 10, \
 "Welcome to Raam x86-64 version 0.01!", 10, 10, 0
 
 xsdt_pointer  dq 0
+mcfg_pointer  dq 0
+
+error_mcfg db "error: could not find MCFG table!", 10, 0
+msg_mcfg db "found MCFG table!", 10, 0
