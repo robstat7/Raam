@@ -31,7 +31,7 @@ section '.text' code executable readable
 ;
 pcie_init:
   ; in most systems there is only one PCI segment group -
-	; (PCI segment group number 0). Hence use the 0 index.
+	; (PCI segment group number 0). Hence use the index 0.
   ; for e.g.,  mcfg->e[0].base_addr
   lea rax, [pcie_ecam]
   mov rbx, qword [rdi + MCFG_STRUCT.e.base_addr]

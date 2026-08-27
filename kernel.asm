@@ -119,10 +119,14 @@ kernel_init:
   cmp eax, 0
   jne .end
 
-  ; get and store PCIe ECAM base address and the starting and the ending
-  ; bus numbers
+  ; get and store the PCIe ECAM base address and the starting and the
+  ; ending bus numbers
   mov rdi, qword [mcfg_pointer]
   call pcie_init
+
+  ; ; find the NVMe controller
+  ; lea rdi, [pcie_ecam]
+  ; call find_nvme_controller
 
   ; enable interrupts now
   sti
