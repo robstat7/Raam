@@ -13,6 +13,8 @@ include 'int_handler.asm'
 
 include 'pic.asm'
 
+include 'pcie.asm'
+
 include 'kbd.asm'
 
 include 'shell.asm'
@@ -57,6 +59,15 @@ struc XSDT_STRUCT {
   .pointer_to_other_sdts  dq ?
 }
 struct XSDT_STRUCT
+
+struc MCFG_STRUCT {
+  .h                  ACPI_SDT_HEADER
+
+  .reserved           dq ?
+  ; below is actually an array of type struct enhanced_config_base_struct
+  .e                  ENHANCED_CONFIG_BASE_STRUCT
+}
+struct MCFG_STRUCT
 
 
 section '.text' code executable readable
@@ -107,6 +118,11 @@ kernel_init:
   call get_mcfg_pointer
   cmp eax, 0
   jne .end
+
+  ; get and store PCIe ECAM base address and the starting and the ending
+  ; bus numbers
+  mov rdi, qword [mcfg_pointer]
+  call pcie_init
 
   ; enable interrupts now
   sti
