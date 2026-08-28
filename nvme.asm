@@ -1,8 +1,8 @@
 ;
 ; NVMe over PCIe driver.
 ;
-; specification used:
-;   - NVM Express Revision 1.3
+; resources used:
+;   - NVM Express revision 1.3 specification
 ;   - https://wiki.osdev.org/NVMe
 ;
 MAX_PCI_BUS_DEV	=	32
