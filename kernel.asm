@@ -130,8 +130,13 @@ kernel_init:
   lea rdi, [pcie_ecam]
   call find_nvme_controller
   cmp eax, 0
-  jne .end
+  je .next
 
+  lea rdi, [error_msg_nvme_controller]
+  call printk
+  jmp .end
+
+.next:
   ; enable interrupts now
   sti
 
@@ -253,3 +258,5 @@ xsdt_pointer  dq 0
 mcfg_pointer  dq 0
 
 error_msg_mcfg db "error: could not find MCFG table!", 10, 0
+
+error_msg_nvme_controller db "error: nvme: couldn't find the controller!", 10, 0
