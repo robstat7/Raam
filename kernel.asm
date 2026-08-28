@@ -15,6 +15,8 @@ include 'pic.asm'
 
 include 'pcie.asm'
 
+include 'nvme.asm'
+
 include 'kbd.asm'
 
 include 'shell.asm'
@@ -124,9 +126,11 @@ kernel_init:
   mov rdi, qword [mcfg_pointer]
   call pcie_init
 
-  ; ; find the NVMe controller
-  ; lea rdi, [pcie_ecam]
-  ; call find_nvme_controller
+  ; find the NVMe controller
+  lea rdi, [pcie_ecam]
+  call find_nvme_controller
+  cmp eax, 0
+  jne .end
 
   ; enable interrupts now
   sti
