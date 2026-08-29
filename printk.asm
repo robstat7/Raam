@@ -36,64 +36,69 @@ printk:
   push rbp            ; save the old base pointer
   mov rbp, rsp
 
-  ; declare local variables
-  sub rsp, 1  ; state
-  sub rsp, 4  ; i
-  sub rsp, 1  ; current_char 
-  sub rsp, 1  ; specifier_char
+  sub rsp, 7
 
+  state equ byte [rbp - 1]
+  i equ dword [rbp - 5]
+  current_char equ byte [rbp - 6]
+  specifier_char equ byte [rbp - 7]
 
-  mov byte [rbp - 1], NORMAL
-  mov dword [rbp - 5], 0
+  mov state, NORMAL
+  mov i, 0
 
 .loop_start:
-  mov ebx, dword [rbp - 5]
+  mov ebx, i
   add rbx, rdi
 
   mov al, byte [rbx]
-  mov byte [rbp - 6], al
+  mov current_char, al
 
-  cmp byte [rbp - 6], NULL_CHARACTER   ; is string terminated?
+  cmp current_char, NULL_CHARACTER   ; is string terminated?
   je .exit
 
   push rdi
 
-  cmp byte [rbp - 1], FORMAT_SPECIFIER ; should we deal with a format specifier?
+  cmp state, FORMAT_SPECIFIER ; should we deal with a format specifier?
   jne .ahead
 
-  cmp byte [rbp - 6], '}'
+  cmp current_char, '}'
   jne .store_specifier_char
-  mov dil, byte [rbp - 7]
+  mov dil, specifier_char
   mov rsi, rsi
   call print_arg
-  mov byte [rbp - 1], NORMAL
+  mov state, NORMAL
   jmp .end
 
 .store_specifier_char:
-  mov al, byte [rbp - 6]
-  mov byte [rbp - 7], al
+  mov al, current_char
+  mov specifier_char, al
   jmp .end
 
 .ahead:
-  cmp byte [rbp - 6], '{'
+  cmp current_char, '{'
   jne .print_char
 
-  mov byte [rbp - 1], FORMAT_SPECIFIER
+  mov state, FORMAT_SPECIFIER
   jmp .end
 
 
 .print_char:
-  mov al, byte [rbp - 6]
+  mov al, current_char
   call tty_put_char
 
 .end:
   pop rdi
 
-  inc dword [rbp - 5]
+  inc i
   jmp .loop_start
 
 .exit:
   ; function epilogue
+  restore state
+  restore i
+  restore current_char
+  restore specifier_char
+
   mov rsp, rbp    ; deallocate the local variable space
   pop rbp         ; restore the caller's base pointer
   ret
