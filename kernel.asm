@@ -137,6 +137,10 @@ kernel_init:
   jmp .end
 
 .next:
+  ; get NVMe base address
+  lea rdi, [nvme_controller_info]
+  call get_nvme_base_address
+
   ; enable interrupts now
   sti
 

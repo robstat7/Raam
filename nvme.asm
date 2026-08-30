@@ -37,11 +37,68 @@ struc PCIE_DEV_INFO_STRUCT {
 	.bus_number           dw ?
 	.device_number        db ?
 	.function_number      db ?
+	.pci_func0_base_addr  dq ?
 }
 struct PCIE_DEV_INFO_STRUCT
 
+struc HEADER_TYPE_0_TABLE_STRUCT {
+  .h                    COMMON_CONFIG_SPACE_HEADER_STRUCT
+  .bar0                 dd ?
+  .bar1                 dd ?
+  .bar2                 dd ?
+  .bar3                 dd ?
+  .bar4                 dd ?
+  .bar5                 dd ?
+  .cardbus_cis_ptr      dd ?
+  .subsys_vendor_id     dw ?
+  .subsys_id            dw ?
+  .expansion_rom_base   dd ?
+  .capabilities_ptr     db ?
+  .reserved1            db ?
+  .reserved2            dw ?
+  .reserved3            dd ?
+  .interrupt_line       db ?
+  .interrupt_pin        db ?
+  .min_grant            db ?
+  .max_latency          db ?
+}
+struct HEADER_TYPE_0_TABLE_STRUCT
+
 
 section '.text' code executable readable
+
+;
+; get_nvme_base_address
+;
+; this function gets the NVMe base address that we will use to
+; initialize the controller. We clear the lowest 4 bits of the
+; base address as they are not part of the address; instead, they serve
+; other purposes.
+;
+; args:
+;   @rdi = struct PCIE_DEV_INFO_STRUCT's variable
+;          nvme_controller_info's address
+;
+; returns:
+;   @rax = the 64-bit NVMe base address
+;
+get_nvme_base_address:
+  mov rax, qword [rdi + PCIE_DEV_INFO_STRUCT.pci_func0_base_addr]
+
+  ; our header type from the "Common Header Fields" is 0x0 that means it
+  ; is a general device. We will thus use the "header type 0x0 table"
+  ; for reading the Base Address #0 register.
+  mov ebx, dword [rax + HEADER_TYPE_0_TABLE_STRUCT.bar0]
+
+  ; the "type" (bits 2-1) from the memory space BAR layout above is 0x0.
+  ; It suggests that the base register is 32-bit wide.
+  ; Now we will clear the lowest 4 bits.
+  mov rcx, 0xf
+  not rcx
+  and rbx, rcx
+
+  mov rax, rbx
+  ret
 
 ;
 ; check_function_number_0
@@ -101,7 +158,12 @@ check_function_number_0:
   cmp byte [rdx + COMMON_CONFIG_SPACE_HEADER_STRUCT.prog_if], NVME_PROG_IF
   jne .not_found
 
-  mov eax, 0    ; found the controller
+  ; found the controller.
+  ; save the physical address for this function's PCI configuration space
+  lea rax, [nvme_controller_info]
+  mov qword [rax + PCIE_DEV_INFO_STRUCT.pci_func0_base_addr], rdx
+
+  mov eax, 0
   jmp .end
 
 .not_found:
