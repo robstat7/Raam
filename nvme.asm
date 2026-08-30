@@ -161,19 +161,12 @@ find_nvme_controller:
   jne .loop_next_pcie_dev
 
   ; controller is found!
-  lea rdi, [msg_nvme_1]
+  lea rdi, [msg_nvme]
   xor esi, esi
   mov si, bus
-  call printk
-
-  lea rdi, [msg_nvme_2]
-  xor esi, esi
-  mov sil, dev
-  call printk
-
-  lea rdi, [msg_nvme_3]
-  xor esi, esi
-  mov sil, 0
+  xor edx, edx
+  mov dl, dev
+  xor ecx, ecx
   call printk
 
   mov found, 0
@@ -203,6 +196,4 @@ find_nvme_controller:
 
 section '.data' data readable writeable
 
-msg_nvme_1 db "Found NVMe controller! Bus number = {p}, ", 0
-msg_nvme_2 db "Device number = {p}, ", 0
-msg_nvme_3 db "Function number = {p} ", 10, 0
+msg_nvme db "Found NVMe controller! Bus number = {p}, Device number = {p}, Function number = {p}", 10, 0

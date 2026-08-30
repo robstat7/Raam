@@ -24,9 +24,9 @@ section '.text' code executable readable
 ;
 ; args:
 ;   @rdi = address of the format string defined as a byte string
-;   @rsi, @rdx, @rcx, @r8, and @r9 =
-;          arguments. Any additional arguments that do not fit in these
-;          registers are passed on the stack in reverse order.
+;   @rsi, @rdx, and @rcx =
+;          values that replaces the format specifiers
+;          in the format string.
 ;
 ; returns:
 ;   nothing
@@ -36,12 +36,23 @@ printk:
   push rbp            ; save the old base pointer
   mov rbp, rsp
 
-  sub rsp, 7
+  sub rsp, 32
 
   state equ byte [rbp - 1]
   i equ dword [rbp - 5]
   current_char equ byte [rbp - 6]
   specifier_char equ byte [rbp - 7]
+  specifier_num equ byte [rbp - 8]
+  arg2 equ qword [rbp - 16]
+  arg3 equ qword [rbp - 24]
+  arg4 equ qword [rbp - 32]
+
+  ; save function arguments
+  mov arg2, rsi
+  mov arg3, rdx
+  mov arg4, rcx
+
+  mov specifier_num, 0
 
   mov state, NORMAL
   mov i, 0
@@ -64,7 +75,21 @@ printk:
   cmp current_char, '}'
   jne .store_specifier_char
   mov dil, specifier_char
-  mov rsi, rsi
+  cmp specifier_num, 1
+  jne .next1
+  mov rsi, arg2
+  jmp .print_argument
+
+.next1:
+  cmp specifier_num, 2
+  jne .next2
+  mov rsi, arg3
+  jmp .print_argument
+
+.next2:
+  mov rsi, arg4
+
+.print_argument:
   call print_arg
   mov state, NORMAL
   jmp .end
@@ -79,6 +104,7 @@ printk:
   jne .print_char
 
   mov state, FORMAT_SPECIFIER
+  inc specifier_num
   jmp .end
 
 
@@ -98,6 +124,10 @@ printk:
   restore i
   restore current_char
   restore specifier_char
+  restore specifier_num
+  restore arg2
+  restore arg3
+  restore arg4
 
   mov rsp, rbp    ; deallocate the local variable space
   pop rbp         ; restore the caller's base pointer
