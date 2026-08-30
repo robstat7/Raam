@@ -33,6 +33,13 @@ struc COMMON_CONFIG_SPACE_HEADER_STRUCT {
 }
 struct COMMON_CONFIG_SPACE_HEADER_STRUCT
 
+struc PCIE_DEV_INFO_STRUCT {
+	.bus_number           dw ?
+	.device_number        db ?
+	.function_number      db ?
+}
+struct PCIE_DEV_INFO_STRUCT
+
 
 section '.text' code executable readable
 
@@ -161,6 +168,14 @@ find_nvme_controller:
   jne .loop_next_pcie_dev
 
   ; controller is found!
+  ; save controller info
+  lea rax, [nvme_controller_info]
+  mov bx, bus
+  mov word [rax + PCIE_DEV_INFO_STRUCT.bus_number], bx
+  mov bl, dev
+  mov byte [rax + PCIE_DEV_INFO_STRUCT.device_number], bl
+  mov byte [rax + PCIE_DEV_INFO_STRUCT.function_number], 0
+
   lea rdi, [msg_nvme]
   xor esi, esi
   mov si, bus
@@ -195,5 +210,7 @@ find_nvme_controller:
 
 
 section '.data' data readable writeable
+
+nvme_controller_info rb sizeof.PCIE_DEV_INFO_STRUCT
 
 msg_nvme db "Found NVMe controller! Bus number = {p}, Device number = {p}, Function number = {p}", 10, 0
