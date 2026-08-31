@@ -82,6 +82,10 @@ section '.text' code executable readable
 ; returns:
 ;   @rax = the 64-bit NVMe base address
 ;
+;
+; note - resources used:
+;    - https://wiki.osdev.org/PCI
+;
 get_nvme_base_address:
   mov rax, qword [rdi + PCIE_DEV_INFO_STRUCT.pci_func0_base_addr]
 
