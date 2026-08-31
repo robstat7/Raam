@@ -12,8 +12,8 @@ MAX_PCI_BUS_DEV	=	32
 PCI_INVALID_VENDOR_ID = 0xffff
 
 NVME_CLASS_CODE = 0x01    ; mass storage controller
-NVME_SUBCLASS = 0x08      ; non-volatile memory controller
-NVME_PROG_IF = 0x02       ; NVM Express
+NVME_SUBCLASS   = 0x08    ; non-volatile memory controller
+NVME_PROG_IF    = 0x02    ; NVM Express
 
 
 struc COMMON_CONFIG_SPACE_HEADER_STRUCT {
