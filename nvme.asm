@@ -108,7 +108,10 @@ section '.text' code executable readable
 ;   @eax = 0 on success else -1.
 ;
 nvme_controller_init:
-  ; reset the controller first
+  ; store the controller register map base address first
+  mov qword [controller_register_map_base], rdi
+
+  ; now reset the controller
   call reset_controller
   cmp eax, 0
   je .next
@@ -119,10 +122,8 @@ nvme_controller_init:
   jmp .end
 
 .next:
-  push rdi
   lea rdi, [msg_nvme_reset_completed]
   call printk
-  pop rdi
 
   mov eax, 0
 .end:
@@ -137,29 +138,31 @@ nvme_controller_init:
 ; (bit #0) to become 0.
 ;
 ; args:
-;   @rdi = 64-bit NVMe base address
+;   nothing
 ;
 ; returns:
 ;   @eax = 0 on success else -1.
 ;
 reset_controller:
-  mov ebx, dword [rdi + REGISTER_MAP_STRUCT.cc]
+  mov rax, qword [controller_register_map_base]
+
+  mov ebx, dword [rax + REGISTER_MAP_STRUCT.cc]
   mov ecx, 0x1
   not ecx
   and ebx, ecx
-  mov dword [rdi + REGISTER_MAP_STRUCT.cc], ebx
+  mov dword [rax + REGISTER_MAP_STRUCT.cc], ebx
 
   ; poll until CSTS.RDY bit (bit #0) becomes 0, or return false if
   ; CSTS.CFS bit (bit #1) is set.
 .loop_start:
   mov ebx, 0x1
-  mov ecx, dword [rdi + REGISTER_MAP_STRUCT.csts]
+  mov ecx, dword [rax + REGISTER_MAP_STRUCT.csts]
   and ecx, ebx
   jz .loop_end
 
   ; check if CSTS.CFS bit (bit #1) is set (fatal error)
   mov ebx, 0x2
-  mov ecx, dword [rdi + REGISTER_MAP_STRUCT.csts]
+  mov ecx, dword [rax + REGISTER_MAP_STRUCT.csts]
   and ecx, ebx
   jz .loop_next
 
@@ -386,6 +389,8 @@ find_nvme_controller:
 section '.data' data readable writeable
 
 nvme_controller_info rb sizeof.PCIE_DEV_INFO_STRUCT
+
+controller_register_map_base dq 0
 
 msg_nvme db "Found NVMe controller! Bus number = {p}, Device number = {p}, Function number = {p}", 10, 0
 
