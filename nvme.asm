@@ -64,8 +64,114 @@ struc HEADER_TYPE_0_TABLE_STRUCT {
 }
 struct HEADER_TYPE_0_TABLE_STRUCT
 
+; kindly visit NVM Express Revision 1.3 spec's
+; section 3.1 - Register Definition
+struc REGISTER_MAP_STRUCT {
+  .cap                  dq ?
+  .vs                   dd ?
+  .intms                dd ?
+  .intmc                dd ?
+  .cc                   dd ?
+  .reserved1            dd ?
+  .csts                 dd ?
+  .nssr                 dd ?
+  .aqa                  dd ?
+  .asq                  dq ?
+  .acq                  dq ?
+  .cmbloc               dd ?
+  .cmbsz                dd ?
+  .bpinfo               dd ?
+  .bprsel               dd ?
+  .bpmbl                dq ?
+  .reserved2            db 3760 dup (?)
+  .reserved3            db 256 dup (?)
+  .sq0tdbl              dd ?
+  .cq0hdbl              dd ?
+  .sq1tdbl              dd ?
+}
+struct REGISTER_MAP_STRUCT
+
 
 section '.text' code executable readable
+
+;
+; nvme_controller_init
+;
+; this function initializes the NVMe controller.
+;
+; args:
+;   @rdi = 64-bit NVMe base address
+;
+; returns:
+;   @eax = 0 on success else -1.
+;
+nvme_controller_init:
+  ; reset the controller first
+  call reset_controller
+  cmp eax, 0
+  je .next
+
+  lea rdi, [msg_nvme_fatal_error]
+  call printk
+  mov eax, -1
+  jmp .end
+
+.next:
+  push rdi
+  lea rdi, [msg_nvme_reset_completed]
+  call printk
+  pop rdi
+
+  mov eax, 0
+.end:
+  ret
+
+;
+; reset_controller
+;
+; this function resets the controller by clearing the
+; CC.EN bit (bit #0). It then waits for the controller to indicate that
+; the previous reset is completed by waiting for the CSTS.RDY bit
+; (bit #0) to become 0.
+;
+; args:
+;   @rdi = 64-bit NVMe base address
+;
+; returns:
+;   @eax = 0 on success else -1.
+;
+reset_controller:
+  mov ebx, dword [rdi + REGISTER_MAP_STRUCT.cc]
+  mov ecx, 0x1
+  not ecx
+  and ebx, ecx
+  mov dword [rdi + REGISTER_MAP_STRUCT.cc], ebx
+
+  ; poll until CSTS.RDY bit (bit #0) becomes 0, or return false if
+  ; CSTS.CFS bit (bit #1) is set.
+.loop_start:
+  mov ebx, 0x1
+  mov ecx, dword [rdi + REGISTER_MAP_STRUCT.csts]
+  and ecx, ebx
+  jz .loop_end
+
+  ; check if CSTS.CFS bit (bit #1) is set (fatal error)
+  mov ebx, 0x2
+  mov ecx, dword [rdi + REGISTER_MAP_STRUCT.csts]
+  and ecx, ebx
+  jz .loop_next
+
+  mov eax, -1
+  jmp .end
+
+.loop_next:
+  jmp .loop_start
+
+.loop_end:
+  mov eax, 0
+
+.end:
+  ret
 
 ;
 ; get_nvme_base_address
@@ -280,3 +386,6 @@ section '.data' data readable writeable
 nvme_controller_info rb sizeof.PCIE_DEV_INFO_STRUCT
 
 msg_nvme db "Found NVMe controller! Bus number = {p}, Device number = {p}, Function number = {p}", 10, 0
+
+msg_nvme_fatal_error db "error: nvme: the controller had a fatal error!", 10, 0
+msg_nvme_reset_completed db "nvme: controller reset is completed!", 10, 0

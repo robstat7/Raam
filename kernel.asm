@@ -141,6 +141,9 @@ kernel_init:
   lea rdi, [nvme_controller_info]
   call get_nvme_base_address
 
+  mov rdi, rax
+  call nvme_controller_init
+
   ; enable interrupts now
   sti
 
