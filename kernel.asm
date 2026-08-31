@@ -143,6 +143,8 @@ kernel_init:
 
   mov rdi, rax
   call nvme_controller_init
+  cmp eax, 0
+  jne .end
 
   ; enable interrupts now
   sti
