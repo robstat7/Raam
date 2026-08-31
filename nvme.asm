@@ -4,6 +4,8 @@
 ; resources used:
 ;   - NVM Express revision 1.3 specification
 ;   - https://wiki.osdev.org/NVMe
+;   - https://wiki.osdev.org/PCI
+;   - https://wiki.osdev.org/PCI_Express#Enhanced_Configuration_Mechanism
 ;
 MAX_PCI_BUS_DEV	=	32
 
@@ -178,7 +180,7 @@ reset_controller:
 ;
 ; this function gets the NVMe base address that we will use to
 ; initialize the controller. We clear the lowest 4 bits of the
-; base address as they are not part of the address; instead, they serve
+; base address as they are not part of the address, instead, they serve
 ; other purposes.
 ;
 ; args:
