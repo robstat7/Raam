@@ -14,6 +14,8 @@ include 'kernel.asm'
 
 include 'xsdp.asm'
 
+; include 'free_stack.asm'
+
 
 struc FRAMEBUFFER {
 	.framebuffer_base	        void
@@ -48,8 +50,13 @@ start:
   call get_xsdp_pointer
   jc .hang
 
+  ; ; initialize the free stack data structure for physical memory manager.
+  ; call pmm_free_stack_init
+  ; jc .hang
+
   ; exit the boot services.
   call exit_boot_services
+  jc .hang
 
   ; go to kernel initialization code.
   mov rdi, qword [xsdp_pointer]   ; boot param
@@ -204,19 +211,64 @@ set_video_mode_1280x1024:
 ;
 ; exit_boot_services
 ;
-; this function exits the boot services.
+; this function exits the boot services. It clears the carry flag on
+; success else sets it.
+;
+; args:
+;   nothing
+;
+; returns:
+;   nothing
 ;
 exit_boot_services:
-	; get memory map size
+  ; first, get the memory map.
+  call get_memory_map
+  jc .exit
 
-	; invoke EFI_BOOT_SERVICES.GetMemoryMap() function
+	; now try to exit boot services 3 times.
+	xor cx, cx
+.exit_bs_loop:
+	uefi_call_wrapper BootServices, ExitBootServices, \
+			  qword [image_handle], qword [map_key]
+	mov rbx, EFI_SUCCESS
+	cmp rax, rbx
+	je .clear_carry_flag
+	inc cx
+	cmp cx, 3
+	jl .exit_bs_loop
+
+	uefi_call_wrapper ConOut, OutputString, ConOut, error_msg_7
+	stc
+  jmp .exit
+
+.clear_carry_flag:
+  clc
+
+.exit:
+	ret
+
+;
+; get_memory_map
+;
+; this function gets the memory map. It clears the carry flag on success
+; else sets it.
+;
+; args:
+;   nothing
+;
+; returns:
+;   nothing
+;
+get_memory_map:
+  ; first, get memory map size.
+	; Invoke EFI_BOOT_SERVICES.GetMemoryMap() function.
 	uefi_call_wrapper BootServices, GetMemoryMap, memory_map_size, 0, \
 			  map_key, desc_size, 0
 	mov rbx, EFI_BUFFER_TOO_SMALL
 	cmp rax, rbx
 	jne .error1
 
-	; update the memory map size
+	; now update the memory map size.
 	;
 	; We basically perform memory_map_size += 2 * descriptor_size.
 	; Allocating the pool creates at least one new descriptor for the chunk
@@ -235,7 +287,7 @@ exit_boot_services:
 	clc
 	mov qword [memory_map_size], rcx
 
-	; allocate a new pool of memory for the memory map
+	; allocate a new pool of memory for the memory map.
 
 	uefi_call_wrapper BootServices, AllocatePool, 2, qword [memory_map_size], \
 			  memory_map	; 2 indicates EfiLoaderData
@@ -243,7 +295,7 @@ exit_boot_services:
 	cmp rax, rbx
 	jne .error2
 
-	; get memory map
+	; finally get memory map.
 
 	uefi_call_wrapper BootServices, GetMemoryMap, memory_map_size, \
 			  qword [memory_map], map_key, desc_size, 0
@@ -251,35 +303,22 @@ exit_boot_services:
 	cmp rax, rbx
 	jne .error3
 
-	; now try to exit boot services 3 times
+  clc
+  jmp .end
 
-	xor cx, cx
-.exit_bs_loop:
-	uefi_call_wrapper BootServices, ExitBootServices, \
-			  qword [image_handle], qword [map_key]
-	mov rbx, EFI_SUCCESS
-	cmp rax, rbx
-	je .exit
-	inc cx
-	cmp cx, 3
-	jl .exit_bs_loop
-.error0:
-	uefi_call_wrapper ConOut, OutputString, ConOut, error_msg_7
-	jmp .hang
 .error1:
 	uefi_call_wrapper ConOut, OutputString, ConOut, error_msg_4
-	jmp .hang
+	jmp .set_carry_flag
 .error2:
 	uefi_call_wrapper ConOut, OutputString, ConOut, error_msg_5
-	jmp .hang
+	jmp .set_carry_flag
 .error3:
 	uefi_call_wrapper ConOut, OutputString, ConOut, error_msg_6
-	jmp .hang
-.hang:
-	; hang here on error
-	jmp $
-.exit:
-	ret
+	jmp .set_carry_flag
+.set_carry_flag:
+  stc
+.end:
+  ret
 
 
 section '.data' data readable writeable
