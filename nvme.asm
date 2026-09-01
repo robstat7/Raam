@@ -16,6 +16,9 @@ NVME_SUBCLASS   = 0x08    ; non-volatile memory controller
 NVME_PROG_IF    = 0x02    ; NVM Express
 
 
+ADMIN_QUEUE_SIZE = 63     ; 0's based value
+
+
 struc COMMON_CONFIG_SPACE_HEADER_STRUCT {
   .vendor_id            dw ?
   .dev_id               dw ?
@@ -125,8 +128,42 @@ nvme_controller_init:
   lea rdi, [msg_nvme_reset_completed]
   call printk
 
+  call configure_admin_queues
+
   mov eax, 0
 .end:
+  ret
+
+;
+; configure_admin_queues
+;
+; this function configures the admin submission and the admin completion
+; queues by setting up the admin queue attributes (AQA) first. The
+; attributes include the admin completion queue size (ACQS) and the
+; admin submission queue size (ASQS). Both are set to 63 commands or
+; entries, which is a 0's based value (i.e. 64 commands in total). Then
+; it sets up the admin submission queue's and the admin completion
+; queue's base addresses by setting up the admin submission queue (ASQ)
+; and the admin completion queue (ACQ) registers of the controller.
+;
+; args:
+;   nothing
+;
+; returns:
+;   nothing
+;
+configure_admin_queues:
+  mov rax, qword [controller_register_map_base]
+
+  ; combine ACQS (bits 27:16) and ASQS (bits 11:0) into the
+  ; AQA register value.
+  mov ebx, ADMIN_QUEUE_SIZE
+  shl ebx, 16
+  mov ecx, ADMIN_QUEUE_SIZE
+  or ebx, ecx
+  mov dword [rax + REGISTER_MAP_STRUCT.aqa], ebx
+
+  ; TODO: set ASQ and ACQ registers
   ret
 
 ;
