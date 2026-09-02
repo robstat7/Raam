@@ -15,6 +15,10 @@ include 'kernel.asm'
 include 'xsdp.asm'
 
 
+; efi memory type
+EfiLoaderData = 0x2
+
+
 struc FRAMEBUFFER {
 	.framebuffer_base	        void
 	.framebuffer_size	        void
@@ -80,9 +84,8 @@ start:
 store_framebuffer_info:
 	; allocate a new pool of memory to store the framebuffer information
 
-	uefi_call_wrapper BootServices, AllocatePool, 2, \
+	uefi_call_wrapper BootServices, AllocatePool, EfiLoaderData, \
 			  qword [framebuffer_info_size], framebuffer_info
-						     ; 2 indicates EfiLoaderData
 	mov rbx, EFI_SUCCESS
 	cmp rax, rbx
 	jne .error1
@@ -245,8 +248,8 @@ exit_boot_services:
 
 	; allocate a new pool of memory for the memory map
 
-	uefi_call_wrapper BootServices, AllocatePool, 2, qword [memory_map_size], \
-			  memory_map	; 2 indicates EfiLoaderData
+	uefi_call_wrapper BootServices, AllocatePool, EfiLoaderData, \
+                    qword [memory_map_size], memory_map
 	mov rbx, EFI_SUCCESS
 	cmp rax, rbx
 	jne .error2
@@ -289,8 +292,21 @@ exit_boot_services:
 .exit:
 	ret
 
+;
+; allocate_nvme_queues_buffer
+;
+; this function allocates 5*4K bytes of buffer for NVMe queues. It
+; clears the carry flag on success else sets it.
+;
+; args:
+;   nothing
+;
+; returns:
+;   nothing
+;
 allocate_nvme_queues_buffer:
-  uefi_call_wrapper BootServices, AllocatePool, 2, 5*4096, nvme_queues_buffer
+  uefi_call_wrapper BootServices, AllocatePool, EfiLoaderData, 5*4096, \
+                    nvme_queues_buffer
   mov rbx, EFI_SUCCESS
   cmp rax, rbx
   jne .error1
