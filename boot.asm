@@ -63,7 +63,8 @@ start:
   call exit_boot_services
 
   ; go to kernel initialization code.
-  mov rdi, qword [xsdp_pointer]   ; boot param
+  ; copy boot params.
+  mov rdi, qword [xsdp_pointer]
   mov rsi, qword [nvme_queues_buffer]
   call kernel_init
 

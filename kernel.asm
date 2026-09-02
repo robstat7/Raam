@@ -81,6 +81,7 @@ section '.text' code executable readable
 ;
 ; args (boot params):
 ;   @rdi = xsdp table pointer
+;   @rsi = nvme queues buffer pointer
 ;
 ; returns:
 ;   nothing
@@ -89,6 +90,7 @@ kernel_init:
   ; first disable interrupts
   cli
 
+  push rsi
   push rdi
 
   call default_tty_init
@@ -142,6 +144,7 @@ kernel_init:
   call get_nvme_base_address
 
   mov rdi, rax
+  pop rsi
   call nvme_controller_init
   cmp eax, 0
   jne .end

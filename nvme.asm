@@ -106,6 +106,7 @@ section '.text' code executable readable
 ;
 ; args:
 ;   @rdi = 64-bit NVMe base address
+;   @rsi = NVMe queues buffer pointer
 ;
 ; returns:
 ;   @eax = 0 on success else -1.
@@ -113,6 +114,10 @@ section '.text' code executable readable
 nvme_controller_init:
   ; store the controller register map base address first
   mov qword [controller_register_map_base], rdi
+
+  mov rdi, rsi
+  call align_address_to_4kib_boundary
+  mov qword [nvme_queues_free_region], rax
 
   ; now reset the controller
   call reset_controller
@@ -163,7 +168,15 @@ configure_admin_queues:
   or ebx, ecx
   mov dword [rax + REGISTER_MAP_STRUCT.aqa], ebx
 
-  ; TODO: set ASQ and ACQ registers
+  ; set ASQ and ACQ registers in the controller (addresses must be 4KiB aligned)
+  mov rbx, qword [nvme_queues_free_region]
+  mov qword [rax + REGISTER_MAP_STRUCT.asq], rbx
+  mov qword [nvme_asqb], rbx
+  add rbx, 4096
+  mov qword [rax + REGISTER_MAP_STRUCT.acq], rbx
+  mov qword [nvme_acqb], rbx
+  add rbx, 4096
+  mov qword [nvme_queues_free_region], rbx
   ret
 
 ;
@@ -422,14 +435,54 @@ find_nvme_controller:
   pop rbp
   ret
 
+;
+; align_address_to_4kib_boundary
+;
+; this function aligns a given address to the next 4 KiB boundary.
+;
+; args:
+;   @rdi = address
+;
+; returns:
+;   @rax = 4 KiB aligned address
+;
+align_address_to_4kib_boundary:
+  ; if the address is not aligned, the remainder tells us how far
+  ; the address is from the previous 4KiB boundary.
+  xor edx, edx
+  mov rax, rdi
+  mov ecx, 4096
+  div rcx
+  cmp rdx, 0
+  je .end
+
+  sub rcx, rdx
+  add rdi, rcx
+
+.end:
+  mov rax, rdi
+  ret
+
 
 section '.data' data readable writeable
 
 nvme_controller_info rb sizeof.PCIE_DEV_INFO_STRUCT
 
+
 controller_register_map_base dq 0
+
 
 msg_nvme db "Found NVMe controller! Bus number = {p}, Device number = {p}, Function number = {p}", 10, 0
 
 msg_nvme_fatal_error db "error: nvme: the controller had a fatal error!", 10, 0
 msg_nvme_reset_completed db "nvme: controller reset is completed!", 10, 0
+
+
+; contains the next 4 KiB aligned address to be used for NVMe queues.
+; the memory region is already zeroed.
+nvme_queues_free_region dq 0
+
+
+; admin queues' base addresses
+nvme_asqb dq 0
+nvme_acqb dq 0
