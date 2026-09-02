@@ -48,11 +48,19 @@ start:
   call get_xsdp_pointer
   jc .hang
 
+  ; allocate and clear 5*4K bytes of bufer for NVMe queues
+  call allocate_nvme_queues_buffer
+  jc .hang
+
+  ; clear the allocated buffer by setting it to 0s
+  uefi_call_wrapper BootServices, SetMem, qword [nvme_queues_buffer], 5*4096, 0
+
   ; exit the boot services.
   call exit_boot_services
 
   ; go to kernel initialization code.
   mov rdi, qword [xsdp_pointer]   ; boot param
+  mov rsi, qword [nvme_queues_buffer]
   call kernel_init
 
 .hang:
@@ -281,6 +289,20 @@ exit_boot_services:
 .exit:
 	ret
 
+allocate_nvme_queues_buffer:
+  uefi_call_wrapper BootServices, AllocatePool, 2, 5*4096, nvme_queues_buffer
+  mov rbx, EFI_SUCCESS
+  cmp rax, rbx
+  jne .error1
+  clc
+  jmp .end
+
+.error1:
+	uefi_call_wrapper ConOut, OutputString, ConOut, error_msg_9
+  stc
+
+.end:
+  ret
 
 section '.data' data readable writeable
 
@@ -300,6 +322,7 @@ error_msg_5	du "fatal error: error allocating memory map buffer!", 0
 error_msg_6	du "fatal error: error getting memory map!", 0
 error_msg_7	du "fatal error: exit boot services: map key is incorrect!", 0
 error_msg_8	du "fatal error: error allocating fb info buffer!", 0
+error_msg_9	du "fatal error: error allocating nvme queues buffer!", 0
 
 total_video_modes dd 0
 mode_code	dd 100	; taking an arbitrary high mode code
@@ -312,3 +335,5 @@ memory_map_size	dq 0
 map_key		dq ?
 desc_size	dq ?
 memory_map	dq 0
+
+nvme_queues_buffer dq 0
