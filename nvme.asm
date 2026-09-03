@@ -106,20 +106,20 @@ section '.text' code executable readable
 ;
 ; args:
 ;   @rdi = 64-bit NVMe base address
-;   @rsi = NVMe queues buffer pointer
+;   @rsi = NVMe queues buffer pointer (buffer is zeroed)
 ;
 ; returns:
 ;   @eax = 0 on success else -1.
 ;
 nvme_controller_init:
-  ; store the controller register map base address first
+  ; store the controller register map base address first.
   mov qword [controller_register_map_base], rdi
 
+  ; now set 4 KiB aligned address for NVMe queues buffer.
   mov rdi, rsi
   call align_address_to_4kib_boundary
   mov qword [nvme_queues_free_region], rax
 
-  ; now reset the controller
   call reset_controller
   cmp eax, 0
   je .next
@@ -193,7 +193,21 @@ configure_admin_queues:
   mov qword [nvme_queues_free_region], rbx
   ret
 
-; enable the controller - set CC.EN bit (bit #0)
+;
+; enable_controller
+;
+; this function enables the controller by setting the
+; CC.EN bit (bit #0). It then waits for the controller to indicate that
+; the previous enable is complete by waiting for the CSTS.RDY bit
+; (bit #0) to be set.
+;
+; args:
+;   nothing
+;
+; returns:
+;   @eax = 0 on success else -1.
+;
+
 enable_controller:
   mov rax, qword [controller_register_map_base]
   mov ebx, dword [rax + REGISTER_MAP_STRUCT.cc]
