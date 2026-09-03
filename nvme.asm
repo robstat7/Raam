@@ -135,7 +135,21 @@ nvme_controller_init:
 
   call configure_admin_queues
 
+  call enable_controller
+  cmp eax, 0
+  je .next2
+
+  lea rdi, [msg_nvme_fatal_error]
+  call printk
+  mov eax, -1
+  jmp .end
+
+.next2:
+  lea rdi, [msg_nvme_enable_completed]
+  call printk
+
   mov eax, 0
+
 .end:
   ret
 
@@ -179,6 +193,40 @@ configure_admin_queues:
   mov qword [nvme_queues_free_region], rbx
   ret
 
+; enable the controller - set CC.EN bit (bit #0)
+enable_controller:
+  mov rax, qword [controller_register_map_base]
+  mov ebx, dword [rax + REGISTER_MAP_STRUCT.cc]
+  mov ecx, 0x1
+  or ebx, ecx
+  mov dword [rax + REGISTER_MAP_STRUCT.cc], ebx
+
+  ; poll until CSTS.RDY bit (bit #0) is set, or return -1 if
+  ; CSTS.CFS bit (bit #1) is set.
+.loop_start:
+  mov ebx, 0x1
+  mov ecx, dword [rax + REGISTER_MAP_STRUCT.csts]
+  and ecx, ebx
+  jnz .loop_end
+
+  ; check if CSTS.CFS bit (bit #1) is set (fatal error)
+  mov ebx, 0x2
+  mov ecx, dword [rax + REGISTER_MAP_STRUCT.csts]
+  and ecx, ebx
+  jz .loop_next
+
+  mov eax, -1
+  jmp .end
+
+.loop_next:
+  jmp .loop_start
+
+.loop_end:
+  mov eax, 0
+
+.end:
+  ret
+
 ;
 ; reset_controller
 ;
@@ -202,7 +250,7 @@ reset_controller:
   and ebx, ecx
   mov dword [rax + REGISTER_MAP_STRUCT.cc], ebx
 
-  ; poll until CSTS.RDY bit (bit #0) becomes 0, or return false if
+  ; poll until CSTS.RDY bit (bit #0) becomes 0, or return -1 if
   ; CSTS.CFS bit (bit #1) is set.
 .loop_start:
   mov ebx, 0x1
@@ -474,8 +522,9 @@ controller_register_map_base dq 0
 
 msg_nvme db "Found NVMe controller! Bus number = {p}, Device number = {p}, Function number = {p}", 10, 0
 
-msg_nvme_fatal_error db "error: nvme: the controller had a fatal error!", 10, 0
+msg_nvme_fatal_error db "nvme: error: the controller had a fatal error!", 10, 0
 msg_nvme_reset_completed db "nvme: controller reset is completed!", 10, 0
+msg_nvme_enable_completed db "nvme: controller is enabled!", 10, 0
 
 
 ; contains the next 4 KiB aligned address to be used for NVMe queues.
