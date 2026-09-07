@@ -96,7 +96,7 @@ struc REGISTER_MAP_STRUCT {
 }
 struct REGISTER_MAP_STRUCT
 
-struc SUBMISSION_QUEUE_COMMANDS_STRUCT {
+struc ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT {
   .cdw0                 dd ?
   .cdw1                 dd ?
   .cdw2                 dd ?
@@ -111,7 +111,7 @@ struc SUBMISSION_QUEUE_COMMANDS_STRUCT {
   .cdw14                dd ?
   .cdw15                dd ?
 }
-struct SUBMISSION_QUEUE_COMMANDS_STRUCT
+struct ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT
 
 
 section '.text' code executable readable
@@ -222,6 +222,32 @@ create_first_io_completion_queue:
   pop rbp
   ret
 
+;
+; send_admin_command
+;
+; this function builds the command at the expected location in the
+; submission ring and sends it to the controller for processing. First
+; it reads the currently stored admin submission queue tail doorbell
+; value from the memory. The vaild values are from 0 to 63. This value
+; tells us about the command no. in the submission ring that is being
+; currently submitted. It then updates the tail doorbell value by adding
+; 1 to it. If it is equal to 64 (greater than 63), we wrap it to 0. As
+; each command is 64 bytes in size, we multiply this unupdated tail
+; doorbell value by 64 to calculate the offset in the submission ring
+; before creating the new command.
+; Then it builds the command at the expected location and sends it to
+; the controller for processing.
+;
+; args:
+;   @edi = cdw0
+;   @esi = cdw1
+;   @rdx = cdw6_7 (command dword 6 and 7)
+;   @ecx = cdw10
+;   @r8d = cdw11
+;
+; returns:
+;   nothing
+;
 send_admin_command:
   push rbp
   mov rbp, rsp
@@ -250,7 +276,7 @@ send_admin_command:
   ; calculate the offset into the submission ring
   xor eax, eax
   mov al, old_admin_sq_tail_dbl_val
-  imul eax, 64
+  imul eax, 64      ; each command is 64 bytes in size
   mov offset, eax
 
   ; find the address in the submission ring to build the command
@@ -266,7 +292,7 @@ send_admin_command:
   mov edx, esi
   mov esi, edi
   mov rdi, asqb_ptr
-  call build_command_structure
+  call admin_build_command_structure
 
   ; now send the admin command by updating the admin submission queue tail
   ; doorbell register.
@@ -317,20 +343,39 @@ check_admin_completion_queue:
   mov dword [rax], 0  ; overwrite the old entry
   ret
 
-build_command_structure:
-  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw0], esi
-  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw1], edx
-  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw2], 0
-  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw3], 0
-  mov qword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw4_5], 0
-  mov qword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw6_7], rcx
-  mov qword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw8_9], 0
-  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw10], r8d
-  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw11], r9d
-  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw12], 0
-  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw13], 0
-  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw14], 0
-  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw15], 0
+;
+; admin_build_command_structure
+;
+; this function builds the command at the expected location in the
+; submission ring. It only accepts the command dword values for cdw0,
+; cdw1, cdw6-7, cdw10, and cdw11. Rest all the command dwords value
+; must be 0.
+;
+; args:
+;   @rdi = address in the submission ring to build the command
+;   @esi = cdw0
+;   @edx = cdw1
+;   @rcx = cdw6_7
+;   @r8d = cdw10
+;   @r9d = cdw11
+;
+; returns:
+;   nothing
+;
+admin_build_command_structure:
+  mov dword [rdi + ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw0], esi
+  mov dword [rdi + ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw1], edx
+  mov dword [rdi + ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw2], 0
+  mov dword [rdi + ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw3], 0
+  mov qword [rdi + ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw4_5], 0
+  mov qword [rdi + ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw6_7], rcx
+  mov qword [rdi + ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw8_9], 0
+  mov dword [rdi + ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw10], r8d
+  mov dword [rdi + ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw11], r9d
+  mov dword [rdi + ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw12], 0
+  mov dword [rdi + ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw13], 0
+  mov dword [rdi + ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw14], 0
+  mov dword [rdi + ADMIN_SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw15], 0
   ret
 
 create_first_io_submission_queue:
