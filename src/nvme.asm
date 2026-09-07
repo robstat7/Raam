@@ -96,6 +96,23 @@ struc REGISTER_MAP_STRUCT {
 }
 struct REGISTER_MAP_STRUCT
 
+struc SUBMISSION_QUEUE_COMMANDS_STRUCT {
+  .cdw0                 dd ?
+  .cdw1                 dd ?
+  .cdw2                 dd ?
+  .cdw3                 dd ?
+  .cdw4_5               dq ?
+  .cdw6_7               dq ?
+  .cdw8_9               dq ?
+  .cdw10                dd ?
+  .cdw11                dd ?
+  .cdw12                dd ?
+  .cdw13                dd ?
+  .cdw14                dd ?
+  .cdw15                dd ?
+}
+struct SUBMISSION_QUEUE_COMMANDS_STRUCT
+
 
 section '.text' code executable readable
 
@@ -148,9 +165,221 @@ nvme_controller_init:
   lea rdi, [msg_nvme_enable_completed]
   call printk
 
+  call create_first_io_completion_queue
+  call create_first_io_submission_queue
+
   mov eax, 0
 
 .end:
+  ret
+
+create_first_io_completion_queue:
+  push rbp
+  mov rbp, rsp
+
+  sub rsp, 16
+
+  cdw0 equ dword [rbp - 4]
+  cdw1 equ dword [rbp - 8]
+  cdw10 equ dword [rbp - 12]
+  cdw11 equ dword [rbp - 16]
+
+  ; first we need to set the CC.IOCQES field before creating the I/O
+  ; completion queue. As our controller supports only one I/O Command
+  ; Set i.e. the NVM Command Set, both the required and the maximum
+  ; values for CQES are 4 (2^4 = 16 bytes). We will use this value.
+  mov rax, qword [controller_register_map_base]
+  mov ebx, dword [rax + REGISTER_MAP_STRUCT.cc]
+  or ebx, 0x400000
+  mov dword [rax + REGISTER_MAP_STRUCT.cc], ebx
+
+  ; CDW0 CID 0, PRP used (bits 15:14 clear), FUSE normal (bits 9:8 clear),
+  ; command create io completion queue (0x5)
+  mov cdw0, 0x5
+
+  mov cdw1, 0x0         ; CDW1 ignored
+  mov cdw10, 0xf0001    ; queue size = 15 commands (0's based), qid = 1
+  mov cdw11, 0x1        ; interrupts disabled, physically contiguous (1<<0)
+
+  mov rbx, qword [nvme_queues_free_region]
+  mov qword [nvme_iocqb], rbx
+  add rbx, 4096
+  mov qword [nvme_queues_free_region], rbx
+
+  mov edi, cdw0
+  mov esi, cdw1
+  mov rdx, qword [nvme_iocqb]
+  mov ecx, cdw10
+  mov r8d, cdw11
+  call send_admin_command
+
+  restore cdw0
+  restore cdw1
+  restore cdw10
+  restore cdw11
+
+  mov rsp, rbp
+  pop rbp
+  ret
+
+send_admin_command:
+  push rbp
+  mov rbp, rsp
+
+  sub rsp, 14
+
+  admin_sq_tail_dbl_val equ byte [rbp - 1]
+  old_admin_sq_tail_dbl_val equ byte [rbp - 2]
+  offset equ dword [rbp - 6]
+  asqb_ptr equ qword [rbp - 14]
+
+  mov al, byte [admin_sq_tail_doorbell]
+  mov admin_sq_tail_dbl_val, al
+  mov old_admin_sq_tail_dbl_val, al
+
+  inc admin_sq_tail_dbl_val
+
+  cmp admin_sq_tail_dbl_val, 64
+  je .wrap
+  jmp .next
+
+.wrap:
+  mov admin_sq_tail_dbl_val, 0        ; wrap after 64 commands
+
+.next:
+  ; calculate the offset into the submission ring
+  xor eax, eax
+  mov al, old_admin_sq_tail_dbl_val
+  imul eax, 64
+  mov offset, eax
+
+  ; find the address in the submission ring to build the command
+  mov rax, qword [nvme_asqb]
+  xor ebx, ebx
+  mov ebx, offset
+  add rax, rbx
+  mov asqb_ptr, rax
+
+  mov r9d, r8d
+  mov r8d, ecx
+  mov rcx, rdx
+  mov edx, esi
+  mov esi, edi
+  mov rdi, asqb_ptr
+  call build_command_structure
+
+  ; now send the admin command by updating the admin submission queue tail
+  ; doorbell register.
+  ; store the new tail doorbell value first.
+  xor eax, eax
+  mov al, admin_sq_tail_dbl_val
+  mov byte [admin_sq_tail_doorbell], al
+
+  ; ring the doorbell by writing the newly incremented value to it.
+  mov rbx, qword [controller_register_map_base]
+  mov dword [rbx + REGISTER_MAP_STRUCT.sq0tdbl], eax
+
+  xor eax, eax
+  mov al, old_admin_sq_tail_dbl_val
+  mov edi, eax
+  call check_admin_completion_queue
+
+  restore admin_sq_tail_dbl_val
+  restore old_admin_sq_tail_dbl_val
+  restore offset
+  restore asqb_ptr
+
+  mov rsp, rbp
+  pop rbp
+  ret
+
+check_admin_completion_queue:
+  imul edi, 16    ; each entry is 16 bytes
+  add edi, 12     ; add 12 for double word 3
+
+  mov rax, qword [nvme_acqb]
+  add rax, rdi
+
+.loop_start:
+  mov ebx, dword [rax]
+  cmp ebx, 0
+  je .loop_start
+
+  xor ebx, ebx
+  mov bx, word [rax + 2]
+
+  push rax
+  lea rdi, [nvme_debug_msg]
+  mov esi, ebx
+  call printk
+
+  pop rax
+  mov dword [rax], 0  ; overwrite the old entry
+  ret
+
+build_command_structure:
+  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw0], esi
+  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw1], edx
+  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw2], 0
+  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw3], 0
+  mov qword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw4_5], 0
+  mov qword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw6_7], rcx
+  mov qword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw8_9], 0
+  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw10], r8d
+  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw11], r9d
+  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw12], 0
+  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw13], 0
+  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw14], 0
+  mov dword [rdi + SUBMISSION_QUEUE_COMMANDS_STRUCT.cdw15], 0
+  ret
+
+create_first_io_submission_queue:
+  push rbp
+  mov rbp, rsp
+
+  sub rsp, 16
+
+  cdw0 equ dword [rbp - 4]
+  cdw1 equ dword [rbp - 8]
+  cdw10 equ dword [rbp - 12]
+  cdw11 equ dword [rbp - 16]
+
+  ; first we need to set the CC.IOSQES field before creating the I/O
+  ; submission queue. As our controller supports only one I/O Command
+  ; Set i.e. the NVM Command Set, both the required and the maximum
+  ; values for SQES are 6 (2^6 = 64 bytes). We will use this value.
+  mov rax, qword [controller_register_map_base]
+  mov ebx, dword [rax + REGISTER_MAP_STRUCT.cc]
+  or ebx, 0x60000
+  mov dword [rax + REGISTER_MAP_STRUCT.cc], ebx
+
+  ; CDW0 CID 0, PRP used (bits 15:14 clear), FUSE normal (bits 9:8 clear),
+  ; command create io submission queue (0x1)
+  mov cdw0, 0x1
+
+  mov cdw1, 0x0         ; CDW1 ignored
+  mov cdw10, 0x3f0001   ; queue size = 63 commands (0's based), qid = 1
+  mov cdw11, 0x10001    ; cqid = 1, physically contiguous (1<<0)
+
+  mov rbx, qword [nvme_queues_free_region]
+  mov qword [nvme_iosqb], rbx
+  add rbx, 4096
+  mov qword [nvme_queues_free_region], rbx
+
+  mov edi, cdw0
+  mov esi, cdw1
+  mov rdx, qword [nvme_iosqb]
+  mov ecx, cdw10
+  mov r8d, cdw11
+  call send_admin_command
+
+  restore cdw0
+  restore cdw1
+  restore cdw10
+  restore cdw11
+
+  mov rsp, rbp
+  pop rbp
   ret
 
 ;
@@ -549,3 +778,12 @@ nvme_queues_free_region dq 0
 ; admin queues' base addresses
 nvme_asqb dq 0
 nvme_acqb dq 0
+
+; io queues' base addresses
+nvme_iocqb dq 0
+nvme_iosqb dq 0
+
+
+admin_sq_tail_doorbell  db 0
+
+nvme_debug_msg db "@acq: status field plus phase tag value = {p}", 10, 0
