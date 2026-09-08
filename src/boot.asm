@@ -52,12 +52,12 @@ start:
   call get_xsdp_pointer
   jc .hang
 
-  ; allocate and clear 5*4K bytes of bufer for NVMe queues
+  ; allocate and clear 6*4K bytes of bufer for NVMe queues
   call allocate_nvme_queues_buffer
   jc .hang
 
   ; clear the allocated buffer by setting it to 0s
-  uefi_call_wrapper BootServices, SetMem, qword [nvme_queues_buffer], 5*4096, 0
+  uefi_call_wrapper BootServices, SetMem, qword [nvme_queues_buffer], 6*4096, 0
 
   ; exit the boot services.
   call exit_boot_services
@@ -296,7 +296,7 @@ exit_boot_services:
 ;
 ; allocate_nvme_queues_buffer
 ;
-; this function allocates 5*4K bytes of buffer for NVMe queues. It
+; this function allocates 6*4K bytes of buffer for NVMe queues. It
 ; clears the carry flag on success else sets it.
 ;
 ; args:
@@ -306,7 +306,7 @@ exit_boot_services:
 ;   nothing
 ;
 allocate_nvme_queues_buffer:
-  uefi_call_wrapper BootServices, AllocatePool, EfiLoaderData, 5*4096, \
+  uefi_call_wrapper BootServices, AllocatePool, EfiLoaderData, 6*4096, \
                     nvme_queues_buffer
   mov rbx, EFI_SUCCESS
   cmp rax, rbx

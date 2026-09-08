@@ -168,10 +168,158 @@ nvme_controller_init:
   call create_first_io_completion_queue
   call create_first_io_submission_queue
 
+  ; set NVMe data buffer base address
+  mov rax, qword [nvme_queues_free_region]
+  mov qword [nvme_data_buffer], rax
+  add rax, 4096
+  mov qword [nvme_queues_free_region], rax
+
   mov eax, 0
 
 .end:
   ret
+
+;
+; this function reads a number of logical blocks from the starting sector and
+; returns data in the nvme data buffer.
+; logical block size is 512 bytes.
+;
+; args:
+;   @edi = starting sector
+;   @esi = number of blocks to read (0's based value)
+;
+; returns:
+;   @rax = nvme_data_buffer pointer
+nvme_read:
+  push rbp
+  mov rbp, rsp
+
+  sub rsp, 30
+
+  cdw0 equ dword [rbp - 4]
+  cdw1 equ dword [rbp - 8]
+  cdw10_11 equ dword [rbp - 12]
+  cdw12 equ dword [rbp - 16]
+  io_sq_tail_dbl_val equ byte [rbp - 17]
+  old_io_sq_tail_dbl_val equ byte [rbp - 18]
+  offset equ dword [rbp - 22]
+  iosqb_ptr equ qword [rbp - 30]
+
+  ; CDW0 CID 0, PRP used (15:14 clear), FUSE normal (bits 9:8 clear),
+  ; command read (0x2)
+  mov cdw0, 0x2
+
+  ; CDW1 NSID. The vast majority of NVMe SSDs designed for consumer use
+  ; (e.g., laptops, desktops) have one namespace.
+  mov cdw1, 0x1
+
+  mov cdw10_11, edi
+  mov cdw12, esi
+
+  ; read the tail doorbell value
+  mov al, byte [nvme_iotail]
+  mov io_sq_tail_dbl_val, al
+  mov old_io_sq_tail_dbl_val, al
+
+  ; update the tail doorbell value
+  inc io_sq_tail_dbl_val
+
+  cmp io_sq_tail_dbl_val, 64
+  je .wrap
+  jmp .next
+
+.wrap:
+  mov io_sq_tail_dbl_val, 0        ; wrap after 64 commands
+
+.next:
+  ; calculate the offset into the submission ring
+  xor eax, eax
+  mov al, old_io_sq_tail_dbl_val
+  imul eax, 64      ; each command is 64 bytes in size
+  mov offset, eax
+
+  ; find the address in the submission ring to build the command
+  mov rax, qword [nvme_iosqb]
+  xor ebx, ebx
+  mov ebx, offset
+  add rax, rbx
+  mov iosqb_ptr, rax
+
+  ; build the command structure
+  mov rax, iosqb_ptr
+  mov ebx, cdw0
+  mov dword [rax], ebx       ; cdw0
+  mov ebx, cdw1
+  mov dword [rax + 4], ebx   ; cdw1
+  mov dword [rax + 8], 0     ; cdw2
+  mov dword [rax + 12], 0    ; cdw3
+  mov qword [rax + 16], 0    ; cdw4-5
+  mov rbx, qword [nvme_data_buffer]
+  mov qword [rax + 24], rbx  ; cdw6-7
+  mov qword [rax + 32], 0    ; cdw8-9
+  mov ebx, cdw10_11
+  mov qword [rax + 40], rbx  ; cdw10_11
+  mov ebx, cdw12
+  mov dword [rax + 48], ebx  ; cdw12
+  mov dword [rax + 52], 0    ; cdw13
+  mov dword [rax + 56], 0    ; cdw14
+  mov dword [rax + 60], 0    ; cdw15
+
+  ; now send the read command by updating the I/O submission queue tail
+  ; doorbell register.
+  ; store the new tail doorbell value first.
+  xor eax, eax
+  mov al, io_sq_tail_dbl_val
+  mov byte [nvme_iotail], al
+
+  ; ring the doorbell by writing the newly incremented value to it.
+  mov rbx, qword [controller_register_map_base]
+  mov dword [rbx + REGISTER_MAP_STRUCT.sq1tdbl], eax
+
+  xor eax, eax
+  mov al, old_io_sq_tail_dbl_val
+  mov edi, eax
+  call check_io_completion_queue
+
+  mov rax, [nvme_data_buffer]
+
+  restore cdw0
+  restore cdw1
+  restore cdw10_11
+  restore cdw12
+  restore io_sq_tail_dbl_val
+  restore old_io_sq_tail_dbl_val
+  restore offset
+  restore iosqb_ptr
+
+  mov rsp, rbp
+  pop rbp
+  ret
+
+check_io_completion_queue:
+  imul edi, 16    ; each entry is 16 bytes
+  add edi, 12     ; add 12 for double word 3
+
+  mov rax, qword [nvme_iocqb]
+  add rax, rdi
+
+.loop_start:
+  mov ebx, dword [rax]
+  cmp ebx, 0
+  je .loop_start
+
+  xor ebx, ebx
+  mov bx, word [rax + 2]
+
+  push rax
+  lea rdi, [nvme_debug_msg2]
+  mov esi, ebx
+  call printk
+
+  pop rax
+  mov dword [rax], 0  ; overwrite the old entry
+  ret
+
 
 create_first_io_completion_queue:
   push rbp
@@ -831,4 +979,11 @@ nvme_iosqb dq 0
 
 admin_sq_tail_doorbell  db 0
 
+nvme_iotail db 0
+
+; buffer to hold the NVMe read/write data
+nvme_data_buffer dq 0
+
+
 nvme_debug_msg db "@acq: status field plus phase tag value = {p}", 10, 0
+nvme_debug_msg2 db "@iocq: status field plus phase tag value = {p}", 10, 0

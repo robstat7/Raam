@@ -1,3 +1,6 @@
+include 'ls.asm'
+
+
 section '.text' code executable readable
 
 run_shell:
@@ -75,7 +78,7 @@ run_shell:
   mov edx, 7
   call strncmp
   cmp eax, 0
-  jne .default
+  jne .cmd_5
 
   ; using intel's motherboard chipset register for reboot
   ; specification link:
@@ -83,6 +86,17 @@ run_shell:
   mov dx, 0xcf9       ; reset control register
   mov al, 0x06        ; bit 1 = system reset, bit 2 = reset cpu
   out dx, al
+  jmp .end
+
+.cmd_5:
+  lea rdi, [input_buffer]
+  lea rsi, [cmd_5]
+  mov edx, 3
+  call strncmp
+  cmp eax, 0
+  jne .default
+
+  call list_files_in_root_directory
   jmp .end
 
 .default:
@@ -103,8 +117,9 @@ cmd_1 db "help", 10, 0
 cmd_2 db "clear", 10, 0
 cmd_3 db "echo", 10, 0
 cmd_4 db "reboot", 10, 0
+cmd_5 db "ls", 10, 0
 
-cmd_1_response db "Available commands:", 10, "help", 10, "ls", 10, "clear", \
-10, "echo", 10, "reboot", 10, 0
+cmd_1_response db "Available commands:", 10, "help", 10, "clear", 10, "echo", \
+10, "reboot", 10, "ls", 10, 0
 
 cmd_not_found_msg db "Command not found", 10, 0
