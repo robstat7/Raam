@@ -311,12 +311,12 @@ check_io_completion_queue:
   xor ebx, ebx
   mov bx, word [rax + 2]
 
-  push rax
-  lea rdi, [nvme_debug_msg2]
-  mov esi, ebx
-  call printk
+  ; push rax
+  ; lea rdi, [nvme_debug_msg2]
+  ; mov esi, ebx
+  ; call printk
 
-  pop rax
+  ; pop rax
   mov dword [rax], 0  ; overwrite the old entry
   ret
 

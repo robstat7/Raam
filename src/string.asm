@@ -243,3 +243,47 @@ strncmp:
 
 .end:
   ret
+
+;
+; args:
+;   @rdi = destination
+;   @rsi = source
+;   @edx = length n
+;
+; returns:
+;   @rax = destination pointer
+strncpy:
+  push rbp
+  mov rbp, rsp
+
+  sub rsp, 12
+
+  i equ dword [rbp - 4]
+  temp equ qword [rbp - 12]
+
+  mov temp, rdi
+  mov i, 0
+
+.loop_start:
+  cmp i, edx
+  jae .loop_end
+
+  mov al, byte [rsi]
+  mov byte [rdi], al
+
+  inc rsi
+  inc rdi
+
+.loop_next:
+  inc i
+  jmp .loop_start
+
+.loop_end:
+  mov rax, temp
+
+  restore i
+  restore temp
+
+  mov rsp, rbp
+  pop rbp
+  ret
