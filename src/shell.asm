@@ -94,9 +94,22 @@ run_shell:
   mov edx, 3
   call strncmp
   cmp eax, 0
-  jne .default
+  jne .cmd_6
 
   call list_files_in_root_directory
+  jmp .end
+
+.cmd_6:
+  lea rdi, [input_buffer]
+  lea rsi, [cmd_6]
+  mov edx, 3
+  call strncmp
+  cmp eax, 0
+  jne .default
+
+  lea rdi, [input_buffer]
+  add rdi, 4  ; length of "cat "
+  call printk
   jmp .end
 
 .default:
@@ -118,6 +131,7 @@ cmd_2 db "clear", 10, 0
 cmd_3 db "echo", 10, 0
 cmd_4 db "reboot", 10, 0
 cmd_5 db "ls", 10, 0
+cmd_6 db "cat", 10, 0
 
 cmd_1_response db "Available commands:", 10, "help", 10, "clear", 10, "echo", \
 10, "reboot", 10, "ls", 10, "cat", 10, 0
