@@ -235,8 +235,14 @@ convert_scan_code_byte:
 
 .space:
   cmp al, 0x39
-  jne .default
+  jne .period
   mov al, SPACE_CHARACTER
+  jmp .end
+
+.period:
+  cmp al, 0x34
+  jne .default
+  mov al, '.'
   jmp .end
 
 
