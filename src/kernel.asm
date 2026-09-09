@@ -21,6 +21,8 @@ include 'kbd.asm'
 
 include 'shell.asm'
 
+include 'fs.asm'
+
 
 struc XSDP_STRUCT {
   .signature          db 8 dup (?)
@@ -148,6 +150,8 @@ kernel_init:
   call nvme_controller_init
   cmp eax, 0
   jne .end
+ 
+  call find_root_directory_lba
 
   ; enable interrupts now
   sti

@@ -1,6 +1,3 @@
-include 'ls.asm'
-
-
 section '.text' code executable readable
 
 run_shell:
@@ -109,7 +106,7 @@ run_shell:
 
   lea rdi, [input_buffer]
   add rdi, 4  ; length of "cat "
-  call printk
+  call get_file_on_root_directory
   jmp .end
 
 .default:
