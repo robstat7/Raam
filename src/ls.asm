@@ -57,7 +57,7 @@ list_files_in_root_directory:
   push rbp
   mov rbp, rsp
 
-  sub rsp, 31
+  sub rsp, 32
 
   root_dir_sectors equ dword [rbp - 4]
   first_data_sector equ dword [rbp - 8]
@@ -67,6 +67,7 @@ list_files_in_root_directory:
   total_logical_blocks_to_read equ byte [rbp - 29]
   blocks_read equ byte [rbp - 30]
   entry_num equ byte [rbp - 31]
+  counter equ byte [rbp - 32]
 
   mov edi, ROOT_PARTITION_FIRST_SECTOR
   xor esi, esi
@@ -143,22 +144,69 @@ list_files_in_root_directory:
   lea rsi, [r8 + DIR_ENTRY_STRUCT.file_name]
   mov edx, 11 ; dir entry's file name field is 11 bytes long
   call strncpy
-  
-  ; terminate file name buffer with newline char and null char
-  mov rdi, rax
-  mov byte [rdi + 11], NEWLINE_CHARACTER
-  mov byte [rdi + 12], 0x0
 
   ; skip printing volume label entry name
+  mov rdi, rax
   lea rsi, [VOLUME_LABEL]
   mov edx, 8  ; length of VOLUME_LABEL
   call strncmp
   cmp eax, 0
   je .inner_loop_next
 
+  ; print file name
   push r8
-  lea rdi, [file_name_field_value]
-  call printk   ; print file name
+  lea rax, [file_name_field_value]
+  mov counter, 0
+.print_loop_start:
+  cmp counter, 8
+  jae .print_loop_end
+
+  cmp byte [rax], SPACE_CHARACTER
+  je .print_loop_end
+
+  lea rdi, [msg_file_name_char]
+  xor esi, esi
+  mov sil, byte [rax]
+  push rax
+  call printk
+  pop rax
+
+.print_loop_next:
+  inc counter
+  inc rax
+  jmp .print_loop_start
+
+.print_loop_end:
+  ; now print the file extension
+  lea rdi, [msg_period]
+  call printk
+
+  lea rax, [file_name_field_value]
+  add rax, 8    ; file extension starts from byte #8 (0's based)
+  mov counter, 0
+
+.print_extension_loop_start:
+  cmp counter, 3
+  jae .print_extension_loop_end
+
+  cmp byte [rax], SPACE_CHARACTER
+  je .print_extension_loop_end
+
+  lea rdi, [msg_file_name_char]
+  xor esi, esi
+  mov sil, byte [rax]
+  push rax
+  call printk
+  pop rax
+
+.print_extension_loop_next:
+  inc counter
+  inc rax
+  jmp .print_extension_loop_start
+
+.print_extension_loop_end:
+  lea rdi, [msg_newline_str]
+  call printk
   pop r8
 
 .inner_loop_next:
@@ -183,6 +231,7 @@ list_files_in_root_directory:
   restore total_logical_blocks_to_read
   restore blocks_read
   restore entry_num
+  restore counter
 
   mov rsp, rbp
   pop rbp
@@ -191,6 +240,11 @@ list_files_in_root_directory:
 
 section '.data' data readable writeable
 
-file_name_field_value rb 13
+file_name_field_value rb 11
 
 VOLUME_LABEL db "RAAMROOT"
+
+
+msg_file_name_char db "{c}", 0
+msg_period db ".", 0
+msg_newline_str db 10, 0
