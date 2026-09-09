@@ -120,6 +120,6 @@ cmd_4 db "reboot", 10, 0
 cmd_5 db "ls", 10, 0
 
 cmd_1_response db "Available commands:", 10, "help", 10, "clear", 10, "echo", \
-10, "reboot", 10, "ls", 10, 0
+10, "reboot", 10, "ls", 10, "cat", 10, 0
 
 cmd_not_found_msg db "Command not found", 10, 0
