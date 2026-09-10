@@ -107,6 +107,14 @@ run_shell:
   lea rdi, [input_buffer]
   add rdi, 4  ; length of "cat "
   call get_file_on_root_directory
+  cmp ax, -1
+  jne .next_in_cmd6
+
+  lea rdi, [msg_no_such_file]
+  call printk
+  jmp .end
+
+.next_in_cmd6:
   jmp .end
 
 .default:
@@ -134,3 +142,5 @@ cmd_1_response db "Available commands:", 10, "help", 10, "clear", 10, "echo", \
 10, "reboot", 10, "ls", 10, "cat", 10, 0
 
 cmd_not_found_msg db "Command not found", 10, 0
+
+msg_no_such_file db "No such file", 10, 0

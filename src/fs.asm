@@ -1,6 +1,9 @@
 ;
 ; note: using FAT12 formatted NVMe partition for root
 ;
+; resource used:
+;   - https://wiki.osdev.org/FAT
+;
 ROOT_PARTITION_FIRST_SECTOR = 996558848   ; NOTE: CAUTION!!!
 
 
@@ -264,19 +267,31 @@ list_files_in_root_directory:
 ; args:
 ;   @rdi = pointer to file name stored in the keyboard input buffer
 ;          in the form of "README.MD" (without quotes) for example.
+; returns:
+;   @ax = first cluster number of the file if the file is found else -1
+;   @ebx = file size in bytes if the file is found else -1
+;
 get_file_on_root_directory:
   push rbp
   mov rbp, rsp
 
-  sub rsp, 12
+  sub rsp, 36
 
   temp_lba equ qword [rbp - 8]
   total_logical_blocks_to_read equ byte [rbp - 9]
   blocks_read equ byte [rbp - 10]
   entry_num equ byte [rbp - 11]
   counter equ byte [rbp - 12]
+  file_name_simplified_array equ [rbp - 26]
+  i equ byte [rbp - 27]
+  file_found equ byte [rbp - 28]
+  file_name_argument equ qword [rbp - 36]
 
-  mov rax, qword [ROOT_DIR_LBA]
+  mov file_name_argument, rdi    ; save it
+
+  mov file_found, 0   ; not found yet
+
+  mov rbx, qword [ROOT_DIR_LBA]
   mov temp_lba, rbx
 
 
@@ -307,67 +322,78 @@ get_file_on_root_directory:
   cmp al, 0xe5      ; the entry is unused
   je .inner_loop_next
 
+  push r8
   lea rdi, [file_name_field_value]
   lea rsi, [r8 + DIR_ENTRY_STRUCT.file_name]
   mov edx, 11 ; dir entry's file name field is 11 bytes long
   call strncpy
 
-  ; TODO
-  ; compare file name
-  push r8
-  lea rax, [file_name_field_value]
-  mov counter, 0
-.print_loop_start:
-  cmp counter, 8
-  jae .print_loop_end
-
-  cmp byte [rax], SPACE_CHARACTER
-  je .print_loop_end
-
-  lea rdi, [msg_file_name_char]
-  xor esi, esi
-  mov sil, byte [rax]
-  push rax
-  call printk
-  pop rax
-
-.print_loop_next:
-  inc counter
-  inc rax
-  jmp .print_loop_start
-
-.print_loop_end:
-  ; now print the file extension
-  lea rdi, [msg_period]
-  call printk
+  ; first copy file name (without extension) to the array
+  mov i, 0
 
   lea rax, [file_name_field_value]
-  add rax, 8    ; file extension starts from byte #8 (0's based)
-  mov counter, 0
-
-.print_extension_loop_start:
-  cmp counter, 3
-  jae .print_extension_loop_end
+  lea rbx, file_name_simplified_array
+.loop_start:
+  cmp i, 8  ; file name (without extension) has a limit of 8 characters in FAT12
+  je .loop_end
 
   cmp byte [rax], SPACE_CHARACTER
-  je .print_extension_loop_end
+  je .loop_end
 
-  lea rdi, [msg_file_name_char]
-  xor esi, esi
-  mov sil, byte [rax]
-  push rax
-  call printk
-  pop rax
-
-.print_extension_loop_next:
-  inc counter
+  mov cl, byte [rax]
+  mov byte [rbx], cl
   inc rax
-  jmp .print_extension_loop_start
+  inc rbx
+  inc i
+  jmp .loop_start
 
-.print_extension_loop_end:
-  lea rdi, [msg_newline_str]
-  call printk
+.loop_end:
+
+  ; place a period ('.') character after the file name
+  mov byte [rbx], '.'
+
+  ; now copy the extension to the array
+  mov i, 0
+
+  lea rax, [file_name_field_value]
+  add rax, 8  ; the extension starts from byte #8 (0's based)
+  inc rbx
+.extension_loop_start:
+  cmp i, 3  ; extension has a limit of 3 characters
+  je .extension_loop_end
+
+  cmp byte [rax], SPACE_CHARACTER
+  je .extension_loop_end
+
+  mov cl, byte [rax]
+  mov byte [rbx], cl
+  inc rax
+  inc rbx
+  inc i
+  jmp .extension_loop_start
+
+.extension_loop_end:
+
+  ; terminate file name array with newline and null characters
+  mov byte [rbx], NEWLINE_CHARACTER
+  mov byte [rbx + 1], 0x0
+
+  mov rdi, file_name_argument
+  call strlen
+  mov edx, eax
+  mov rdi, file_name_argument
+  lea rsi, file_name_simplified_array
+  call strncmp
+  cmp eax, 0
+  jne .inner_loop_next
+
+  ; found the file!
   pop r8
+  mov ax, word [r8 + DIR_ENTRY_STRUCT.first_cluster_number]
+  mov ebx, dword [r8 + DIR_ENTRY_STRUCT.file_size]
+  mov file_found, 1   ; file is found
+  jmp .outer_loop_end
+
 
 .inner_loop_next:
   inc entry_num
@@ -382,12 +408,23 @@ get_file_on_root_directory:
   jmp .outer_loop_start
 
 .outer_loop_end:
+  cmp file_found, 0
+  jne .end
 
+  ; file is not found
+  mov ax, -1
+  mov ebx, -1
+
+.end:
   restore temp_lba
   restore total_logical_blocks_to_read
   restore blocks_read
   restore entry_num
   restore counter
+  restore file_name_simplified_array
+  restore i
+  restore file_found
+  restore file_name_argument
 
   mov rsp, rbp
   pop rbp
