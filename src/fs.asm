@@ -103,6 +103,9 @@ find_root_directory_lba:
   add eax, root_dir_sectors
   mov first_data_sector, eax
 
+  ; also store it for later use
+  mov dword [FIRST_DATA_SECTOR], eax
+
   ; find the first root directory sector.
   mov eax, root_dir_sectors
   mov ebx, first_data_sector
@@ -430,6 +433,35 @@ get_file_on_root_directory:
   pop rbp
   ret
 
+;args:
+; @di = file cluster number
+; @esi = file length in bytes
+print_file_contents:
+  push rdi
+  push rsi
+  mov edi, ROOT_PARTITION_FIRST_SECTOR
+  xor esi, esi
+  call nvme_read
+  mov r8, rax
+
+  xor eax, eax
+  mov al, byte [r8 + FAT_BS.sectors_per_cluster]
+
+  pop rsi
+  pop rdi
+
+  sub di, 2
+  imul edi, eax
+  add edi, dword [FIRST_DATA_SECTOR]    ; first sector of file cluster
+
+  add edi, ROOT_PARTITION_FIRST_SECTOR
+  xor esi, esi
+  call nvme_read
+
+  mov rdi, rax
+  call printk
+  ret
+
 
 section '.data' data readable writeable
 
@@ -437,8 +469,10 @@ file_name_field_value rb 11
 
 VOLUME_LABEL db "RAAMROOT"
 
-; NOTE: IMPORTANT VARIABLE!!!
+; NOTE: IMPORTANT VARIABLES!!!
 ROOT_DIR_LBA dq ?
+
+FIRST_DATA_SECTOR dd ?
 
 msg_file_name_char db "{c}", 0
 msg_period db ".", 0

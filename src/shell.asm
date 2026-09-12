@@ -115,6 +115,13 @@ run_shell:
   jmp .end
 
 .next_in_cmd6:
+  cmp ebx, 0x0   ; file has no content
+  je .end
+
+  xor edi, edi
+  mov di, ax
+  mov esi, ebx
+  call print_file_contents
   jmp .end
 
 .default:
