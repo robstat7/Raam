@@ -1,8 +1,11 @@
 ;
 ; note: using FAT12 formatted NVMe partition for root
 ;
-; resource used:
+; resources used:
 ;   - https://wiki.osdev.org/FAT
+;   - Microsoft Extensible Firmware Initiative FAT32 File System Specification,
+;     FAT: General Overview of On-Disk Format,
+;     Version 1.03, December 6, 2000 by Microsoft Corporation
 ;
 ROOT_PARTITION_FIRST_SECTOR = 996558848   ; NOTE: CAUTION!!!
 
@@ -433,9 +436,26 @@ get_file_on_root_directory:
   pop rbp
   ret
 
-;args:
-; @di = file cluster number
-; @esi = file length in bytes
+;
+; print_file_contents
+;
+; this function prints the contents of a given file.
+;
+; args:
+;  @edi = file cluster number
+;  @esi = file length in bytes
+;
+; returns:
+;  nothing
+;
+; note:
+;  - The FAT maps the data region of the volume by cluster number. The
+;    first data cluster is cluster 2.
+;  - Given any valid data cluster number N, the sector number of the
+;    first sector of that cluster (again relative to sector 0 of the
+;    FAT volume) is computed as follows:
+;    FirstSectorofCluster = ((N – 2) * BPB_SecPerClus) + FirstDataSector;
+;
 print_file_contents:
   push rdi
   push rsi
@@ -450,10 +470,12 @@ print_file_contents:
   pop rsi
   pop rdi
 
-  sub di, 2
+  ; get the first sector of the file cluster
+  sub edi, 2
   imul edi, eax
-  add edi, dword [FIRST_DATA_SECTOR]    ; first sector of file cluster
+  add edi, dword [FIRST_DATA_SECTOR]
 
+  ; now read the file contents (first 512 bytes max at the moment)
   add edi, ROOT_PARTITION_FIRST_SECTOR
   xor esi, esi
   call nvme_read
