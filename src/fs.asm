@@ -484,6 +484,12 @@ print_file_contents:
   call printk
   ret
 
+;args:
+; @rdi = file name
+; @rsi = null-terminated text buffer
+write_buffer_to_file:
+  ret
+
 
 section '.data' data readable writeable
 

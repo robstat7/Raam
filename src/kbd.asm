@@ -388,8 +388,14 @@ convert_scan_code_byte:
 
 .period:
   cmp al, 0x34
-  jne .default
+  jne .comma
   mov al, '.'
+  jmp .end
+
+.comma:
+  cmp al, 0x33
+  jne .default
+  mov al, ','
   jmp .end
 
 

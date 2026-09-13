@@ -1,3 +1,6 @@
+include "ed.asm"
+
+
 section '.text' code executable readable
 
 run_shell:
@@ -102,7 +105,7 @@ run_shell:
   mov edx, 3
   call strncmp
   cmp eax, 0
-  jne .default
+  jne .cmd_7
 
   lea rdi, [input_buffer]
   add rdi, 4  ; length of "cat "
@@ -124,6 +127,18 @@ run_shell:
   call print_file_contents
   jmp .end
 
+.cmd_7:
+  lea rdi, [input_buffer]
+  lea rsi, [cmd_7]
+  mov edx, 2
+  call strncmp
+  cmp eax, 0
+  jne .default
+
+  call ed_start
+  jmp .end
+
+
 .default:
   lea rdi, [cmd_not_found_msg]
   call printk
@@ -144,9 +159,10 @@ cmd_3 db "echo", 10, 0
 cmd_4 db "reboot", 10, 0
 cmd_5 db "ls", 10, 0
 cmd_6 db "cat", 10, 0
+cmd_7 db "ed", 10, 0
 
 cmd_1_response db "Available commands:", 10, "help", 10, "clear", 10, "echo", \
-10, "reboot", 10, "ls", 10, "cat", 10, 0
+10, "reboot", 10, "ls", 10, "cat", 10, "ed", 10, 0
 
 cmd_not_found_msg db "Command not found", 10, 0
 
