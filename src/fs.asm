@@ -457,8 +457,8 @@ get_file_on_root_directory:
 ;    FirstSectorofCluster = ((N – 2) * BPB_SecPerClus) + FirstDataSector;
 ;
 print_file_contents:
-  push rdi
   push rsi
+  push rdi
   mov edi, ROOT_PARTITION_FIRST_SECTOR
   xor esi, esi
   call nvme_read
@@ -467,7 +467,6 @@ print_file_contents:
   xor eax, eax
   mov al, byte [r8 + FAT_BS.sectors_per_cluster]
 
-  pop rsi
   pop rdi
 
   ; get the first sector of the file cluster
@@ -479,6 +478,13 @@ print_file_contents:
   add edi, ROOT_PARTITION_FIRST_SECTOR
   xor esi, esi
   call nvme_read
+
+  ; add a null character at file length offset to print the file
+  mov r8, rax
+  pop rsi
+  mov esi, esi
+  add r8, rsi
+  mov byte [r8], NULL_CHARACTER
 
   mov rdi, rax
   call printk
