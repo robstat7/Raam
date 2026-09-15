@@ -488,6 +488,208 @@ print_file_contents:
 ; @rdi = file name
 ; @rsi = null-terminated text buffer
 write_buffer_to_file:
+  push rbp
+  mov rbp, rsp
+
+  sub rsp, 541
+
+  first_fat_sector equ word [rbp - 2]
+  free_cluster_number equ word [rbp - 4]
+  sectors_per_cluster equ byte [rbp - 5]
+  text_buffer equ qword [rbp - 13]
+  file_name equ qword [rbp - 21]
+  first_sector_of_free_cluster equ dword [rbp - 25]
+  fat_table_data equ [rbp - 537]
+  text_buffer_len equ dword [rbp - 541]
+
+  mov file_name, rdi
+  mov text_buffer, rsi
+
+  mov edi, ROOT_PARTITION_FIRST_SECTOR
+  xor esi, esi
+  call nvme_read
+  mov r8, rax
+
+  mov cl, byte [r8 + FAT_BS.sectors_per_cluster]
+  mov sectors_per_cluster, cl
+ 
+  xor eax, eax
+  mov ax, word [r8 + FAT_BS.reserved_sector_count]
+  mov first_fat_sector, ax
+
+  ; read first sector of the FAT table
+  mov edi, ROOT_PARTITION_FIRST_SECTOR
+  add edi, eax
+  xor esi, esi
+  call nvme_read
+  mov r8, rax
+
+  ; temperorily copy the FAT table data for later use
+  lea rdi, fat_table_data
+  mov rsi, r8
+  mov edx, 512
+  call strncpy
+
+  ; read third (first usable) FAT entry for cluster #2
+  xor eax, eax
+  mov ax, word [r8 + 3]
+  and ax, 0xfff
+
+  ; note: a free cluster has value 0x0
+  mov free_cluster_number, 0x2   ; store this free cluster number
+
+  ; now write file contents to the free cluster
+
+  ; get the first sector of the file cluster
+  xor edx, edx
+  mov dx, free_cluster_number
+  sub dx, 2
+  xor ecx, ecx
+  mov cl, sectors_per_cluster
+  imul edx, ecx
+  add edx, dword [FIRST_DATA_SECTOR]
+  mov first_sector_of_free_cluster, edx
+
+  ; read it
+  add edx, ROOT_PARTITION_FIRST_SECTOR
+  mov edi, edx
+  xor esi, esi
+  call nvme_read
+  push rax
+
+  ; find the length of the text buffer to be written to the file
+  mov rdi, text_buffer
+  call strlen
+  mov text_buffer_len, eax
+
+  ; copy text buffer to the nvme_data_buffer
+  pop rdi
+  mov rsi, text_buffer
+  mov edx, eax
+  call strncpy
+
+  ; now write file contents (512 bytes max at the moment)
+  mov edi, first_sector_of_free_cluster
+  add edi, ROOT_PARTITION_FIRST_SECTOR
+  xor esi, esi
+  call nvme_write
+
+  ; set the cluster value in FAT to 0xfff (no more clusters in the chain)
+  lea r8, fat_table_data
+  xor eax, eax
+  mov ax, word [r8 + 3]
+  or ax, 0xfff
+  mov word [r8 + 3], ax
+
+  ; write the fat_table_data to NVMe
+  mov rdi, qword [nvme_data_buffer]
+  mov rsi, r8
+  mov edx, 512
+  call strncpy
+
+  xor eax, eax
+  mov ax, first_fat_sector
+  mov edi, ROOT_PARTITION_FIRST_SECTOR
+  add edi, eax
+  xor esi, esi
+  call nvme_write
+
+  ; now add the entry in the root directory
+  mov rdi, qword [ROOT_DIR_LBA]
+  xor esi, esi
+  call nvme_read
+  mov r8, rax
+  mov eax, 2 * sizeof.DIR_ENTRY_STRUCT
+  add r8, rax     ; get pointer to third entry
+
+  ; create valid file name for the entry
+  mov rdi, file_name
+  lea rsi, [r8 + DIR_ENTRY_STRUCT.file_name]
+  mov cl, 0 ; counter
+
+.filename_loop_start:
+  cmp byte [rdi], '.'
+  je .filename_loop_end
+
+  mov al, byte [rdi]
+  mov byte [rsi], al
+  inc rdi
+  inc rsi
+  inc cl
+  jmp .filename_loop_start
+
+.filename_loop_end:
+  ; insert spaces for the remaining filename characters if any
+
+.filename_spaces_loop_start:
+  cmp cl, 8
+  je .filename_spaces_loop_end
+
+  mov byte [rsi], ' '
+  inc rsi
+  inc cl
+  jmp .filename_spaces_loop_start
+
+.filename_spaces_loop_end:
+  ; now go for extension fields
+  mov cl, 0 ; reset counter
+  inc rdi
+
+.extension_loop_start:
+  cmp byte [rdi], NEWLINE_CHARACTER
+  je .extension_loop_end
+
+  mov al, byte [rdi]
+  mov byte [rsi], al
+  inc rdi
+  inc rsi
+  inc cl
+  jmp .extension_loop_start
+
+.extension_loop_end:
+
+.extension_spaces_loop_start:
+  cmp cl, 3
+  je .extension_spaces_loop_end
+
+  mov byte [rsi], ' '
+  inc rsi
+  inc cl
+  jmp .extension_spaces_loop_start
+
+.extension_spaces_loop_end:
+
+  ; set entry fields
+
+  ; file attributes: read and write, regular file
+  mov byte [r8 + DIR_ENTRY_STRUCT.file_attributes], 0x0
+  mov byte [r8 + DIR_ENTRY_STRUCT.creation_time_100th_sec], 0x0
+  mov word [r8 + DIR_ENTRY_STRUCT.creation_time], 0x0
+  mov word [r8 + DIR_ENTRY_STRUCT.creation_date], 0x5c21  ; 1 Jan 2026
+  mov word [r8 + DIR_ENTRY_STRUCT.last_accessed_date], 0x5c21  ; 1 Jan 2026
+  mov word [r8 + DIR_ENTRY_STRUCT.last_modified_time], 0x0
+  mov word [r8 + DIR_ENTRY_STRUCT.creation_date], 0x5c21  ; 1 Jan 2026
+  mov ax, free_cluster_number
+  mov word [r8 + DIR_ENTRY_STRUCT.first_cluster_number], ax
+  mov eax, text_buffer_len
+  mov dword [r8 + DIR_ENTRY_STRUCT.file_size], eax
+
+  ; write the root directory first sector buffer back
+  mov rdi, qword [ROOT_DIR_LBA]
+  xor esi, esi
+  call nvme_write
+
+  restore first_fat_sector
+  restore free_cluster_number
+  restore sectors_per_cluster
+  restore text_buffer
+  restore file_name
+  restore first_sector_of_free_cluster
+  restore fat_table_data
+  restore text_buffer_len
+
+  mov rsp, rbp
+  pop rbp
   ret
 
 
@@ -505,3 +707,5 @@ FIRST_DATA_SECTOR dd ?
 msg_file_name_char db "{c}", 0
 msg_period db ".", 0
 msg_newline_str db 10, 0
+
+msg_fat_entry_val db "@fat_entry = {p}", 10, 0
