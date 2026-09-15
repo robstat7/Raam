@@ -28,8 +28,17 @@ ed_start:
   mov edx, 3
   call strncmp
   cmp eax, 0
-  jne .cmd_write_to_file
+  jne .cmd_exit_ed
   jmp .print_buffer
+
+.cmd_exit_ed:
+  lea rdi, [input_buffer]
+  lea rsi, [cmd_quit]
+  mov edx, 2
+  call strncmp
+  cmp eax, 0
+  jne .cmd_write_to_file
+  jmp .exit_ed
 
 .cmd_write_to_file:
   lea rdi, [input_buffer]
@@ -54,6 +63,10 @@ ed_start:
   lea rdi, [text_buffer]
   call printk
   jmp .write_ed_command_start
+
+.exit_ed:
+  mov word [buffer_index], 0  ; reset buffer_index
+  ret
 
 .insert_text_start:
   mov byte [input_mode], INPUT_MODE_ON
@@ -110,6 +123,7 @@ ED_COMMANDS:
 cmd_insert db "i", 10, 0
 cmd_print_buffer db ",p", 10, 0
 cmd_write_to_file db "w ", 0
+cmd_quit db "q", 10, 0
 
 cmd_unknown db "?", 10, 0
 
