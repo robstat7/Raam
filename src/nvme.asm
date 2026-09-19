@@ -93,6 +93,7 @@ struc REGISTER_MAP_STRUCT {
   .sq0tdbl              dd ?
   .cq0hdbl              dd ?
   .sq1tdbl              dd ?
+  .cq1hdbl              dd ?
 }
 struct REGISTER_MAP_STRUCT
 
@@ -275,9 +276,6 @@ nvme_write:
   mov rbx, qword [controller_register_map_base]
   mov dword [rbx + REGISTER_MAP_STRUCT.sq1tdbl], eax
 
-  xor eax, eax
-  mov al, old_io_sq_tail_dbl_val
-  mov edi, eax
   call check_io_completion_queue
 
   restore cdw0
@@ -390,12 +388,9 @@ nvme_read:
   mov rbx, qword [controller_register_map_base]
   mov dword [rbx + REGISTER_MAP_STRUCT.sq1tdbl], eax
 
-  xor eax, eax
-  mov al, old_io_sq_tail_dbl_val
-  mov edi, eax
   call check_io_completion_queue
 
-  mov rax, [nvme_data_buffer]
+  mov rax, qword [nvme_data_buffer]
 
   restore cdw0
   restore cdw1
@@ -411,29 +406,78 @@ nvme_read:
   ret
 
 check_io_completion_queue:
-  imul edi, 16    ; each entry is 16 bytes
-  add edi, 12     ; add 12 for double word 3
+  push rbp
+  mov rbp, rsp
 
-  mov rax, qword [nvme_iocqb]
-  add rax, rdi
+  sub rsp, 2
 
+  io_cq_head_dbl_val equ byte [rbp - 1]
+  old_io_cq_head_dbl_val equ byte [rbp - 2]
+
+  mov al, byte [nvme_io_cq_head]
+  mov io_cq_head_dbl_val, al
+  mov old_io_cq_head_dbl_val, al
+
+  ; update the head doorbell value
+  inc io_cq_head_dbl_val
+
+  cmp io_cq_head_dbl_val, 1
+  jne .next
+
+  ; expected phase changes
+  xor byte [nvme_io_cq_phase], 1
+
+.next:
+  cmp io_cq_head_dbl_val, 64
+  je .wrap
+  jmp .next2
+
+.wrap:
+  mov io_cq_head_dbl_val, 0        ; wrap after 64 entries
+
+.next2:
+  ; calculate the offset into the completion ring
+  xor eax, eax
+  mov al, old_io_cq_head_dbl_val
+  imul eax, 16      ; each entry is 16 bytes in size
+
+  ; add 12 for double word 3
+  add eax, 12
+
+  mov rbx, qword [nvme_iocqb]
+  add rbx, rax
+
+  xor ecx, ecx
 .loop_start:
-  mov ebx, dword [rax]
-  cmp ebx, 0
-  je .loop_start
+  mov cx, word [rbx + 2]
+  and cl, 1
 
-  xor ebx, ebx
-  mov bx, word [rax + 2]
+  cmp cl, byte [nvme_io_cq_phase]
+  jne .loop_start
 
-  ; push rax
+  mov cx, word [rbx + 2]
+
+  ; push rbx
   ; lea rdi, [nvme_debug_msg2]
-  ; mov esi, ebx
+  ; mov esi, ecx
   ; call printk
+  ; pop rbx
 
-  ; pop rax
-  mov dword [rax], 0  ; overwrite the old entry
+  ; store the new head doorbell value first.
+  xor eax, eax
+  mov al, io_cq_head_dbl_val
+  mov byte [nvme_io_cq_head], al
+
+  ; ring the doorbell by writing the newly incremented value to it.
+  mov rbx, qword [controller_register_map_base]
+  mov dword [rbx + REGISTER_MAP_STRUCT.cq1hdbl], eax
+
+  restore old_io_cq_head_dbl_val
+  restore io_cq_head_dbl_val
+
+  mov rsp, rbp
+  pop rbp
   ret
-
 
 create_first_io_completion_queue:
   push rbp
@@ -460,7 +504,7 @@ create_first_io_completion_queue:
   mov cdw0, 0x5
 
   mov cdw1, 0x0         ; CDW1 ignored
-  mov cdw10, 0xf0001    ; queue size = 15 commands (0's based), qid = 1
+  mov cdw10, 0x3f0001   ; queue size = 63 slots (0's based value), qid = 1
   mov cdw11, 0x1        ; interrupts disabled, physically contiguous (1<<0)
 
   mov rbx, qword [nvme_queues_free_region]
@@ -600,8 +644,8 @@ check_admin_completion_queue:
   ; lea rdi, [nvme_debug_msg]
   ; mov esi, ebx
   ; call printk
-
   ; pop rax
+
   mov dword [rax], 0  ; overwrite the old entry
   ret
 
@@ -665,7 +709,7 @@ create_first_io_submission_queue:
   mov cdw0, 0x1
 
   mov cdw1, 0x0         ; CDW1 ignored
-  mov cdw10, 0x3f0001   ; queue size = 63 commands (0's based), qid = 1
+  mov cdw10, 0x3f0001   ; queue size = 63 slots (0's based value), qid = 1
   mov cdw11, 0x10001    ; cqid = 1, physically contiguous (1<<0)
 
   mov rbx, qword [nvme_queues_free_region]
@@ -1094,6 +1138,8 @@ nvme_iosqb dq 0
 admin_sq_tail_doorbell  db 0
 
 nvme_iotail db 0
+nvme_io_cq_head db 0
+nvme_io_cq_phase db 0
 
 ; buffer to hold the NVMe read/write data
 nvme_data_buffer dq 0

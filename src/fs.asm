@@ -172,6 +172,7 @@ list_files_in_root_directory:
   cmp al, 0x0       ; no more files/directories in this directory
   je .outer_loop_end
 
+  push r8
   cmp al, 0xe5      ; the entry is unused
   je .inner_loop_next
 
@@ -189,7 +190,6 @@ list_files_in_root_directory:
   je .inner_loop_next
 
   ; print file name
-  push r8
   lea rax, [file_name_field_value]
   mov counter, 0
 .print_loop_start:
@@ -242,10 +242,10 @@ list_files_in_root_directory:
 .print_extension_loop_end:
   lea rdi, [msg_newline_str]
   call printk
-  pop r8
 
 .inner_loop_next:
   inc entry_num
+  pop r8
   add r8, sizeof.DIR_ENTRY_STRUCT
   jmp .inner_loop_start
 
@@ -325,10 +325,10 @@ get_file_on_root_directory:
   cmp al, 0x0       ; no more files/directories in this directory
   je .outer_loop_end
 
+  push r8
   cmp al, 0xe5      ; the entry is unused
   je .inner_loop_next
 
-  push r8
   lea rdi, [file_name_field_value]
   lea rsi, [r8 + DIR_ENTRY_STRUCT.file_name]
   mov edx, 11 ; dir entry's file name field is 11 bytes long
@@ -403,6 +403,7 @@ get_file_on_root_directory:
 
 .inner_loop_next:
   inc entry_num
+  pop r8
   add r8, sizeof.DIR_ENTRY_STRUCT
   jmp .inner_loop_start
 
