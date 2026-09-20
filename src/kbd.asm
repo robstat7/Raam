@@ -24,6 +24,22 @@ keyboard_interrupt_handler:
   cmp al, 0x0 ; key release event
   je .end
 
+  cmp al, BACKSPACE_CHARACTER
+  jne .next
+
+  ; handle backspace key press
+  cmp byte [input_buffer_index], 0  ; are we already at the beginning of line?
+  je .end
+
+  dec byte [input_buffer_index]
+
+  lea rdi, [char_string]
+  xor esi, esi
+  mov sil, al
+  call printk
+  jmp .end
+
+.next:
   ; fill the input buffer and print the character onto the terminal screen
   lea rbx, [input_buffer]
   xor ecx, ecx
@@ -394,8 +410,14 @@ convert_scan_code_byte:
 
 .comma:
   cmp al, 0x33
-  jne .default
+  jne .backspace
   mov al, ','
+  jmp .end
+
+.backspace:
+  cmp al, 0x0e
+  jne .default
+  mov al, BACKSPACE_CHARACTER
   jmp .end
 
 

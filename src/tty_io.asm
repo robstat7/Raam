@@ -37,6 +37,7 @@ LINE_SPACING_SIZE = 0x2
 ; characters with ascii code
 NEWLINE_CHARACTER = 0xa
 SPACE_CHARACTER = 0x20
+BACKSPACE_CHARACTER = 0x8
 
 
 section '.text' code executable readable
@@ -57,11 +58,22 @@ section '.text' code executable readable
 ;   nothing
 ;
 tty_put_char:
-  ; first handle special character
+  ; first handle special characters
   cmp al, NEWLINE_CHARACTER
-  jne .continue
+  jne .backspace
 
   call update_tty_cursors_for_newline
+  jmp .exit
+
+.backspace:
+  cmp al, BACKSPACE_CHARACTER
+  jne .continue
+
+  mov r8, default_tty
+  mov ebx, dword [r8 + TTY.cursor_x]
+  sub ebx, FONT_WIDTH
+  mov dword [r8 + TTY.cursor_x], ebx
+  call clear_character_on_screen
   jmp .exit
 
 .continue:
@@ -183,8 +195,7 @@ update_tty_cursors:
 ;
 ; tty_put_pixel
 ;
-; this function puts a single pixel on the terminal. It should only be
-; called by `tty_put_char`.
+; this function puts a single pixel onto the terminal.
 ;
 ; params:
 ;   eax: pixel_color
@@ -238,6 +249,79 @@ default_tty_init:
   mov dword [rbx + TTY.fg_color], COLOR_WHITE
   mov dword [rbx + TTY.bg_color], COLOR_BLACK
 
+  ret
+
+;
+; clear_character_on_screen
+;
+; this function puts a solid rectangle character onto the terminal
+; screen in order to clear the previous character already sitting there.
+; It uses the 8x16 font array to get this font's data and writes
+; it to the framebuffer pixel by pixel. It writes all the "on" pixels with the
+; background color. It doesn't not update the terminal cursors' positions.
+; Use case: helper function for backspace keypress handling.
+;
+; args:
+;   nothing
+; retuns:
+;   nothing
+;
+clear_character_on_screen:
+  mov al, 0x0         ; solid rectangle
+
+  ; reset row and col
+  mov dword [row], 0
+  mov dword [col], 0
+
+  xor ebx, ebx
+  mov bl, al
+  imul ebx, FONT_HEIGHT
+  mov dword [offset], ebx
+
+.row_loop:
+  cmp [row], 16     ; 16 rows in a 8x16 font
+  jae .exit
+
+  mov eax, dword [offset]
+  add eax, dword [row]
+
+  xor ebx, ebx
+  add rax, special_font_8x16
+  mov bl, byte [rax]
+  mov byte [row_data], bl
+
+  mov dword [col], 0      ; reset col at the start of each row
+.col_loop:
+  cmp [col], 8
+  jae .row_loop_inc
+
+  ; check if we need to put a pixel from the fonts row
+  mov rax, mask
+  mov ebx, dword [col]
+  add rax, rbx
+  xor ebx, ebx
+  mov bl, byte [row_data]
+  mov dl, byte [rax]          ; mask
+  test bl, dl
+  jz .col_loop_inc
+
+  mov r8, default_tty
+  mov eax, dword [r8 + TTY.bg_color]
+  mov ebx, dword [r8 + TTY.cursor_x]
+  add ebx, [col]
+  mov ecx, dword [r8 + TTY.cursor_y]
+  add ecx, [row]
+  call tty_put_pixel
+
+.col_loop_inc:
+  inc dword [col]
+  jmp .col_loop
+
+.row_loop_inc:
+  inc dword [row]
+  jmp .row_loop
+
+.exit:
   ret
 
 ; fills screen with tty background color and resets cursor to (0,0)
