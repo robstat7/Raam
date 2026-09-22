@@ -491,14 +491,23 @@ print_file_contents:
   call printk
   ret
 
-;args:
-; @rdi = file name
-; @rsi = null-terminated text buffer
+;
+; write_buffer_to_file
+;
+; this function writes a given text buffer to a file in the root partition.
+;
+; args:
+;   @rdi = file name
+;   @rsi = null-terminated text buffer
+;
+; returns:
+;   nothing
+;
 write_buffer_to_file:
   push rbp
   mov rbp, rsp
 
-  sub rsp, 541
+  sub rsp, 555
 
   first_fat_sector equ word [rbp - 2]
   free_cluster_number equ word [rbp - 4]
@@ -508,6 +517,10 @@ write_buffer_to_file:
   first_sector_of_free_cluster equ dword [rbp - 25]
   fat_table_data equ [rbp - 537]
   text_buffer_len equ dword [rbp - 541]
+  total_entries_to_read equ word [rbp - 543]
+  fat_entry_num equ word [rbp - 545]
+  fat_table_entry_pointer equ qword [rbp - 553]
+  entry_num equ word [rbp - 555]
 
   mov file_name, rdi
   mov text_buffer, rsi
@@ -537,14 +550,82 @@ write_buffer_to_file:
   mov edx, 512
   call strncpy
 
-  ; read third (first usable) FAT entry for cluster #2
+  ; skip first two reserved FAT12 entries. Each entry size is 1.5 bytes.
+  lea r8, fat_table_data
+  add r8, 3               ; 3 = 2 * 1.5 bytes
+
+  ; now find the first free data cluster. Note that the cluster number starts
+  ; from 2 here (that is 1 greater than fat_entry_num).
+
+  mov total_entries_to_read, 15   ; allow to create 15 files max at the moment
+  mov fat_entry_num, 1
+  mov free_cluster_number, 0x0
+
+.loop_start:
+  mov ax, total_entries_to_read
+  cmp fat_entry_num, ax
+  ja .loop_end
+
+  ; read FAT entry
   xor eax, eax
-  mov ax, word [r8 + 3]
+  mov ax, word [r8]
+
+  mov bx, fat_entry_num
+  and bx, 1
+  jz .shift_right
+
   and ax, 0xfff
+  jmp .next
 
-  ; note: a free cluster has value 0x0
-  mov free_cluster_number, 0x2   ; store this free cluster number
+.shift_right:
+  shr ax, 0x4
 
+.next:
+  ; a free cluster has its entry value as 0x0
+  cmp ax, 0x0
+  jne .loop_next
+
+  ; found the free cluster!!!
+  mov bx, fat_entry_num
+  inc bx
+  mov free_cluster_number, bx  ; store this free cluster number
+  ; also store fat table entry pointer
+  mov fat_table_entry_pointer, r8
+  jmp .loop_end
+
+.loop_next:
+  mov ax, fat_entry_num
+  and ax, 1
+  jz .double_increment
+
+.single_increment:
+  inc r8
+  jmp .next2
+
+.double_increment:
+  add r8, 2
+
+.next2:
+  inc fat_entry_num
+  jmp .loop_start
+
+.loop_end:
+
+  ; safety first!
+
+  cmp free_cluster_number, 0x0
+  jne .next3
+
+  ; we are trying to create 16th file!!! stop that for now.
+  lea rdi, [msg_fs_panic]  
+  xor esi, esi
+  mov si, fat_entry_num
+  call printk
+  cli
+  hlt       ; halt the computer
+  jmp $
+
+.next3:
   ; now write file contents to the free cluster
 
   ; get the first sector of the file cluster
@@ -582,15 +663,27 @@ write_buffer_to_file:
   call nvme_write
 
   ; set the cluster value in FAT to 0xfff (no more clusters in the chain)
-  lea r8, fat_table_data
+  mov r8, fat_table_entry_pointer
   xor eax, eax
-  mov ax, word [r8 + 3]
-  or ax, 0xfff
-  mov word [r8 + 3], ax
+  mov ax, word [r8]
+
+  mov bx, free_cluster_number
+  and bx, 1
+  jz .on_lower_12_bits
+
+.on_higher_12_bits:
+  or ax, 0xfff0
+  jmp .next4
+
+.on_lower_12_bits:
+  or ax, 0x0fff
+
+.next4:
+  mov word [r8], ax
 
   ; write the fat_table_data to NVMe
   mov rdi, qword [nvme_data_buffer]
-  mov rsi, r8
+  lea rsi, fat_table_data
   mov edx, 512
   call strncpy
 
@@ -602,13 +695,33 @@ write_buffer_to_file:
   call nvme_write
 
   ; now add the entry in the root directory
+
   mov rdi, qword [ROOT_DIR_LBA]
   xor esi, esi
   call nvme_read
   mov r8, rax
-  mov eax, 2 * sizeof.DIR_ENTRY_STRUCT
-  add r8, rax     ; get pointer to third entry
 
+  ; find a free entry
+  mov total_entries_to_read, 16
+  mov entry_num, 0
+
+.root_dir_entries_loop_start:
+  mov ax, total_entries_to_read
+  cmp entry_num, ax
+  jae .root_dir_entries_loop_end
+
+  mov al, byte [r8]
+
+  cmp al, 0x0       ; no more files/directories in this directory
+  jne .next5
+
+  jmp .write_entry
+
+.next5:
+  cmp al, 0xe5      ; the entry is unused
+  jne .root_dir_entries_loop_next
+
+.write_entry:
   ; create valid file name for the entry
   mov rdi, file_name
   lea rsi, [r8 + DIR_ENTRY_STRUCT.file_name]
@@ -675,12 +788,20 @@ write_buffer_to_file:
   mov word [r8 + DIR_ENTRY_STRUCT.creation_date], 0x5c21  ; 1 Jan 2026
   mov word [r8 + DIR_ENTRY_STRUCT.last_accessed_date], 0x5c21  ; 1 Jan 2026
   mov word [r8 + DIR_ENTRY_STRUCT.last_modified_time], 0x0
-  mov word [r8 + DIR_ENTRY_STRUCT.creation_date], 0x5c21  ; 1 Jan 2026
+  mov word [r8 + DIR_ENTRY_STRUCT.last_modified_date], 0x5c21  ; 1 Jan 2026
   mov ax, free_cluster_number
   mov word [r8 + DIR_ENTRY_STRUCT.first_cluster_number], ax
   mov eax, text_buffer_len
   mov dword [r8 + DIR_ENTRY_STRUCT.file_size], eax
 
+  jmp .root_dir_entries_loop_end
+
+.root_dir_entries_loop_next:
+  add r8, sizeof.DIR_ENTRY_STRUCT
+  inc entry_num
+  jmp .root_dir_entries_loop_start
+
+.root_dir_entries_loop_end:
   ; write the root directory first sector buffer back
   mov rdi, qword [ROOT_DIR_LBA]
   xor esi, esi
@@ -694,6 +815,10 @@ write_buffer_to_file:
   restore first_sector_of_free_cluster
   restore fat_table_data
   restore text_buffer_len
+  restore total_entries_to_read
+  restore fat_entry_num
+  restore fat_table_entry_pointer
+  restore entry_num
 
   mov rsp, rbp
   pop rbp
@@ -716,3 +841,6 @@ msg_period db ".", 0
 msg_newline_str db 10, 0
 
 msg_fat_entry_val db "@fat_entry = {p}", 10, 0
+
+msg_fs_panic db "panic: fs: you are trying to create more than 15 files!!!", \
+10, "FAT entry number = {p}", 0
