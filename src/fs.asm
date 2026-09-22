@@ -495,6 +495,8 @@ print_file_contents:
 ; write_buffer_to_file
 ;
 ; this function writes a given text buffer to a file in the root partition.
+; 
+; note: allow users to create 15 files max at the moment.
 ;
 ; args:
 ;   @rdi = file name
