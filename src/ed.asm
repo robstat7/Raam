@@ -5,6 +5,12 @@ section '.text' code executable readable
 
 ed_start:
 
+.init:
+  mov word [buffer_index], 0
+
+  lea rdi, [text_buffer]
+  mov byte [rdi], NULL_CHARACTER
+
 .write_ed_command_start:
   mov byte [input_mode], INPUT_MODE_ON
 
@@ -64,10 +70,6 @@ ed_start:
   call printk
   jmp .write_ed_command_start
 
-.exit_ed:
-  mov word [buffer_index], 0  ; reset buffer_index
-  ret
-
 .insert_text_start:
   mov byte [input_mode], INPUT_MODE_ON
 
@@ -114,6 +116,9 @@ ed_start:
   lea rdi, [cmd_unknown]
   call printk
   jmp .write_ed_command_start
+
+.exit_ed:
+  ret
 
 
 section '.data' data readable writeable
