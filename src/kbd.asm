@@ -381,13 +381,24 @@ convert_scan_code_byte:
 
 .z:
   cmp al, 0x2c
-  jne .enter
+  jne .colon_semicolon
   cmp byte [is_left_shift_pressed], 1
   jne .use_lower_z
   mov al, 'Z'
   jmp .end
 .use_lower_z:
   mov al, 'z'
+  jmp .end
+
+.colon_semicolon:
+  cmp al, 0x27
+  jne .enter
+  cmp byte [is_left_shift_pressed], 1
+  jne .use_semicolon
+  mov al, ':'
+  jmp .end
+.use_semicolon:
+  mov al, ';'
   jmp .end
 
 .enter:
@@ -416,8 +427,68 @@ convert_scan_code_byte:
 
 .backspace:
   cmp al, 0x0e
-  jne .default
+  jne .zero
   mov al, BACKSPACE_CHARACTER
+  jmp .end
+
+.zero:
+  cmp al, 0x0b
+  jne .one
+  mov al, 0x30
+  jmp .end
+
+.one:
+  cmp al, 0x02
+  jne .two
+  mov al, 0x31
+  jmp .end
+
+.two:
+  cmp al, 0x03
+  jne .three
+  mov al, 0x32
+  jmp .end
+
+.three:
+  cmp al, 0x04
+  jne .four
+  mov al, 0x33
+  jmp .end
+
+.four:
+  cmp al, 0x05
+  jne .five
+  mov al, 0x34
+  jmp .end
+
+.five:
+  cmp al, 0x06
+  jne .six
+  mov al, 0x35
+  jmp .end
+
+.six:
+  cmp al, 0x07
+  jne .seven
+  mov al, 0x36
+  jmp .end
+
+.seven:
+  cmp al, 0x08
+  jne .eight
+  mov al, 0x37
+  jmp .end
+
+.eight:
+  cmp al, 0x09
+  jne .nine
+  mov al, 0x38
+  jmp .end
+
+.nine:
+  cmp al, 0x0a
+  jne .default
+  mov al, 0x39
   jmp .end
 
 
