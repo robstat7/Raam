@@ -50,7 +50,7 @@ channels for satsangs (spiritual discourses):
 
 <br />
 
-You can also read the Vani Ji online:
+You can also read the Vani Ji (Literature) online:
 
 &nbsp;&nbsp;&nbsp;&nbsp;[Hindi Vani Ji](https://ramdwara.com/public/vaniji.php?lang=hindi)
 
