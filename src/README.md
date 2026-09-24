@@ -45,6 +45,12 @@ channels for satsanga (spiritual discourses):
 &nbsp;&nbsp;&nbsp;&nbsp;[Dr. Pavan Chandak Ji](https://www.youtube.com/@dr.pavanchandak8939)
 
 &nbsp;&nbsp;&nbsp;&nbsp;[Raamdwara Pune - Shanu Pandit Ji](https://www.youtube.com/@ramdwarapune-shanupandit9764)
+
+You can also read the Vani Ji online:
+
+&nbsp;&nbsp;&nbsp;&nbsp;[Hindi Vani Ji](https://ramdwara.com/public/vaniji.php?lang=hindi)
+
+&nbsp;&nbsp;&nbsp;&nbsp;[English Vani Ji](https://ramdwara.com/public/vaniji.php?lang=english)
 <br/><br/>
 
 🙏 Raam Raam Ji 🙏
