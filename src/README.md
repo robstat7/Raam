@@ -39,6 +39,7 @@ Sumiran-bhajan (chanting) method can be learned from the following video:
 
 &nbsp;&nbsp;&nbsp;&nbsp;[Raamdwara Pune || Sumiran-bhajan (chanting) method || Shanu Pandit Ji](https://www.youtube.com/watch?v=EYQ73QSJQZY)
 
+<br />
 People knowing the Hindi language can visit the following YouTube
 channels for satsangs (spiritual discourses):
 
@@ -46,7 +47,7 @@ channels for satsangs (spiritual discourses):
 
 &nbsp;&nbsp;&nbsp;&nbsp;[Raamdwara Pune - Shanu Pandit Ji](https://www.youtube.com/@ramdwarapune-shanupandit9764)
 
-
+<br />
 You can also read the Vani Ji online:
 
 &nbsp;&nbsp;&nbsp;&nbsp;[Hindi Vani Ji](https://ramdwara.com/public/vaniji.php?lang=hindi)
