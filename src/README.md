@@ -24,6 +24,7 @@ What works:
 
 Hardware support is currently very limited.
 
+OS photo:
 ![Writing Diary in Raam OS](photos/writing_diary.jpg)
 
 # || Raam || pronunciation
