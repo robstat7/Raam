@@ -4,7 +4,25 @@
 
 # Raam operating system
 
-Raam is an x86-64 Unix-like operating system for my HP Pavilion Laptop 15 machine.
+Raam is an x86-64 Unix-like operating system for laptop and desktop PCs.
+It is written completely from scratch using FASM Assembly.
+
+Currently tested on:
+- HP Pavilion Laptop 15
+- Dell Inspiron 15 3535
+
+What works:
+- UEFI boot
+- Terminal output
+- Keyboard input
+- Shell
+- Echo
+- File creation
+- File listing
+- File reading
+- Reboot
+
+Hardware support is currently very limited.
 
 # || Raam || pronunciation
 
