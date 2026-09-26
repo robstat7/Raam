@@ -267,7 +267,8 @@ get_mcfg_pointer:
 
 section '.data' data readable writeable
 
-welcome_msg db 10, "_/\_ Raam Raam Ji _/\_", 10, 10, \
+welcome_msg db 10, "|| Chant Raam name. Awaken your destiny ||", 10, 10, \
+"_/\_ Raam Raam Ji _/\_", 10, 10, \
 "Welcome to Raam x86-64 version 0.07!", 10, 10, 0
 
 xsdt_pointer  dq 0
