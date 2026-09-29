@@ -20,13 +20,24 @@ ed_start:
   jmp .loop_write_ed_command
 
 .process_ed_cmd:
+
+.cmd_insert_text:
   lea rdi, [input_buffer]
   lea rsi, [cmd_insert]
   mov edx, 2  
   call strncmp
   cmp eax, 0
-  jne .cmd_print_buffer
+  jne .cmd_edit_file
   jmp .insert_text_start
+
+.cmd_edit_file:
+  lea rdi, [input_buffer]
+  lea rsi, [cmd_edit]
+  mov edx, 2  
+  call strncmp
+  cmp eax, 0
+  jne .cmd_print_buffer
+  jmp .open_file
 
 .cmd_print_buffer:
   lea rdi, [input_buffer]
@@ -60,6 +71,23 @@ ed_start:
 
   lea rdi, [text_buffer]
   call strlen
+  lea rdi, [msg_bytes_written]
+  mov esi, eax
+  call printk
+  jmp .write_ed_command_start
+
+.open_file:
+  lea rdi, [input_buffer + 2] ; file name arg
+  call get_file_on_root_directory
+  cmp ax, -1
+  je .unrecognized_cmd
+
+  xor edi, edi
+  mov di, ax
+  mov esi, ebx
+  lea rdx, [text_buffer]
+  call copy_file_contents
+
   lea rdi, [msg_bytes_written]
   mov esi, eax
   call printk
@@ -126,6 +154,7 @@ section '.data' data readable writeable
 ; ed commands
 ED_COMMANDS:
 cmd_insert db "i", 10, 0
+cmd_edit db "e ", 0
 cmd_print_buffer db ",p", 10, 0
 cmd_write_to_file db "w ", 0
 cmd_quit db "q", 10, 0

@@ -438,6 +438,71 @@ get_file_on_root_directory:
   ret
 
 ;
+; copy_file_contents
+;
+; this function copies the contents of a given file to a buffer.
+;
+; args:
+;  @edi = file cluster number
+;  @esi = file length in bytes
+;  @rdx = buffer
+;
+; returns:
+;  @eax = the number of bytes copied to the buffer
+;
+; note:
+;  - The FAT maps the data region of the volume by cluster number. The
+;    first data cluster is cluster 2.
+;  - Given any valid data cluster number N, the sector number of the
+;    first sector of that cluster (again relative to sector 0 of the
+;    FAT volume) is computed as follows:
+;    FirstSectorofCluster = ((N – 2) * BPB_SecPerClus) + FirstDataSector;
+;
+copy_file_contents:
+  push rsi
+  push rdi
+  mov edi, ROOT_PARTITION_FIRST_SECTOR
+  xor esi, esi
+  call nvme_read
+  mov r8, rax
+
+  xor eax, eax
+  mov al, byte [r8 + FAT_BS.sectors_per_cluster]
+
+  pop rdi
+
+  ; get the first sector of the file cluster
+  sub edi, 2
+  imul edi, eax
+  add edi, dword [FIRST_DATA_SECTOR]
+
+  ; now read the file contents (first 512 bytes max at the moment)
+  add edi, ROOT_PARTITION_FIRST_SECTOR
+  xor esi, esi
+  call nvme_read
+
+  ; add a null character at file length offset to print the file
+  mov r8, rax
+  pop rsi
+  mov esi, esi
+  add r8, rsi
+  mov byte [r8], NULL_CHARACTER
+
+  push rax
+  mov rdi, rax
+  call strlen
+  pop rsi
+
+  mov rdi, rdx
+  mov edx, eax
+  push rdi
+  call strncpy
+  pop rdi
+
+  call strlen
+  ret
+
+;
 ; print_file_contents
 ;
 ; this function prints the contents of a given file.
