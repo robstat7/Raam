@@ -24,7 +24,16 @@ ed_start:
 .cmd_insert_text:
   lea rdi, [input_buffer]
   lea rsi, [cmd_insert]
-  mov edx, 2  
+  mov edx, 2
+  call strncmp
+  cmp eax, 0
+  jne .cmd_append_text
+  jmp .insert_text_start
+
+.cmd_append_text:
+  lea rdi, [input_buffer]
+  lea rsi, [cmd_append]
+  mov edx, 2
   call strncmp
   cmp eax, 0
   jne .cmd_edit_file
@@ -87,6 +96,9 @@ ed_start:
   mov esi, ebx
   lea rdx, [text_buffer]
   call copy_file_contents
+
+  ; update buffer index
+  mov word [buffer_index], ax
 
   lea rdi, [msg_bytes_written]
   mov esi, eax
@@ -154,6 +166,7 @@ section '.data' data readable writeable
 ; ed commands
 ED_COMMANDS:
 cmd_insert db "i", 10, 0
+cmd_append db "a", 10, 0
 cmd_edit db "e ", 0
 cmd_print_buffer db ",p", 10, 0
 cmd_write_to_file db "w ", 0
